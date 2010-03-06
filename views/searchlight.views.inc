@@ -31,6 +31,7 @@ function searchlight_views_plugins() {
         'use pager' => FALSE,
         'accept attachments' => FALSE,
         'admin' => t('Searchlight attribute'),
+        'parent' => 'searchlight_datasource',
       ),
     ),
     /*
