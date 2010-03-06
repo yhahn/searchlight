@@ -1,0 +1,46 @@
+<?php
+
+/**
+ * Format a conf value for nice printing in the sphinx.conf file.
+ */
+function sphinx_views_conf_print($value) {
+  return "{$value}\n";
+}
+
+/**
+ * Preprocessor for theme('sphinx_views_conf').
+ */
+function template_preprocess_sphinx_views_conf(&$vars) {
+  foreach ($vars['datasources'] as $id => $datasource) {
+    foreach ($datasource['conf'] as $key => $value) {
+      $vars['datasources'][$id]['conf'][$key] = sphinx_views_conf_print($value);
+    }
+    foreach ($datasource['index'] as $key => $value) {
+      $vars['datasources'][$id]['index'][$key] = sphinx_views_conf_print($value);
+    }
+  }
+  foreach ($vars['searchd'] as $key => $value) {
+    $vars['searchd'][$key] = sphinx_views_conf_print($value);
+  }
+}
+
+/**
+ * Theme function for Sphinx index display form.
+ */
+function theme_sphinx_views_plugin_display_datasource($form) {
+  $output = '';
+  $rows = array();
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = $form[$key]['#title'];
+    foreach (element_children($form[$key]) as $cell) {
+      if (isset($form[$key][$cell]['#type']) && !in_array($form[$key][$cell]['#type'], array('hidden', 'value'))) {
+        $row[] = drupal_render($form[$key][$cell]);
+      }
+    }
+    $rows[] = $row;
+  }
+  $output = theme('table', array(t('Field'), t('Usage'), t('Show facet')), $rows);
+  $output .= drupal_render($form);
+  return $output;
+}

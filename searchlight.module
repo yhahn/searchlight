@@ -1,0 +1,281 @@
+<?php
+
+/**
+ * Implementation of hook_ctools_plugin_api().
+ */
+function searchlight_ctools_plugin_api($module, $api) {
+  if ($module === 'searchlight' && $api === 'plugins') {
+    return array('version' => 1);
+  }
+}
+
+/**
+ * Implementation of hook_ctools_plugin_plugins().
+ */
+function searchlight_ctools_plugin_plugins() {
+  return array(
+    'cache' => TRUE,
+    'use hooks' => TRUE,
+  );
+}
+
+/**
+ * Implementation of hook_searchlight_plugins().
+ * This is a CTools plugin API hook.
+ */
+function searchlight_searchlight_plugins() {
+  return array(
+    'searchlight_backend' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'searchlight_backend.inc',
+        'class' => 'searchlight_backend',
+      ),
+    ),
+    'searchlight_backend_sphinx' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'searchlight_backend_sphinx.inc',
+        'class' => 'searchlight_backend_sphinx',
+        'parent' => 'searchlight_backend',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_searchlight_registry().
+ */
+function searchlight_searchlight_registry() {
+  return array(
+    'backend' => array(
+      'sphinx' => array(
+        'title' => t('Sphinx'),
+        'plugin' => 'searchlight_backend_sphinx',
+      ),
+    ),
+  );
+}
+
+/**
+ * Retrieves & caches the searchlight registry.
+ */
+function searchlight_registry($key = NULL, $reset = FALSE) {
+  static $registry;
+  if (!isset($registry) || $reset) {
+    if (!$reset && $cache = cache_get('searchlight_registry')) {
+      $registry = $cache->data;
+    }
+    else {
+      $registry = module_invoke_all('searchlight_registry');
+      drupal_alter('searchlight_registry', $registry);
+      cache_set('searchlight_registry', $registry);
+    }
+  }
+  if (isset($key)) {
+    return isset($registry[$key]) ? $registry[$key] : array();
+  }
+  return $registry;
+}
+
+/**
+ * Retrieve an instance of a searchlight backend class.
+ */
+function searchlight_load_backend($backend = NULL, $reset = FALSE) {
+  static $loaded;
+  ctools_include('plugins');
+
+  if (!isset($loaded[$backend]) || $reset) {
+    $loaded[$backend] = FALSE;
+    $backends = searchlight_registry('backend');
+    if (isset($backends[$backend]) && $info = $backends[$backend]) {
+      $plugins = ctools_get_plugins('searchlight', 'plugins');
+      if (isset($plugins[$info['plugin']]) && $class = ctools_plugin_get_class($plugins[$info['plugin']], 'handler')) {
+        $loaded[$backend] = new $class();
+      }
+    }
+  }
+  return $loaded[$backend];
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function searchlight_menu() {
+  $items = array();
+  $items['admin/settings/search/searchlight'] = array(
+    'title' => 'Searchlight',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => module_exists('search') ? MENU_LOCAL_TASK : MENU_DEFAULT_LOCAL_TASK,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function searchlight_menu_alter(&$items) {
+  if (module_exists('search')) {
+    $items['admin/settings/search/core'] = $items['admin/settings/search'];
+    $items['admin/settings/search/core']['title'] = 'Core';
+    $items['admin/settings/search/core']['type'] = MENU_DEFAULT_LOCAL_TASK;
+  }
+  else {
+    $items['admin/settings/search'] = $items['admin/settings/search/searchlight'];
+    $items['admin/settings/search']['title'] = 'Search';
+    $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
+  }
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function searchlight_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'searchlight') . '/views',
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function searchlight_theme() {
+  return array(
+    'searchlight_conf' => array(
+      'template' => 'sphinx-views-conf',
+      'arguments' => array('datasources' => array(), 'searchd' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_plugin_display_datasource' => array(
+      'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_flush_caches().
+ */
+function searchlight_flush_caches() {
+  searchlight_invalidate_cache();
+}
+
+/**
+ * Invalidate cached data.
+ */
+function searchlight_invalidate_cache() {
+  cache_clear_all('sphinx', 'cache', TRUE);
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op === 'list') {
+    return array('facets' => array('info' => t('Search facets')));
+  }
+  else if ($op === 'view' && $delta === 'facets') {
+    $sphinx_view = searchlight_current_sphinx_view();
+    if ($sphinx_view) {
+      $datasource = searchlight_get_datasource($sphinx_view->view->base_table);
+      if (!empty($datasource['facets'])) {
+        foreach ($datasource['facets'] as $id => $attribute) {
+          $result = $sphinx_view->execute_facet($attribute, 5);
+          $facet = $sphinx_view->build_facet($datasource['attributes'][$id], $result);
+
+          $items = array();
+          foreach ($facet['items'] as $item) {
+            $items[] = "{$item['rendered']} ({$item['count']})";
+          }
+          $output .= theme('item_list', $items, $facet['label']);
+        }
+      }
+      return array('content' => $output);
+    }
+  }
+}
+
+/**
+ * Get the datasource view for a given base table and set its datasource
+ * display. If an appropriate view could not be found, return FALSE.
+ */
+function searchlight_get_view($base_table) {
+  $views = variable_get('searchlight', array());
+  if (isset($views[$base_table]) && $view = views_get_view($views[$base_table])) {
+    foreach ($view->display as $display) {
+      if ($display->display_plugin === 'sphinx_datasource') {
+        $view->set_display($display->id);
+        return $view;
+      }
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Retrieve full Sphinx datasource information for a given base table.
+ */
+function searchlight_get_datasource($base_table, $reset = FALSE) {
+  static $datasources = array();
+  if (!isset($datasources[$base_table]) || $reset) {
+    $cid = "sphinx_datasource_{$base_table}";
+    if (!$reset && $cache = cache_get($cid)) {
+      $datasources[$base_table] = $cache->data;
+    }
+    else {
+      $datasources[$base_table] = array();
+      if ($view = searchlight_get_view($base_table)) {
+        $datasource = $view->execute_display();
+        cache_set($cid, $datasource);
+        $datasources[$base_table] = $datasource;
+      }
+    }
+  }
+  return !empty($datasources[$base_table]) ? $datasources[$base_table] : FALSE;
+}
+
+/**
+ * Get the datasource ID for a given base table.
+ */
+function searchlight_get_datasource_id($base_table) {
+  global $db_url;
+  $url = is_array($db_url) ? $db_url['default'] : $db_url;
+  $url = parse_url($url);
+  return trim(urldecode($url['path']), '/') .'_'. $base_table;
+}
+
+/**
+ * Retrieve all views on the given base table that have the specified display.
+ */
+function searchlight_get_usable_views($base_table, $display_plugin = 'sphinx_datasource') {
+  $views = views_get_all_views();
+  $usable = array();
+  foreach ($views as $view) {
+    if ($view->base_table === $base_table) {
+      foreach ($view->display as $display) {
+        if ($display->display_plugin === $display_plugin) {
+          $usable[$view->name] = $view;
+        }
+      }
+    }
+  }
+  return $usable;
+}
+
+/**
+ * Static cache settings/getting the current sphinx page view.
+ * If there is no such view, returns FALSE.
+ */
+function &searchlight_current_sphinx_view($sphinx_view = NULL, $reset = FALSE) {
+  static $cache;
+  $cache = $reset ? NULL : $cache;
+  $cache = isset($sphinx_view) ? $sphinx_view : $cache;
+  return isset($cache) ? $cache : NULL;
+}
