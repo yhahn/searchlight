@@ -69,16 +69,7 @@ function searchlight_views_data() {
  * Implementation of hook_views_query_alter().
  */
 function searchlight_views_query_alter(&$view, &$query) {
-  return;
-  // @TODO: Backend plugin interface point.
-  if (isset($view->searchlight)) {
-    module_load_include('inc', 'searchlight', 'sphinx_views');
-    $sphinx_view = new sphinx_view($view);
-    $sphinx_view->execute_view();
-
-    // If this is a page view, set it in the static cache.
-    if ($view->display_handler->display->display_plugin === 'page') {
-      sphinx_views_current_sphinx_view($sphinx_view);
-    }
+  if (isset($view->searchlight) && $backend = searchlight_default_backend()) {
+    $backend->viewsExecute($view);
   }
 }

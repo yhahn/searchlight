@@ -7,8 +7,12 @@ class searchlight_handler_filter_search extends views_handler_filter {
   function query() {
     $this->view->searchlight = isset($this->view->searchlight) ? $this->view->searchlight : array();
     $value = trim(current($this->value));
+    $this->view->searchlight = isset($this->view->searchlight) ? $this->view->searchlight : array();
+    $this->view->searchlight['base_table'] = $this->view->base_table;
+    $this->view->searchlight['datasource'] = searchlight_get_datasource($this->view->base_table);
+    $this->view->searchlight['datasource_id'] = searchlight_get_datasource_id($this->view->base_table);
+    $this->view->searchlight['options'] = $this->options;
     $this->view->searchlight['query'] = $value;
-    $this->view->searchlight['handler'] = $this;
   }
 
   /**

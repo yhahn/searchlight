@@ -8,8 +8,11 @@ class searchlight_handler_argument_search extends views_handler_argument {
     $value = trim($this->argument);
     if ($this->argument_validated && !empty($value)) {
       $this->view->searchlight = isset($this->view->searchlight) ? $this->view->searchlight : array();
+      $this->view->searchlight['base_table'] = $this->view->base_table;
+      $this->view->searchlight['datasource'] = searchlight_get_datasource($this->view->base_table);
+      $this->view->searchlight['datasource_id'] = searchlight_get_datasource_id($this->view->base_table);
+      $this->view->searchlight['options'] = $this->options;
       $this->view->searchlight['query'] = $value;
-      $this->view->searchlight['handler'] = $this;
     }
   }
 

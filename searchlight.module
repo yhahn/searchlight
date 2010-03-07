@@ -273,13 +273,3 @@ function searchlight_get_usable_views($base_table, $display_plugin = 'searchligh
   return $usable;
 }
 
-/**
- * Static cache settings/getting the current searchlight page view.
- * If there is no such view, returns FALSE.
- */
-function &searchlight_current_view($sphinx_view = NULL, $reset = FALSE) {
-  static $cache;
-  $cache = $reset ? NULL : $cache;
-  $cache = isset($sphinx_view) ? $sphinx_view : $cache;
-  return isset($cache) ? $cache : NULL;
-}
