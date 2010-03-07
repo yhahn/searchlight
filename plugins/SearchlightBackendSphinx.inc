@@ -1,6 +1,6 @@
 <?php
 
-class searchlight_backend_sphinx extends searchlight_backend {
+class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
@@ -26,6 +26,37 @@ class searchlight_backend_sphinx extends searchlight_backend {
       '#size' => 6, 
     );
     return $form;
+  }
+
+  /**
+   * Override of viewsOptionDefinition().
+   */
+  function viewsOptionDefinition(&$handler) {
+    return array(
+      'matchMode' => array('default' => 'all'),
+      'hideEmpty' => array('default' => TRUE),
+    );
+  }
+
+  /**
+   * Override of options_form().
+   */
+  function viewsOptionsForm(&$form, &$form_state, &$handler) {
+    $form['matchMode'] = array(
+      '#title' => t('Search mode'),
+      '#type' => 'select',
+      '#options' => array(
+        'all' => t('Match all query words'),
+        'any' => t('Match any of the query words'),
+        'phrase' => t('Match the exact phrase'),
+      ),
+      '#default_value' => $handler->options['matchMode'],
+    );
+    $form['hideEmpty'] = array(
+      '#title' => t('Hide all results when empty'),
+      '#type' => 'checkbox',
+      '#default_value' => $handler->options['hideEmpty'],
+    );
   }
 
   /**

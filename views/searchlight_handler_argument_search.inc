@@ -1,15 +1,15 @@
 <?php
 
-class sphinx_views_handler_argument_search extends views_handler_argument {
+class searchlight_handler_argument_search extends views_handler_argument {
   /**
    * Override of query().
    */
   function query() {
     $value = trim($this->argument);
     if ($this->argument_validated && !empty($value)) {
-      $this->view->sphinx_views = isset($this->view->sphinx_views) ? $this->view->sphinx_views : array();
-      $this->view->sphinx_views['query'] = $value;
-      $this->view->sphinx_views['matchMode'] = $this->options['sphinx']['matchMode'];
+      $this->view->searchlight = isset($this->view->searchlight) ? $this->view->searchlight : array();
+      $this->view->searchlight['query'] = $value;
+      $this->view->searchlight['handler'] = $this;
     }
   }
 
@@ -17,13 +17,10 @@ class sphinx_views_handler_argument_search extends views_handler_argument {
    * Override of option_definition().
    */
   function option_definition() {
-    module_load_include('php', 'sphinx_views', 'sphinxapi');
     $options = parent::option_definition();
-    $options['sphinx'] = array(
-      'default' => array(
-        'matchMode' => SPH_MATCH_ALL,
-      ),
-    );
+    if ($backend = searchlight_default_backend()) {
+      $options += $backend->viewsOptionDefinition($this);
+    }
     return $options;
   }
 
@@ -31,24 +28,9 @@ class sphinx_views_handler_argument_search extends views_handler_argument {
    * Override of options_form().
    */
   function options_form(&$form, &$form_state) {
-    module_load_include('php', 'sphinx_views', 'sphinxapi');
     parent::options_form($form, $form_state);
-    $form['sphinx'] = array(
-      '#title' => t('Sphinx search'),
-      '#tree' => TRUE,
-      '#type' => 'fieldset',
-    );
-    $form['sphinx']['matchMode'] = array(
-      '#title' => t('Search mode'),
-      '#type' => 'select',
-      '#options' => array(
-        SPH_MATCH_ALL => t('Match all query words'),
-        SPH_MATCH_ANY => t('Match any of the query words'),
-        SPH_MATCH_PHRASE => t('Match the exact phrase'),
-        // SPH_MATCH_BOOLEAN => t('Match query as a boolean syntax'),
-        // SPH_MATCH_EXTENDED2 => t('Match query as a boolean syntax'),
-      ),
-      '#default_value' => $this->options['sphinx']['matchMode'],
-    );
+    if ($backend = searchlight_default_backend()) {
+      $backend->viewsOptionsForm($form, &$form_state, $this);
+    }
   }
 }

@@ -25,19 +25,19 @@ function searchlight_ctools_plugin_plugins() {
  */
 function searchlight_searchlight_plugins() {
   return array(
-    'searchlight_backend' => array(
+    'SearchlightBackend' => array(
       'handler' => array(
         'path' => drupal_get_path('module', 'searchlight') .'/plugins',
-        'file' => 'searchlight_backend.inc',
-        'class' => 'searchlight_backend',
+        'file' => 'SearchlightBackend.inc',
+        'class' => 'SearchlightBackend',
       ),
     ),
-    'searchlight_backend_sphinx' => array(
+    'SearchlightBackendSphinx' => array(
       'handler' => array(
         'path' => drupal_get_path('module', 'searchlight') .'/plugins',
-        'file' => 'searchlight_backend_sphinx.inc',
-        'class' => 'searchlight_backend_sphinx',
-        'parent' => 'searchlight_backend',
+        'file' => 'SearchlightBackendSphinx.inc',
+        'class' => 'SearchlightBackendSphinx',
+        'parent' => 'SearchlightBackend',
       ),
     ),
   );
@@ -51,7 +51,7 @@ function searchlight_searchlight_registry() {
     'backend' => array(
       'sphinx' => array(
         'title' => t('Sphinx'),
-        'plugin' => 'searchlight_backend_sphinx',
+        'plugin' => 'SearchlightBackendSphinx',
       ),
     ),
   );
@@ -202,13 +202,6 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
     }
   }
 }
-
-
-
-
-
-
-
 
 
 
