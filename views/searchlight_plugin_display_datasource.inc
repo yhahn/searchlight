@@ -67,16 +67,6 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
   }
 
   /**
-   * Write a SQL query with fully prefixed tables and replaced arguments.
-   */
-  protected function db_query($query, $args) {
-    _db_query_callback($args, TRUE);
-    $query = db_prefix_tables($query);
-    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
-    return $query;
-  }
-
-  /**
    * Just say no.
    */
   function uses_breadcrumb() { return FALSE; }
@@ -91,69 +81,17 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
 
   /**
    * Do not fully execute the view -- we only need the build the query object.
-   * Generate an array representing a full description of this datasource for
-   * Sphinx.
+   * Generate an array representing a full description of this datasource.
    */
   function execute() {
-    $options = $this->get_option('sphinx_datasource');
+    $options = $this->get_option('searchlight_datasource');
     $this->view->build();
-    // @TODO backend integration point.
-
-    return;
-
     $datasource = array(
-      'attributes' => array(),
-      'conf' => array(),
+      'attributes' => $options['attributes'],
       'base_table' => $this->view->base_table,
+      'id' => searchlight_get_datasource_id($this->view->base_table),
+      'view' => $this->view,
     );
-
-    // Build attributes first.
-    foreach ($this->view->field as $handler) {
-      $name = "{$handler->table}.{$handler->real_field}";
-      if (!empty($options['attributes'][$name]['usage']) && $options['attributes'][$name]['usage'] === 'attribute') {
-        if ($attribute = $this->sphinx_attribute($handler)) {
-          $datasource['attributes'][$name] = $attribute;
-          if (!empty($options['attributes'][$name]['facet'])) {
-            $datasource['facets'][$name] = $attribute['name'];
-          }
-        }
-      }
-    }
-    // Build MVA attributes next.
-    foreach ($options['attributes'] as $settings) {
-      if ($settings['usage'] === 'attribute' && isset($settings['view']['view'], $settings['view']['display'])) {
-        if ($view = views_get_view($settings['view']['view'])) {
-          $view->set_display($settings['view']['display']);
-          if ($attribute = $view->execute_display()) {
-            $name = "{$attribute['table']}.{$attribute['field']}";
-            $datasource['attributes'][$name] = $attribute;
-            if (!empty($options['attributes'][$name]['facet'])) {
-              $datasource['facets'][$name] = $attribute['name'];
-            }
-          }
-        }
-      }
-    }
-
-    // Build configuration queries next.
-
-    // Build the query.
-    $sql_query = drupal_clone($this->view->query);
-    $sql_query->add_where(0, "{$this->view->base_table}.{$this->view->base_field}" .' BETWEEN $start AND $end');
-    $datasource['conf']['sql_query'] = $this->db_query($sql_query->query(), $sql_query->get_where_args());
-
-    // Build the info query.
-    $sql_query_info = drupal_clone($this->view->query);
-    $sql_query_info->add_where(0, "{$this->view->base_table}.{$this->view->base_field}" .' = $id');
-    $datasource['conf']['sql_query_info'] = $this->db_query($sql_query_info->query(), $sql_query_info->get_where_args());
-
-    // Assume serial ids on the base table and step by 1000.
-    $datasource['conf']['sql_query_range'] = "SELECT MIN({$this->view->base_field}), MAX({$this->view->base_field}) FROM {$this->view->base_table}";
-    $datasource['conf']['sql_range_step'] = 1000;
-    $datasource['conf']['sql_ranged_throttle'] = 0;
-
-    // @TODO: here would be a good place to set database information in
-    // multiDB scenarios.
     return $datasource;
   }
 
@@ -179,7 +117,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
         foreach ($handlers as $field => $handler) {
           if (($handler->real_field !== $this->view->base_field) && ($datatype = $this->get_datatype($handler))) {
             $name = "{$handler->table}.{$handler->real_field}";
-            $form_option['attributes'][$name] = array(
+            $form_option['fields'][$name] = array(
               '#title' => $handler->ui_name(),
               '#tree' => TRUE,
             );
@@ -188,15 +126,19 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
             $facet_id = form_clean_id("attributes-{$elem}-facet");
 
             // Datatype
-            $form_option['attributes'][$name]['datatype'] = array(
+            $form_option['fields'][$name]['datatype'] = array(
+              '#type' => 'value',
+              '#value' => $datatype,
+            );
+            $form_option['fields'][$name]['_datatype'] = array(
               '#type' => 'markup',
               '#value' => "<code>{$datatype}</code>",
             );
 
             // Usage
             $default_usage = ($datatype === 'text') ? 'content' : 'attribute';
-            $default_usage = isset($options['attributes'][$name]['usage']) ? $options['attributes'][$name]['usage'] : $default_usage;
-            $form_option['attributes'][$name]['usage'] = array(
+            $default_usage = isset($options['fields'][$name]['usage']) ? $options['fields'][$name]['usage'] : $default_usage;
+            $form_option['fields'][$name]['usage'] = array(
               '#type' => 'select',
               '#options' => array('content' => t('Content'), 'attribute' => t('Attribute')),
               '#default_value' => $default_usage,
@@ -205,8 +147,8 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
 
             // Facet
             $default_facet = ($default_usage === 'attribute');
-            $default_facet = isset($options['attributes'][$name]['facet']) ? $options['attributes'][$name]['facet'] : $default_facet;
-            $form_option['attributes'][$name]['facet'] = array(
+            $default_facet = isset($options['field'][$name]['facet']) ? $options['field'][$name]['facet'] : $default_facet;
+            $form_option['fields'][$name]['facet'] = array(
               '#type' => 'checkbox',
               '#default_value' => $default_facet,
               '#process' => array('views_process_dependency'),

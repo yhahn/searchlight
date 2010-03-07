@@ -1,6 +1,166 @@
 <?php
 
 class searchlight_backend_sphinx extends searchlight_backend {
+  /**
+   * Write a SQL query with fully prefixed tables and replaced arguments.
+   */
+  protected function writeQuery($query, $args) {
+    _db_query_callback($args, TRUE);
+    $query = db_prefix_tables($query);
+    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
+    return $query;
+  }
+
+  protected function settingsDefault() {
+    return array(
+      'port' => 9312,
+    );
+  }
+
+  public function settingsForm() {
+    $form = array();
+    $form['port'] = array(
+      '#title' => t('searchd port'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['port'],
+      '#size' => 6, 
+    );
+    return $form;
+  }
+
+  /**
+  * Generate an array representing the conf and index settings for a datasource.
+  */
+  protected function sphinxDatasourceConf($datasource) {
+    $conf = array('conf' => array(), 'index' => array());
+
+    // Retrieve db info.
+    global $db_url, $db_type;
+    $url = is_array($db_url) ? $db_url['default'] : $db_url;
+    $url = parse_url($url);
+
+    // Configuration options.
+    $conf['conf']['id'] = $datasource['id'];
+    $conf['conf']['type'] = $db_type;
+    $conf['conf']['sql_user'] = urldecode($url['user']);
+    $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
+    $conf['conf']['sql_host'] = urldecode($url['host']);
+    $conf['conf']['sql_db']   = trim(urldecode($url['path']), '/');
+    $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
+
+    // Build the query.
+    $view = $datasource['view'];
+    $sql_query = drupal_clone($view->query);
+    $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+    $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
+    $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
+
+    // Build the info query.
+    $sql_query_info = drupal_clone($view->query);
+    $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+    $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
+    $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
+
+    // Assume serial ids on the base table and step by 1000.
+    $conf['conf']['sql_query_range'] = "SELECT MIN({$this->view->base_field}), MAX({$this->view->base_field}) FROM {$this->view->base_table}";
+    $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
+    $conf['conf']['sql_range_step'] = 1000;
+    $conf['conf']['sql_ranged_throttle'] = 0;
+
+    // Merge in attributes.
+    $sql_attr = array();
+    $sphinx_type = array(
+      'text' => 'sql_attr_str2ordinal'
+    );
+    foreach ($datasource['attributes'] as $attribute) {
+      switch ($attribute['datatype']) {
+      }
+      // if ($attribute['type'] === 'sql_attr_multi') {
+      //   $query = str_replace("\n", " \\\n", trim($attribute['mva_query']));
+      //   $sql_attr[] = "{$attribute['type']} = {$attribute['mva_type']} {$attribute['name']} from {$attribute['mva_source']}; {$query}";
+      // }
+      // else {
+      $sql_attr[] = "{$attribute['type']} = {$attribute['name']}";
+      // }
+    }
+    $sql_attr = array_unique($sql_attr);
+    $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
+
+    // Index information
+    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource['id'];
+    $conf['index']['docinfo'] = 'extern';
+    $conf['index']['mlock'] = 0;
+    $conf['index']['morphology'] = 'stem_en';
+    $conf['index']['min_word_len'] = 1;
+    $conf['index']['charset_type'] = 'utf-8';
+    $conf['index']['html_strip'] = 0;
+
+    var_dump($conf);
+
+    return $conf;
+  }
+
+  /**
+  * Get the Sphinx searchd settings.
+  */
+  protected function sphinxSearchdConf() {
+    $searchd = array();
+    $searchd['log'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/searchd.log';
+    $searchd['query_log'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/query.log';
+    $searchd['pid_file'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/searchd.pid';
+    return $searchd;
+  }
+
+  public function drushSearchd() {
+    $file_path = conf_path() .'/sphinx/log';
+    if (file_check_directory($file_path, TRUE)) {
+      drush_op('drush_shell_exec', 'searchd --nodetach -c ' . drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf');
+      return drush_log('Search daemon started.', 'success');
+    }
+    return drush_log("An error ocurred while starting the search daemon.", 'error');
+  }
+
+  public function drushIndex() {
+    // Create the sphinx directory if it doesn't exist.
+    $file_path = conf_path() .'/sphinx/indexes';
+    if (file_check_directory($file_path, TRUE)) {
+      drush_op('drush_shell_exec', 'indexer --all --config ' . drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf');
+      $output = drush_shell_exec_output();
+      foreach ($output as $line) {
+        drush_print($line);
+      }
+      drupal_flush_all_caches();
+      return drush_log('Indexing complete.', 'success');
+    }
+    return drush_log("An error ocurred while indexing.", 'error');
+  }
+
+  public function drushWriteConf() {
+    $file_path = conf_path() .'/sphinx';
+    if (file_check_directory($file_path, TRUE)) {
+      // Collect configuration arrays for each datasource.
+      $datasources = array();
+      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
+        if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
+          $datasources[$base_table] = $this->sphinxDatasourceConf($datasource);
+        }
+      }
+      // Generate configuration file from datasources.
+      $sphinx_conf = theme('sphinx_views_conf', $datasources, $this->sphinxSearchdConf());
+      if ($sphinx_conf) {
+        $existing = file_exists("{$file_path}/sphinx.conf") ? file_get_contents("{$file_path}/sphinx.conf") : '';
+        if ($sphinx_conf === $existing) {
+          return drush_log("{$file_path}/sphinx.conf is unchanged.", 'success');
+        }
+        else {
+          file_put_contents("{$file_path}/sphinx.conf", $sphinx_conf);
+          return drush_log("{$file_path}/sphinx.conf was written successfully.", 'success');
+        }
+      }
+    }
+    return drush_log("{$file_path}/sphinx.conf could not be written.", 'error');
+  }
+
   var $view;
   var $sphinx;
   var $query;
@@ -10,14 +170,17 @@ class searchlight_backend_sphinx extends searchlight_backend {
   /**
    * Constructor.
    */
-  function __construct(&$view) {
-    module_load_include('php', 'sphinx_views', 'sphinxapi');
+  /*
+  function __construct() {
+    return;
+    module_load_include('php', 'searchlight', 'libraries/sphinxapi');
     $this->view   = $view;
     $this->query  = $view->query;
     $this->sphinx = new SphinxClient();
     $this->params = $view->sphinx_views;
     $this->sphinx->SetServer('localhost', 9312);
   }
+  */
 
   /**
    * Execute a Sphinx query and provide its results to the View.
