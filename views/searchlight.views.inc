@@ -5,46 +5,30 @@
  * Implementation of hook_views_plugins().
  */
 function searchlight_views_plugins() {
+  $base = array(
+    'path' => drupal_get_path('module', 'searchlight') . '/views',
+    'theme' => 'views_view',
+    'uses hook menu' => FALSE,
+    'use ajax' => FALSE,
+    'use pager' => FALSE,
+    'accept attachments' => FALSE,
+  );
   return array(
-    // 'module' => 'sphinx_views',
     'display' => array(
-      'searchlight_datasource' => array(
+      'searchlight_datasource' => $base + array(
         'title' => t('Searchlight datasource'),
         'help' => t('Expose a base table to Searchlight for indexing.'),
         'handler' => 'searchlight_plugin_display_datasource',
-        'path' => drupal_get_path('module', 'searchlight') . '/views',
-        'theme' => 'views_view',
-        'uses hook menu' => FALSE,
-        'use ajax' => FALSE,
-        'use pager' => FALSE,
-        'accept attachments' => FALSE,
         'admin' => t('Searchlight datasource'),
       ),
-      'searchlight_attribute' => array(
-        'title' => t('Searchlight attribute'),
-        'help' => t('Expose a view as an attribute to be used with a Searchlight datasource.'),
-        'handler' => 'searchlight_plugin_display_attribute',
-        'path' => drupal_get_path('module', 'searchlight') . '/views',
-        'theme' => 'views_view',
-        'uses hook menu' => FALSE,
-        'use ajax' => FALSE,
-        'use pager' => FALSE,
-        'accept attachments' => FALSE,
-        'admin' => t('Searchlight attribute'),
+      'searchlight_multivalue' => $base + array(
+        'title' => t('Searchlight multivalue'),
+        'help' => t('Expose a view as an multivalue attribute to be used with a Searchlight datasource.'),
+        'handler' => 'searchlight_plugin_display_multivalue',
+        'admin' => t('Searchlight multivalue'),
         'parent' => 'searchlight_datasource',
       ),
     ),
-    /*
-    'argument default' => array(
-      'node_title' => array(
-        'title' => t('Node title from URL'),
-        'handler' => 'sphinx_views_plugin_argument_default_node_title',
-        'file' => 'sphinx_views_plugin_argument_default_node_title.inc',
-        'path' => drupal_get_path('module', 'sphinx_views') . '/views',
-        'parent' => 'fixed',
-      ),
-    ),
-    */
   );
 }
 

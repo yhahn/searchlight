@@ -70,17 +70,51 @@ class searchlight_backend_sphinx extends searchlight_backend {
     // Merge in attributes.
     $sql_attr = array();
     $sphinx_type = array(
-      'text' => 'sql_attr_str2ordinal'
+      'text'      => 'sql_attr_str2ordinal',
+      'int'       => 'sql_attr_uint',
+      'float'     => 'sql_attr_float',
+      'timestamp' => 'sql_attr_timestamp',
     );
-    foreach ($datasource['attributes'] as $attribute) {
-      switch ($attribute['datatype']) {
+    foreach ($datasource['fields'] as $field) {
+      if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
+        $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
       }
+//     // Remove any fields that are not the id field or attribute field.
+//     $options = $this->get_option('searchlight_multivalue');
+//     $query = drupal_clone($this->view->query);
+//     foreach ($query->fields as $alias => $query_field) {
+//       if ($query_field['field'] === $this->view->base_field && $query_field['table'] === $this->view->base_table) {
+//         continue;
+//       }
+//       if ($query_field['field'] === $options['attribute']) {
+//         $attribute = $alias;
+//         $table = $query_field['table'];
+//         $field = $query_field['field'];
+//       }
+//       else {
+//         unset($query->fields[$alias]);
+//       }
+//     }
+// 
+//     // Build MVA query.
+//     return array(
+//       'type' => 'sql_attr_multi',
+//       'name' => $attribute,
+//       'table' => $table,
+//       'field' => $field,
+//       'view' => $this->view->name,
+//       'display' => $this->view->display_handler->display->id,
+//       'mva_label_field' => $options['facet'],
+//       'mva_type' => 'uint',
+//       'mva_source' => 'query',
+//       'mva_query' => $this->db_query($query->query(), $query->get_where_args()),
+//     );
+
       // if ($attribute['type'] === 'sql_attr_multi') {
       //   $query = str_replace("\n", " \\\n", trim($attribute['mva_query']));
       //   $sql_attr[] = "{$attribute['type']} = {$attribute['mva_type']} {$attribute['name']} from {$attribute['mva_source']}; {$query}";
       // }
       // else {
-      $sql_attr[] = "{$attribute['type']} = {$attribute['name']}";
       // }
     }
     $sql_attr = array_unique($sql_attr);
@@ -94,8 +128,6 @@ class searchlight_backend_sphinx extends searchlight_backend {
     $conf['index']['min_word_len'] = 1;
     $conf['index']['charset_type'] = 'utf-8';
     $conf['index']['html_strip'] = 0;
-
-    var_dump($conf);
 
     return $conf;
   }
@@ -146,7 +178,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
         }
       }
       // Generate configuration file from datasources.
-      $sphinx_conf = theme('sphinx_views_conf', $datasources, $this->sphinxSearchdConf());
+      $sphinx_conf = theme('searchlight_sphinx_conf', $datasources, $this->sphinxSearchdConf());
       if ($sphinx_conf) {
         $existing = file_exists("{$file_path}/sphinx.conf") ? file_get_contents("{$file_path}/sphinx.conf") : '';
         if ($sphinx_conf === $existing) {

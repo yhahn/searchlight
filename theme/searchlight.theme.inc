@@ -3,24 +3,24 @@
 /**
  * Format a conf value for nice printing in the sphinx.conf file.
  */
-function sphinx_views_conf_print($value) {
+function searchlight_sphinx_conf_print($value) {
   return "{$value}\n";
 }
 
 /**
- * Preprocessor for theme('sphinx_views_conf').
+ * Preprocessor for theme('searchlight_sphinx_conf').
  */
-function template_preprocess_sphinx_views_conf(&$vars) {
+function template_preprocess_searchlight_sphinx_conf(&$vars) {
   foreach ($vars['datasources'] as $id => $datasource) {
     foreach ($datasource['conf'] as $key => $value) {
-      $vars['datasources'][$id]['conf'][$key] = sphinx_views_conf_print($value);
+      $vars['datasources'][$id]['conf'][$key] = searchlight_sphinx_conf_print($value);
     }
     foreach ($datasource['index'] as $key => $value) {
-      $vars['datasources'][$id]['index'][$key] = sphinx_views_conf_print($value);
+      $vars['datasources'][$id]['index'][$key] = searchlight_sphinx_conf_print($value);
     }
   }
   foreach ($vars['searchd'] as $key => $value) {
-    $vars['searchd'][$key] = sphinx_views_conf_print($value);
+    $vars['searchd'][$key] = searchlight_sphinx_conf_print($value);
   }
 }
 

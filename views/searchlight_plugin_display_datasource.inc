@@ -2,6 +2,28 @@
 
 class searchlight_plugin_display_datasource extends views_plugin_display {
   /**
+   * Return the name of this plugin that will be used as the storage key
+   * for settings, other identifiers.
+   */
+  protected function my_name() {
+    return 'searchlight_datasource';
+  }
+
+  /**
+   * Get the final name for a given datasource field. Based on the field alias
+   * assigned by Views **after** the View has been built.
+   */
+  protected function field_name($handler) {
+    if ($handler->field_alias != 'unknown') {
+      return $handler->field_alias;
+    }
+    else if (isset($handler->aliases[$handler->real_field])) {
+      return $handler->aliases[$handler->real_field];
+    }
+    return FALSE;
+  }
+
+  /**
    * Given a Views handler return one of the datasource datatypes based on the
    * database column type and other metadata. May be one of the following
    * datasource attribute types:
@@ -11,7 +33,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    *   `float`:     float column.
    *   `timestamp`: unix timestamp.
    */
-  protected function get_datatype($handler) {
+  protected function field_datatype($handler) {
     $attribute = array();
     $schema = drupal_get_schema($handler->table);
     if ($schema && isset($handler->real_field, $schema['fields'][$handler->real_field]) && $handler->real_field != $handler->view->base_field) {
@@ -84,14 +106,26 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    * Generate an array representing a full description of this datasource.
    */
   function execute() {
-    $options = $this->get_option('searchlight_datasource');
+    $options = $this->get_option($this->my_name());
     $this->view->build();
     $datasource = array(
-      'attributes' => $options['attributes'],
+      'fields' => array(),
       'base_table' => $this->view->base_table,
       'id' => searchlight_get_datasource_id($this->view->base_table),
       'view' => $this->view,
     );
+
+    // Iterate through each handler and generate full field information.
+    $fields = $options['fields'];
+    $handlers = $this->display->handler->get_handlers('field');
+    foreach ($handlers as $field => $handler) {
+      if (isset($fields[$field]) && $name = $this->field_name($handler)) {
+        $fields[$field]['name'] = $name;
+        $fields[$field]['table'] = $handler->table;
+        $fields[$field]['field'] = $handler->real_field;
+        $datasource['fields'][$name] = $fields[$field];
+      }
+    }
     return $datasource;
   }
 
@@ -101,9 +135,9 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
     switch ($form_state['section']) {
-      case 'searchlight_datasource':
+      case $this->my_name():
         $form_option = array('#tree' => TRUE);
-        $options = $this->get_option('searchlight_datasource');
+        $options = $this->get_option($this->my_name());
 
         $form_option['help'] = array(
           '#type' => 'item',
@@ -111,34 +145,33 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
         );
 
         $handlers = $this->display->handler->get_handlers('field');
-        $form_option['attributes'] = array('#tree' => TRUE, '#theme' => 'searchlight_plugin_display_datasource');
+        $form_option['fields'] = array('#tree' => TRUE, '#theme' => 'searchlight_plugin_display_datasource');
 
         // @TODO: Rewrite this to support $handler->additional_fields
         foreach ($handlers as $field => $handler) {
-          if (($handler->real_field !== $this->view->base_field) && ($datatype = $this->get_datatype($handler))) {
-            $name = "{$handler->table}.{$handler->real_field}";
-            $form_option['fields'][$name] = array(
+          if (($handler->real_field !== $this->view->base_field) && ($datatype = $this->field_datatype($handler))) {
+            $form_option['fields'][$field] = array(
               '#title' => $handler->ui_name(),
               '#tree' => TRUE,
             );
-            $elem = str_replace('.', '-', $name);
+            $elem = str_replace('.', '-', $field);
             $usage_id = form_clean_id("attributes-{$elem}-usage");
             $facet_id = form_clean_id("attributes-{$elem}-facet");
 
             // Datatype
-            $form_option['fields'][$name]['datatype'] = array(
+            $form_option['fields'][$field]['datatype'] = array(
               '#type' => 'value',
               '#value' => $datatype,
             );
-            $form_option['fields'][$name]['_datatype'] = array(
+            $form_option['fields'][$field]['_datatype'] = array(
               '#type' => 'markup',
               '#value' => "<code>{$datatype}</code>",
             );
 
             // Usage
             $default_usage = ($datatype === 'text') ? 'content' : 'attribute';
-            $default_usage = isset($options['fields'][$name]['usage']) ? $options['fields'][$name]['usage'] : $default_usage;
-            $form_option['fields'][$name]['usage'] = array(
+            $default_usage = isset($options['fields'][$field]['usage']) ? $options['fields'][$field]['usage'] : $default_usage;
+            $form_option['fields'][$field]['usage'] = array(
               '#type' => 'select',
               '#options' => array('content' => t('Content'), 'attribute' => t('Attribute')),
               '#default_value' => $default_usage,
@@ -147,8 +180,8 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
 
             // Facet
             $default_facet = ($default_usage === 'attribute');
-            $default_facet = isset($options['field'][$name]['facet']) ? $options['field'][$name]['facet'] : $default_facet;
-            $form_option['fields'][$name]['facet'] = array(
+            $default_facet = isset($options['field'][$field]['facet']) ? $options['field'][$field]['facet'] : $default_facet;
+            $form_option['fields'][$field]['facet'] = array(
               '#type' => 'checkbox',
               '#default_value' => $default_facet,
               '#process' => array('views_process_dependency'),
@@ -159,6 +192,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
         }
 
         // Multi-valued attributes.
+        /*
         foreach (searchlight_get_usable_views($this->view->base_table, 'searchlight_attribute') as $view) {
           foreach ($view->display as $display) {
             if ($display->display_plugin === 'searchlight_attribute') {
@@ -207,7 +241,9 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
             }
           }
         }
-        $form['searchlight_datasource'] = $form_option;
+        */
+
+        $form[$this->my_name()] = $form_option;
         break;
     }
   }
@@ -219,7 +255,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
   function options_submit($form, &$form_state) {
     parent::options_submit($form, $form_state);
     switch ($form_state['section']) {
-      case 'searchlight_datasource':
+      case $this->my_name():
         $this->set_option($form_state['section'], $form_state['values'][$form_state['section']]);
         searchlight_invalidate_cache();
         break;
@@ -233,17 +269,17 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    */
   function options_summary(&$categories, &$options) {
     parent::options_summary($categories, $options);
-    $categories['basic'] = array('title' => t('Datasource settings'));
-    $options['searchlight_datasource'] = array(
-      'category' => 'basic',
-      'title' => t('Datasource settings'),
-      'value' => t('Settings'),
-    );
     foreach (array_keys($this->force_options()) as $key) {
       if (isset($options[$key])) {
         unset($options[$key]);
       }
     }
+    $categories['basic'] = array('title' => t('Datasource settings'));
+    $options[$this->my_name()] = array(
+      'category' => 'basic',
+      'title' => t('Datasource settings'),
+      'value' => t('Settings'),
+    );
   }
 
   /**
@@ -251,7 +287,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    */
   function option_definition() {
     $options = parent::option_definition();
-    $options['searchlight_datasource'] = array('default' => array());
+    $options[$this->my_name()] = array('default' => array());
     foreach ($this->force_options() as $key => $value) {
       if (isset($options[$key]['default'], $value)) {
         $options[$key]['default'] = $value;

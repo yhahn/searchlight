@@ -154,8 +154,8 @@ function searchlight_views_api() {
  */
 function searchlight_theme() {
   return array(
-    'searchlight_conf' => array(
-      'template' => 'sphinx-views-conf',
+    'searchlight_sphinx_conf' => array(
+      'template' => 'searchlight-sphinx-conf',
       'arguments' => array('datasources' => array(), 'searchd' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
