@@ -203,12 +203,21 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   }
 }
 
+
+
+
+
+
+
+
+
+
 /**
  * Get the datasource view for a given base table and set its datasource
  * display. If an appropriate view could not be found, return FALSE.
  */
 function searchlight_get_view($base_table) {
-  $views = variable_get('searchlight', array());
+  $views = variable_get('searchlight_views', array());
   if (isset($views[$base_table]) && $view = views_get_view($views[$base_table])) {
     foreach ($view->display as $display) {
       if ($display->display_plugin === 'searchlight_datasource') {

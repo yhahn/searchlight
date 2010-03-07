@@ -3,14 +3,14 @@
 /**
  * Implementation of hook_views_default_views().
  */
-function sphinx_views_views_default_views() {
+function searchlight_views_default_views() {
   $views = array();
 
   // sphinx_search ====================================================
   $view = new view;
-  $view->name = 'sphinx_search';
-  $view->description = 'Basic sphinx search.';
-  $view->tag = 'sphinx';
+  $view->name = 'searchlight_search';
+  $view->description = 'Basic search.';
+  $view->tag = 'searchlight';
   $view->view_php = '';
   $view->base_table = 'node';
   $view->is_cacheable = FALSE;
@@ -179,7 +179,7 @@ function sphinx_views_views_default_views() {
       ),
       'hide_empty' => TRUE,
       'id' => 'search',
-      'table' => 'sphinx_views',
+      'table' => 'searchlight',
       'field' => 'search',
       'relationship' => 'none',
     ),
@@ -219,9 +219,9 @@ function sphinx_views_views_default_views() {
   // sphinx_node ======================================================
   //
   $view = new view;
-  $view->name = 'sphinx_node';
-  $view->description = 'Default Sphinx datasource for the node table.';
-  $view->tag = 'Sphinx';
+  $view->name = 'searchlight_node';
+  $view->description = 'Default searchlight datasource for the node table.';
+  $view->tag = 'searchlight';
   $view->view_php = '';
   $view->base_table = 'node';
   $view->is_cacheable = FALSE;
@@ -436,44 +436,54 @@ function sphinx_views_views_default_views() {
     'grouping' => '',
     'type' => 'ul',
   ));
-  $handler = $view->new_display('sphinx_datasource', 'Sphinx', 'sphinx_datasource_1');
+  $handler = $view->new_display('searchlight_datasource', 'Searchlight', 'searchlight_datasource_1');
   $handler->override_option('style_plugin', 'default');
   $handler->override_option('style_options', array());
-  $handler->override_option('sphinx_datasource', array(
-    'attributes' => array(
-      'node_revisions.body' => array(
-        'usage' => 'content',
-        'facet' => FALSE,
-      ),
-      'node.title' => array(
+  $handler->override_option('searchlight_datasource', array(
+    'fields' => array(
+      'body' => array(
+        'datatype' => 'text',
         'usage' => 'content',
         'facet' => 0,
       ),
-      'node.changed' => array(
-        'usage' => 'attribute',
+      'title' => array(
+        'datatype' => 'text',
+        'usage' => 'content',
         'facet' => 0,
       ),
-      'users.uid' => array(
-        'usage' => 'attribute',
-        'facet' => 0,
-      ),
-      'users.name' => array(
+      'changed' => array(
+        'datatype' => 'timestamp',
         'usage' => 'attribute',
         'facet' => 1,
       ),
-      'node.type' => array(
+      'uid' => array(
+        'datatype' => 'int',
+        'usage' => 'attribute',
+        'facet' => 1,
+      ),
+      'name' => array(
+        'datatype' => 'text',
+        'usage' => 'attribute',
+        'facet' => 1,
+      ),
+      'type' => array(
+        'datatype' => 'text',
         'usage' => 'attribute',
         'facet' => 1,
       ),
     ),
   ));
+  $translatables['searchlight_node'] = array(
+    t('Defaults'),
+    t('Searchlight'),
+  );
   $views[$view->name] = $view;
 
   //
-  // sphinx_node_term_data
+  // searchlight_node_term_data
   //
   if (module_exists('taxonomy')) {
-    sphinx_views_views_defaults_views_taxonomy($views);
+    searchlight_views_defaults_views_taxonomy($views);
   }
 
   //
@@ -485,11 +495,11 @@ function sphinx_views_views_default_views() {
 /**
  * Default views for node to taxonomy terms.
  */
-function sphinx_views_views_defaults_views_taxonomy(&$views) {
+function searchlight_views_defaults_views_taxonomy(&$views) {
   $view = new view;
-  $view->name = 'sphinx_node_term_data';
-  $view->description = 'Sphinx attribute view for node terms.';
-  $view->tag = 'Sphinx';
+  $view->name = 'searchlight_term_data';
+  $view->description = 'Searchlight multivalue view for node terms.';
+  $view->tag = 'searchlight';
   $view->view_php = '';
   $view->base_table = 'node';
   $view->is_cacheable = FALSE;
@@ -530,7 +540,7 @@ function sphinx_views_views_defaults_views_taxonomy(&$views) {
   $handler->override_option('cache', array(
     'type' => 'none',
   ));
-  $handler = $view->new_display('sphinx_mva', 'Terms', "sphinx_mva_1");
+  $handler = $view->new_display('searchlight_multivalue', 'Terms', "searchlight_multivalue_1");
   // @TODO: support facet per vocabulary
   $views[$view->name] = $view;
 }

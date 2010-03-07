@@ -26,7 +26,7 @@ function searchlight_drush_command() {
 }
 
 /**
- * Generate the Searchlight configuration for the current site.
+ * Generate the configuration file for the current site.
  */
 function searchlight_drush_conf() {
   $backend = searchlight_default_backend();
@@ -34,9 +34,9 @@ function searchlight_drush_conf() {
 }
 
 /**
- * Generate new Sphinx indexes for the current site.
+ * Generate new indexes for the current site.
  */
-function sphinx_views_drush_index() {
+function searchlight_drush_index() {
   $backend = searchlight_default_backend();
   $backend->drushIndex();
 }
@@ -44,7 +44,7 @@ function sphinx_views_drush_index() {
 /**
  * Start or stop the search daemon.
  */
-function sphinx_views_drush_searchd() {
+function searchlight_drush_searchd() {
   $backend = searchlight_default_backend();
   $backend->drushSearchd();
 }

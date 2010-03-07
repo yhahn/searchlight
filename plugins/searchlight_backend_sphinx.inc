@@ -4,20 +4,20 @@ class searchlight_backend_sphinx extends searchlight_backend {
   /**
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
-  protected function writeQuery($query, $args) {
+  function writeQuery($query, $args) {
     _db_query_callback($args, TRUE);
     $query = db_prefix_tables($query);
     $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
     return $query;
   }
 
-  protected function settingsDefault() {
+  function settingsDefault() {
     return array(
       'port' => 9312,
     );
   }
 
-  public function settingsForm() {
+  function settingsForm() {
     $form = array();
     $form['port'] = array(
       '#title' => t('searchd port'),
@@ -29,9 +29,9 @@ class searchlight_backend_sphinx extends searchlight_backend {
   }
 
   /**
-  * Generate an array representing the conf and index settings for a datasource.
-  */
-  protected function sphinxDatasourceConf($datasource) {
+   * Generate an array representing the conf and index settings for a datasource.
+   */
+  function sphinxDatasourceConf($datasource) {
     $conf = array('conf' => array(), 'index' => array());
 
     // Retrieve db info.
@@ -62,7 +62,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
     $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
     // Assume serial ids on the base table and step by 1000.
-    $conf['conf']['sql_query_range'] = "SELECT MIN({$this->view->base_field}), MAX({$this->view->base_field}) FROM {$this->view->base_table}";
+    $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
     $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
     $conf['conf']['sql_range_step'] = 1000;
     $conf['conf']['sql_ranged_throttle'] = 0;
@@ -135,7 +135,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
   /**
   * Get the Sphinx searchd settings.
   */
-  protected function sphinxSearchdConf() {
+  function sphinxSearchdConf() {
     $searchd = array();
     $searchd['log'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/searchd.log';
     $searchd['query_log'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/query.log';
@@ -143,7 +143,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
     return $searchd;
   }
 
-  public function drushSearchd() {
+  function drushSearchd() {
     $file_path = conf_path() .'/sphinx/log';
     if (file_check_directory($file_path, TRUE)) {
       drush_op('drush_shell_exec', 'searchd --nodetach -c ' . drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf');
@@ -152,7 +152,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
 
-  public function drushIndex() {
+  function drushIndex() {
     // Create the sphinx directory if it doesn't exist.
     $file_path = conf_path() .'/sphinx/indexes';
     if (file_check_directory($file_path, TRUE)) {
@@ -167,7 +167,7 @@ class searchlight_backend_sphinx extends searchlight_backend {
     return drush_log("An error ocurred while indexing.", 'error');
   }
 
-  public function drushWriteConf() {
+  function drushWriteConf() {
     $file_path = conf_path() .'/sphinx';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.

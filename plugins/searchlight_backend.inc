@@ -3,11 +3,11 @@
 class searchlight_backend {
   var $settings;
 
-  public function settingsForm($values) {
+  function settingsForm($values) {
     return array();
   }
 
-  protected function settingsDefault() {
+  function settingsDefault() {
     return array();
   }
 
