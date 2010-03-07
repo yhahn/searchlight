@@ -6,7 +6,7 @@
 function searchlight_views_default_views() {
   $views = array();
 
-  // sphinx_search ====================================================
+  // searchlight_search ===============================================
   $view = new view;
   $view->name = 'searchlight_search';
   $view->description = 'Basic search.';
@@ -154,7 +154,7 @@ function searchlight_views_default_views() {
     'search' => array(
       'order' => 'DESC',
       'id' => 'search',
-      'table' => 'sphinx_views',
+      'table' => 'searchlight',
       'field' => 'search',
       'relationship' => 'none',
     ),
@@ -173,6 +173,8 @@ function searchlight_views_default_views() {
         'single' => 1,
         'remember' => 0,
       ),
+      'matchMode' => 'all',
+      'hideEmpty' => 1,
       'sphinx' => array(
         'matchMode' => '0',
         'hideEmpty' => 1,
@@ -213,10 +215,15 @@ function searchlight_views_default_views() {
     'description' => '',
     'weight' => 0,
   ));
+  $translatables['searchlight_search'] = array(
+    t('Defaults'),
+    t('No search results found.'),
+    t('Page: search'),
+  );
   $views[$view->name] = $view;
 
   //
-  // sphinx_node ======================================================
+  // searchlight_node =================================================
   //
   $view = new view;
   $view->name = 'searchlight_node';
