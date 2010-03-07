@@ -1,41 +1,25 @@
 <?php
 
 class SearchlightBackendSphinx extends SearchlightBackend {
-  var $sphinxClient;
-  // var $query;
-  // var $params;
-  // var $ordinals;
-
   /**
-   * Include the Sphinx PHP API library.
+   * Override of settingsDefault().
    */
-  function includeSphinx() {
-    module_load_include('php', 'searchlight', 'libraries/sphinxapi');
-  }
-
-  /**
-   * Write a SQL query with fully prefixed tables and replaced arguments.
-   */
-  function writeQuery($query, $args) {
-    _db_query_callback($args, TRUE);
-    $query = db_prefix_tables($query);
-    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
-    return $query;
-  }
-
   function settingsDefault() {
     return array(
       'port' => 9312,
     );
   }
 
+  /**
+   * Override of settingsForm().
+   */
   function settingsForm() {
     $form = array();
     $form['port'] = array(
       '#title' => t('searchd port'),
       '#type' => 'textfield',
       '#default_value' => $this->settings['port'],
-      '#size' => 6, 
+      '#size' => 6,
     );
     return $form;
   }
@@ -51,7 +35,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Override of options_form().
+   * Override of viewsOptionsForm().
    */
   function viewsOptionsForm(&$form, &$form_state, &$handler) {
     $this->includeSphinx();
@@ -69,7 +53,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Execute a Sphinx query and provide its results to the View.
+   * Override of queryInit().
    */
   function queryInit(&$searchlight) {
     $this->includeSphinx();
@@ -79,6 +63,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $searchlight['client'] = $client;
   }
 
+  /**
+   * Override of queryExecute().
+   */
   function queryExecute(&$searchlight) {
     $searchlight['results'] = $searchlight['client']->Query($searchlight['query'], $searchlight['datasource_id']);
     return array(
@@ -88,117 +75,48 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Set a Sphinx filter from a SQL WHERE clause.
+   * Override of setFilter().
    */
-  function setFilter(&$searchlight, $clause, &$where_args) {
-    $datasource = sphinx_views_get_datasource($this->view->base_table);
-    $split = preg_split('/[ ]([<>=!]*)|(IN)|(NOT IN)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-    if (count($split) >= 2) {
-      $field = trim($split[0]);
-      $operator = trim($split[1]);
-      if (!empty($datasource['attributes'][$field])) {
-        $attribute = $datasource['attributes'][$field];
-
-        // Get the arguments for this where clause.
-        $args = array();
-        $argnum = substr_count($split[2], '%');
-        if ($argnum === 0) {
-          $args[] = $split[2];
-        }
-        else if (count($where_args) >= $argnum) {
-          while ($argnum > 0) {
-            $args[] = array_shift($where_args);
-            $argnum--;
-          }
-        }
-        // @TODO: between range filters (e.g. >= AND <=)
-        switch (strtoupper($operator)) {
-          case '=':
-            $this->SetFilter($attribute['name'], $args, FALSE);
-            return TRUE;
-          case 'IN':
-            $this->SetFilter($attribute['name'], $args, FALSE);
-            return TRUE;
-          case 'NOT IN':
-            $this->SetFilter($attribute['name'], $args, TRUE);
-            return TRUE;
-          case '>':
-            $max = 10000000000;
-            $min = eval("return {$args[0]};");
-            $this->sphinx->SetFilterRange($attribute['name'], $min, $max, TRUE);
-            return TRUE;
-          case '>=':
-            $max = 10000000000;
-            $min = eval("return {$args[0]};");
-            $this->sphinx->SetFilterRange($attribute['name'], $min, $max, FALSE);
-            return TRUE;
-          case '<':
-            $min = 0;
-            $max = eval("return {$args[0]};");
-            $this->sphinx->SetFilterRange($attribute['name'], $min, $max, TRUE);
-            return TRUE;
-          case '<=':
-            $min = 0;
-            $max = eval("return {$args[0]};");
-            $this->sphinx->SetFilterRange($attribute['name'], $min, $max, FALSE);
-            return TRUE;
-        }
-      }
-    }
-    return FALSE;
-  }
-
-  /**
-  * Set global pager vars based on the view.
-  */
-  function setPager(&$searchlight, $offset, $items_per_page) {
-    // Max out at 1000 items.
-    $items_per_page = !empty($items_per_page) ? $items_per_page : 1000;
-    $searchlight['client']->SetLimits($offset, $items_per_page);
-  }
-
-  /**
-   * Set Sphinx sort method from ORDER BY clauses.
-   */
-  function setSort(&$searchlight, $orderby = array()) {
-    $sort = array();
-    $datasource = $searchlight['datasource'];
-    foreach ($orderby as $clause) {
-      $split = explode(' ', $clause);
-      if (count($split) <= 2) {
-        $field = $split[0];
-        $direction = isset($split[1]) ? $split[1] : 'ASC';
-        if ($field === 'searchlight_weight') {
-          $sort[] = "@weight {$direction}";
-          continue;
-        }
-        foreach ($datasource['attributes'] as $attribute) {
-          if ($attribute['name'] === $field) {
-            $sort[] = "{$field} {$direction}";
-            continue;
-          }
-        }
-      }
-    }
-    // @TODO: Add support for SPH_SORT_TIME_SEGMENTS.
-    if (!empty($sort)) {
-      $searchlight['client']->setSortMode(SPH_SORT_EXTENDED, implode(', ', $sort));
-    }
-    else {
-      $searchlight['client']->setSortMode(SPH_SORT_RELEVANCE);
+  function setFilter(&$searchlight, $field, $operator, $args) {
+    // @TODO: between range filters (e.g. >= AND <=)
+    switch ($operator) {
+      case '=':
+        $this->_SetFilter(&$searchlight, $field, $args, FALSE);
+        return TRUE;
+      case 'IN':
+        $this->_SetFilter(&$searchlight, $field, $args, FALSE);
+        return TRUE;
+      case 'NOT IN':
+        $this->_SetFilter(&$searchlight, $field, $args, TRUE);
+        return TRUE;
+      case '>':
+        $max = 10000000000;
+        $min = eval("return {$args[0]};");
+        $this->sphinx->SetFilterRange($field, $min, $max, TRUE);
+        return TRUE;
+      case '>=':
+        $max = 10000000000;
+        $min = eval("return {$args[0]};");
+        $this->sphinx->SetFilterRange($field, $min, $max, FALSE);
+        return TRUE;
+      case '<':
+        $min = 0;
+        $max = eval("return {$args[0]};");
+        $this->sphinx->SetFilterRange($field, $min, $max, TRUE);
+        return TRUE;
+      case '<=':
+        $min = 0;
+        $max = eval("return {$args[0]};");
+        $this->sphinx->SetFilterRange($field, $min, $max, FALSE);
+        return TRUE;
     }
   }
-
-  /**
-   * Wrappers =================================================================
-   */
 
   /**
    * Wrapper of $sphinx->SetFilter().
    * Convert any string values to ordinals before passing through.
    */
-  /*
-  function SetFilter($attribute, $values, $exclude = FALSE) {
+  function _SetFilter(&$searchlight, $attribute, $values, $exclude = FALSE) {
     $ordinals = array();
     foreach ($values as $arg) {
       $arg = trim($arg);
@@ -206,15 +124,40 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $ordinals[] = $arg;
       }
       else {
-        $ordinal = $this->get_ordinal($attribute, $arg);
+        $ordinal = $this->getOrdinal($searchlight, $attribute, $arg);
         if (is_numeric($ordinal)) {
           $ordinals[] = $ordinal;
         }
       }
     }
-    return $this->sphinx->SetFilter($attribute, $ordinals, $exclude);
+    return $searchlight['client']->SetFilter($attribute, $ordinals, $exclude);
   }
+
+  /**
+   * Override of setSort().
+   */
+  function setSort(&$searchlight, $field, $direction) {
+    if (!isset($searchlight['sphinx_sort'])) {
+      $searchlight['sphinx_sort'] = array();
+    }
+    // @TODO: Add support for SPH_SORT_TIME_SEGMENTS.
+    if ($field === 'searchlight_weight') {
+      $searchlight['sphinx_sort'][] = "@weight {$direction}";
+    }
+    else {
+      $searchlight['sphinx_sort'][] = "{$field} {$direction}";
+    }
+    $searchlight['client']->setSortMode(SPH_SORT_EXTENDED, implode(', ', $searchlight['sphinx_sort']));
+  }
+
+  /**
+  * Override of setPager().
   */
+  function setPager(&$searchlight, $offset, $items_per_page) {
+    // Max out at 1000 items.
+    $items_per_page = !empty($items_per_page) ? $items_per_page : 1000;
+    $searchlight['client']->SetLimits($offset, $items_per_page);
+  }
 
   /**
    * Execute the current Sphinx search with a groupby on the given facet.
@@ -325,86 +268,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     return array('label' => $label, 'items' => $items);
-  }
-
-  /**
-   * Get the ordinal integer for a given string, or vice versa.
-   */
-  function get_ordinal($attribute_name, $value, $reset = FALSE) {
-    if (!isset($this->ordinals) || $reset) {
-      $cid = "sphinx_ordinals_{$this->view->base_table}";
-      if (!$reset && $cache = cache_get($cid)) {
-        $this->ordinals = $cache->data;
-      }
-      if ($reset || !isset($this->ordinals)) {
-        $mapping = $this->get_ordinals();
-        if (!empty($mapping)) {
-          cache_set($cid, $mapping);
-        }
-        $this->ordinals = $mapping;
-      }
-    }
-    if (is_numeric($value)) {
-      return array_search($value, $this->ordinals[$attribute_name]);
-    }
-    else {
-      return isset($this->ordinals[$attribute_name][$value]) ? $this->ordinals[$attribute_name][$value] : FALSE;
-    }
-  }
-
-  /**
-   * Get an ordinal mapping for this datasource.
-   * As this is a very expensive operation, its results are cached and
-   * used in the ->get_ordinal() method. You should only call this method
-   * if you know what you are doing.
-   */
-  function get_ordinals() {
-    $datasource = sphinx_views_get_datasource($this->view->base_table);
-
-    // Retrieve all ordinal attributes.
-    $attributes = array();
-    if (!empty($datasource['attributes'])) {
-      foreach ($datasource['attributes'] as $field => $attribute) {
-        if ($attribute['type'] === 'sql_attr_str2ordinal') {
-          $attributes[$field] = $attribute;
-        }
-      }
-    }
-
-    // If there are attributes with ordinals, generate a mapping.
-    // We only handle string ordinals for sets of less than 1000 (for now).
-    $ordinals = array();
-    if (!empty($attributes)) {
-      $sphinx = new SphinxClient();
-      $sphinx->SetLimits(0, 1000);
-
-      foreach ($attributes as $attribute) {
-        // Dispatch a Sphinx query to retrieve the ordinal.
-        $sphinx->SetGroupBy($attribute['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $sphinx->SetGroupDistinct($attribute['name']);
-        $result = $sphinx->Query(NULL, sphinx_views_get_datasource_id($this->view->base_table));
-
-        if (count($result['matches']) < 1000) {
-          // Dispatch a Views query to retrieve the corresponding string.
-          $ids = implode(',', array_keys($result['matches']));
-          $view = sphinx_views_get_view($this->view->base_table);
-          $view->build();
-          $view->set_items_per_page(0);
-          $view->query->where = array();
-          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
-          $view->build_info['query'] = $view->query->query();
-          $view->build_info['query_args'] = $view->query->get_where_args();
-          $view->execute();
-          foreach ($view->result as $row) {
-            $id = $row->{$view->base_field};
-            if (isset($result['matches'][$id], $row->{$attribute['name']})) {
-              $ordinals[$attribute['name']][$row->{$attribute['name']}] = $result['matches'][$id]['attrs'][$attribute['name']];
-            }
-          }
-        }
-      }
-    }
-    return $ordinals;
   }
 
   function drushSearchd() {
@@ -570,5 +433,101 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $searchd['query_log'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/query.log';
     $searchd['pid_file'] = drush_locate_root() .'/'. conf_path() . '/sphinx/log/searchd.pid';
     return $searchd;
+  }
+
+  /**
+   * Include the Sphinx PHP API library.
+   */
+  function includeSphinx() {
+    module_load_include('php', 'searchlight', 'libraries/sphinxapi');
+  }
+
+  /**
+   * Write a SQL query with fully prefixed tables and replaced arguments.
+   */
+  function writeQuery($query, $args) {
+    _db_query_callback($args, TRUE);
+    $query = db_prefix_tables($query);
+    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
+    return $query;
+  }
+
+  /**
+   * Get the ordinal integer for a given string, or vice versa.
+   */
+  function getOrdinal(&$searchlight, $attribute_name, $value, $reset = FALSE) {
+    if (!isset($this->ordinals[$searchlight['base_table']]) || $reset) {
+      $cid = "searchlight_sphinx_ordinals_{$searchlight['base_table']}";
+      if (!$reset && $cache = cache_get($cid)) {
+        $this->ordinals[$searchlight['base_table']] = $cache->data;
+      }
+      if ($reset || !isset($this->ordinals[$searchlight['base_table']])) {
+        $mapping = $this->getOrdinals($searchlight['datasource']);
+        if (!empty($mapping)) {
+          cache_set($cid, $mapping);
+        }
+        $this->ordinals[$searchlight['base_table']] = $mapping;
+      }
+    }
+    if (is_numeric($value)) {
+      return array_search($value, $this->ordinals[$searchlight['base_table']][$attribute_name]);
+    }
+    else {
+      return isset($this->ordinals[$searchlight['base_table']][$attribute_name][$value]) ? $this->ordinals[$searchlight['base_table']][$attribute_name][$value] : FALSE;
+    }
+  }
+
+  /**
+   * Get an ordinal mapping for this datasource.
+   * As this is a very expensive operation, its results are cached and
+   * used in the ->getOrdinal() method. You should only call this method
+   * if you know what you are doing.
+   */
+  function getOrdinals($datasource) {
+    // Retrieve all ordinal attributes.
+    $attributes = array();
+    if (!empty($datasource['fields'])) {
+      foreach ($datasource['fields'] as $name => $field) {
+        if ($field['datatype'] === 'text' && $field['usage'] === 'attribute') {
+          $attributes[$name] = $field;
+        }
+      }
+    }
+
+    // If there are attributes with ordinals, generate a mapping.
+    // We only handle string ordinals for sets of less than 1000 (for now).
+    $ordinals = array();
+    if (!empty($attributes)) {
+      $this->includeSphinx();
+      $sphinx = new SphinxClient();
+      $sphinx->SetLimits(0, 1000);
+
+      foreach ($attributes as $name => $field) {
+        // Dispatch a Sphinx query to retrieve the ordinal.
+        $sphinx->SetGroupBy($name, SPH_GROUPBY_ATTR, '@count desc');
+        $sphinx->SetGroupDistinct($name);
+        $result = $sphinx->Query(NULL, $datasource['id']);
+
+        if (count($result['matches']) < 1000) {
+          // Dispatch a Views query to retrieve the corresponding string.
+          $ids = implode(',', array_keys($result['matches']));
+          $view = searchlight_get_view($datasource['base_table']);
+          $view->build();
+          $view->set_items_per_page(0);
+          $view->query->where = array();
+          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
+          $view->build_info['query'] = $view->query->query();
+          $view->build_info['query_args'] = $view->query->get_where_args();
+          $view->execute();
+          foreach ($view->result as $row) {
+            $id = $row->{$view->base_field};
+            if (isset($result['matches'][$id], $row->{$name})) {
+              $ordinals[$name][$row->{$name}] = $result['matches'][$id]['attrs'][$name];
+            }
+          }
+        }
+      }
+    }
+    return $ordinals;
   }
 }

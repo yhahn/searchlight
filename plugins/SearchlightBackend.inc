@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Abstract class, defines interface for backend.
+ * Abstract class, defines interface for swappable search backends.
  */
 class SearchlightBackend {
   var $settings;
@@ -102,12 +102,18 @@ class SearchlightBackend {
       foreach ($where['clauses'] as $key => $clause) {
         // Query Views token replacements.
         $clause = str_replace(array_keys($replacements), $replacements, $clause);
-        $this->setFilter($view->searchlight, $clause, $where_args);
+        if ($translated = $this->translateWhere($view->searchlight, $clause, $where_args)) {
+          $this->setFilter($view->searchlight, $translated['field'], $translated['operator'], $translated['args']);
+        }
       }
     }
 
     // Set sorts.
-    $this->setSort($view->searchlight, $view->query->orderby);
+    foreach ($view->query->orderby as $orderby) {
+      if ($translated = $this->translateOrderby($view->searchlight, $orderby, $view->query->fields)) {
+        $this->setSort($view->searchlight, $translated['field'], $translated['direction']);
+      }
+    }
 
     // Set pager.
     $pagers = isset($_GET['page']) ? explode(',', $_GET['page']) : array();
@@ -203,12 +209,86 @@ class SearchlightBackend {
     );
   }
 
-  function setFilter(&$searchlight, $clause, $args) {
+  /**
+   * Translate a Views query object WHERE clause into filter params for the
+   * search backend.
+   */
+  function translateWhere(&$searchlight, $clause, &$where_args) {
+    $split = preg_split('/[ ]([<>=!]*)|(IN)|(NOT IN)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+    if (count($split) >= 2) {
+      $field = explode('.', trim(array_shift($split)));
+      $operator = strtoupper(trim(array_shift($split)));
+      if (count($field) === 2) {
+        $table = $field[0];
+        $field = $field[1];
+        foreach ($searchlight['datasource']['fields'] as $name => $info) {
+          if ($info['table'] === $table && $info['field'] === $field) {
+            // Get the arguments for this where clause.
+            $args = array();
+            $argnum = substr_count($clause, '%');
+            if (count($where_args) >= $argnum) {
+              while ($argnum > 0) {
+                $args[] = array_shift($where_args);
+                $argnum--;
+              }
+            }
+            return array('field' => $name, 'operator' => $operator, 'args' => $args);
+          }
+        }
+      }
+    }
+    return FALSE;
   }
 
-  function setSort(&$searchlight, $orderby) {
+  /**
+   * Translate a Views query object ORDER BY clause into sort params for the
+   * search backend.
+   */
+  function translateOrderby(&$searchlight, $orderby, $query_fields) {
+    $split = explode(' ', $orderby);
+    if (count($split) <= 2) {
+      $field = $split[0];
+      $direction = isset($split[1]) ? strtoupper($split[1]) : 'ASC';
+      if ($field === 'searchlight_weight') {
+        return array('field' => 'searchlight_weight', 'direction' => $direction);
+      }
+      // Orderby field is *not* aliased. Retrieve table, field.
+      if (strpos($field, '.') !== FALSE) {
+        list($table, $field) = explode('.', $field);
+      }
+      // Field is aliased. Use query fields to retrieve actual table, field.
+      else {
+        if (isset($query_fields[$field])) {
+          $table = $query_fields[$field]['table'];
+          $field = $query_fields[$field]['field'];
+        }
+      }
+      if (isset($table, $field)) {
+        foreach ($searchlight['datasource']['fields'] as $name => $info) {
+          if ($info['table'] === $table && $info['field'] === $field) {
+            return array('field' => $name, 'direction' => $direction);
+          }
+        }
+      }
+    }
+    return FALSE;
   }
 
+  /**
+   * Set a filter parameter for the search backend.
+   */
+  function setFilter(&$searchlight, $field, $operator, $args) {
+  }
+
+  /**
+   * Set a sort parameter for the search backend.
+   */
+  function setSort(&$searchlight, $field, $direction) {
+  }
+
+  /**
+   * Set a pager/limit parameter for the search backend.
+   */
   function setPager(&$searchlight, $offset, $items_per_page) {
   }
 }
