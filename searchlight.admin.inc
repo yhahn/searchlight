@@ -7,8 +7,6 @@ function searchlight_settings_form($form_state) {
   $form = array();
 
   // Datasource views selection.
-  // @TODO: Should this be by view_name:display rather trying to discover the
-  // correct display later on?
   $form['searchlight_views'] = array(
     '#tree' => TRUE,
     '#type' => 'fieldset',
@@ -18,7 +16,14 @@ function searchlight_settings_form($form_state) {
   $views = variable_get('searchlight_views', array());
   views_include('admin');
   foreach (views_fetch_base_tables() as $base_table => $info) {
-    $options = drupal_map_assoc(array_keys(searchlight_get_views_by_display($base_table, 'searchlight_datasource')));
+    $options = array();
+    foreach (searchlight_get_views_by_display($base_table, 'searchlight_datasource') as $view) {
+      foreach ($view->display as $display) {
+        if ($display->display_plugin === 'searchlight_datasource') {
+          $options[$view->name]["{$view->name}:{$display->id}"] = $display->display_title;
+        }
+      }
+    }
     if (!empty($options)) {
       $options = array(0 => '<'. t('Disabled') .'>') + $options;
       $form['searchlight_views'][$base_table] = array(

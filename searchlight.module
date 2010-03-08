@@ -212,23 +212,6 @@ function searchlight_build_view($identifier) {
 }
 
 /**
- * Get the datasource view for a given base table and set its datasource
- * display. If an appropriate view could not be found, return FALSE.
- */
-function searchlight_get_view($base_table) {
-  $views = variable_get('searchlight_views', array());
-  if (isset($views[$base_table]) && $view = views_get_view($views[$base_table])) {
-    foreach ($view->display as $display) {
-      if ($display->display_plugin === 'searchlight_datasource') {
-        $view->set_display($display->id);
-        return $view;
-      }
-    }
-  }
-  return FALSE;
-}
-
-/**
  * Retrieve full datasource information for a given base table.
  */
 function searchlight_get_datasource($base_table, $reset = FALSE) {
@@ -241,7 +224,8 @@ function searchlight_get_datasource($base_table, $reset = FALSE) {
     }
     else {
       $datasources[$base_table] = array();
-      if ($view = searchlight_get_view($base_table)) {
+      $views = variable_get('searchlight_views', array());
+      if (isset($views[$base_table]) && $view = searchlight_build_view($views[$base_table])) {
         $datasource = $view->execute_display();
         cache_set($cid, $datasource);
         $datasources[$base_table] = $datasource;

@@ -496,8 +496,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         if (count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
           $ids = implode(',', array_keys($result['matches']));
-          $view = searchlight_get_view($datasource['base_table']);
-          $view->build();
+          $view = searchlight_build_view($datasource['view']);
           $view->set_items_per_page(0);
           $view->query->where = array();
           $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
