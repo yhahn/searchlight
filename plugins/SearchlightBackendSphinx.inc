@@ -151,8 +151,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-  * Override of setPager().
-  */
+   * Override of setPager().
+   */
   function setPager(&$searchlight, $offset, $items_per_page) {
     // Max out at 1000 items.
     $items_per_page = !empty($items_per_page) ? $items_per_page : 1000;
@@ -160,45 +160,52 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Execute the current Sphinx search with a groupby on the given facet.
+   * Override of facetBuild().
    */
-  function execute_facet($attribute, $count = 20) {
-    $this->sphinx->SetGroupBy($attribute, SPH_GROUPBY_ATTR, '@count desc');
-    $this->sphinx->SetLimits(0, $count);
-    return $this->execute_sphinx();
-  }
+  function facetBuild(&$searchlight, $field) {
+    // Make a copy for building this facet.
+    $facet = $searchlight;
 
-  /**
-   * Build a facet results ready for theming from a Sphinx query result
-   * returned by ->execute_facet().
-   */
-  function build_facet($attribute, $result = array()) {
+    // Init the Sphinx client. It may not exist if there has bene no search
+    // on this page.
+    if (!isset($facet['client'])) {
+      $this->queryInit($facet);
+    }
+
+    // @TODO: make configurable:
+    // - date facet grouping
+    // - # of items to show on a per facet basis
+    if ($field['datatype'] === 'timestamp') {
+      $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_MONTH, '@group desc');
+    }
+    else {
+      $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+    }
+    $facet['client']->SetLimits(0, 5);
+    $result = $this->queryExecute($facet);
+
     $items = array();
-    $ids = array();
-
-    // Collect facet information from result set.
-    if (!empty($result['matches'])) {
-      foreach ($result['matches'] as $row) {
-        if (isset($row['attrs']['@groupby'], $row['attrs']['@count'])) {
-          if ($attribute['type'] === 'sql_attr_str2ordinal') {
-            $id = $this->get_ordinal($attribute['name'], $row['attrs']['@groupby']);
+    foreach ($result['result'] as $id) {
+      if (isset($facet['results']['matches'][$id]['attrs'])) {
+        $attr = $facet['results']['matches'][$id]['attrs'];
+        if (isset($attr['@groupby'], $attr['@count'])) {
+          // Handle ordinal conversion.
+          if ($field['datatype'] === 'text') {
+            $id = $this->getOrdinal($searchlight, $field['name'], $attr['@groupby']);
+          }
+          // @TODO: how do we want to handle date formatting? : |
+          // Perhaps bypass the field handler entirely?
+          else if ($field['datatype'] === 'timestamp') {
+            $id = mktime(NULL, NULL, NULL, substr($attr['@groupby'], 4), NULL, substr($attr['@groupby'], 0, 4));
           }
           else {
-            $id = $row['attrs']['@groupby'];
+            $id = $attr['@groupby'];
           }
-          $count = $row['attrs']['@count'];
-          $ids[] = $id;
-          $items[$id] = array(
-            'id' => $id,
-            'count' => $count,
-            'attribute' => $attribute,
-          );
+          $items[$id] = array('id' => $id, 'count' => $attr['@count']);
         }
       }
     }
-
-    // Render facets.
-    return $this->render_facet($attribute, $items);
+    return $items;
   }
 
   /**

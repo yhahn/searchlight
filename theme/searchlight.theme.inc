@@ -37,3 +37,24 @@ function theme_searchlight_plugin_display_datasource($form) {
   $output .= drupal_render($form);
   return $output;
 }
+
+/**
+ * Theme function for a facet.
+ */
+function theme_searchlight_facet($facet) {
+  return theme('item_list', $facet['items'], $facet['label']);
+}
+
+/**
+ * Theme function for an individual (inactive) facet link.
+ */
+function theme_searchlight_facet_link($field, $item) {
+  return "<div class='searchlight-facet'>{$item['link']} <span class='count'>{$item['count']}</span></div>";
+}
+
+/**
+ * Theme function for an individual (active) facet link.
+ */
+function theme_searchlight_facet_active($field, $item) {
+  return "<div class='searchlight-facet'>{$item['title']}</div>";
+}

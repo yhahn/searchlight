@@ -30,6 +30,10 @@ class SearchlightBackend {
   }
 
   /**
+   * Views integration methods ================================================
+   */
+
+  /**
    * Backend callback for filter, argument views handler
    * $handler->option_definition() method.
    */
@@ -187,29 +191,6 @@ class SearchlightBackend {
   }
 
   /**
-   * Let the backend init its query params/object.
-   */
-  function queryInit(&$searchlight) {
-  }
-
-  /**
-   * Let the backend execute its query.
-   *
-   * @return An array with the following:
-   *
-   * 'result': An array of primary IDs for the given base table, in the
-   *   preferred order of the resultset.
-   * 'total_rows': An integer value for the total number of rows in the
-   *   full resultset. Used by Views for paging.
-   */
-  function queryExecute(&$searchlight) {
-    return array(
-      'result' => array(),
-      'total_rows' => 0,
-    );
-  }
-
-  /**
    * Translate a Views query object WHERE clause into filter params for the
    * search backend.
    */
@@ -275,6 +256,33 @@ class SearchlightBackend {
   }
 
   /**
+   * Backend API integration ==================================================
+   */
+
+  /**
+   * Let the backend init its query params/object.
+   */
+  function queryInit(&$searchlight) {
+  }
+
+  /**
+   * Let the backend execute its query.
+   *
+   * @return An array with the following:
+   *
+   * 'result': An array of primary IDs for the given base table, in the
+   *   preferred order of the resultset.
+   * 'total_rows': An integer value for the total number of rows in the
+   *   full resultset. Used by Views for paging.
+   */
+  function queryExecute(&$searchlight) {
+    return array(
+      'result' => array(),
+      'total_rows' => 0,
+    );
+  }
+
+  /**
    * Set a filter parameter for the search backend.
    */
   function setFilter(&$searchlight, $field, $operator, $args) {
@@ -290,5 +298,60 @@ class SearchlightBackend {
    * Set a pager/limit parameter for the search backend.
    */
   function setPager(&$searchlight, $offset, $items_per_page) {
+  }
+
+  /**
+   * Facet methods ============================================================
+   */
+
+  /**
+   * Execute backend operations to determine the top facets for a given field.
+   *
+   * @return A result array, each with a sub-array of items containing:
+   *
+   * 'id': The primary ID for this item.
+   * 'count': The number of entries that belong to this facet item.
+   */
+  function facetBuild(&$searchlight, $field) {
+    return array();
+  }
+
+  /**
+   * Render a facet using its corresponding field handler.
+   */
+  function facetRender(&$searchlight, $field, $items) {
+    $view = searchlight_build_view($searchlight['datasource']['view']);
+
+    // Detect which handler is responsible for this field.
+    foreach ($view->field as $field_handler) {
+      if ($field_handler->field_alias === $field['name']) {
+        $handler = $field_handler;
+        break;
+      }
+    }
+    // Fake some rows so we can use the pre_render method.
+    if (!empty($handler)) {
+      $rows = array();
+      foreach ($items as $item) {
+        $row = new stdClass();
+        $row->{$field['name']} = $item['id'];
+        $rows[$item['id']] = $row;
+      }
+      $handler->pre_render($rows);
+
+      // Now render each row.
+      $facets = searchlight_facets();
+      $rendered = array();
+      foreach ($rows as $id => $row) {
+        // Generate a PURL modifier for this item.
+        $modifier = $facets->getModifier('add', $field['name'], $id);
+        $item = $items[$id];
+        $item['title'] = strip_tags($handler->render($row));
+        $item['link'] = l($item['title'], $_GET['q'], array('purl' => array('provider' => 'searchlight', 'id' => $modifier)));
+        $rendered[$id] = theme('searchlight_facet_link', $field, $item);
+      }
+      return array('label' => $handler->label(), 'items' => $rendered);
+    }
+    return FALSE;
   }
 }

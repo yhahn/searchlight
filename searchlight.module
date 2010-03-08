@@ -43,24 +43,35 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
     return array('facets' => array('info' => t('Search facets')));
   }
   else if ($op === 'view' && $delta === 'facets') {
-    $sphinx_view = searchlight_current_sphinx_view();
-    if ($sphinx_view) {
-      $datasource = searchlight_get_datasource($sphinx_view->view->base_table);
-      if (!empty($datasource['facets'])) {
-        foreach ($datasource['facets'] as $id => $attribute) {
-          $result = $sphinx_view->execute_facet($attribute, 5);
-          $facet = $sphinx_view->build_facet($datasource['attributes'][$id], $result);
-
-          $items = array();
-          foreach ($facet['items'] as $item) {
-            $items[] = "{$item['rendered']} ({$item['count']})";
+    if ($display = views_get_page_view()) {
+      $view = $display->view;
+      if (!empty($view->searchlight)) {
+        $output = '';
+        $backend = searchlight_default_backend();
+        foreach ($view->searchlight['datasource']['fields'] as $field) {
+          if (!empty($field['facet'])) {
+            $items = $backend->facetBuild($view->searchlight, $field);
+            $rendered = $backend->facetRender($view->searchlight, $field, $items);
+            $output .= theme('searchlight_facet', $rendered);
           }
-          $output .= theme('item_list', $items, $facet['label']);
         }
+        return array('content' => $output);
       }
-      return array('content' => $output);
     }
   }
+}
+
+/**
+ * Implementation of hook_purl_provider().
+ */
+function searchlight_purl_provider() {
+  return array(
+    'searchlight' => array(
+      'name' => t('Searchlight facets'),
+      'description' => t('Sets one or more active facets.'),
+      'callback' => 'searchlight_facets_activate',
+    ),
+  );
 }
 
 /**
@@ -76,6 +87,18 @@ function searchlight_theme() {
     ),
     'searchlight_plugin_display_datasource' => array(
       'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_facet' => array(
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_facet_link' => array(
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_facet_active' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -147,6 +170,28 @@ function searchlight_searchlight_registry() {
       ),
     ),
   );
+}
+
+/**
+ * Factory/singleton static cache for facets handler.
+ */
+function searchlight_facets($reset = FALSE) {
+  static $facets;
+  if (!isset($facets) || $reset) {
+    module_load_include('inc', 'searchlight', 'searchlight.facets');
+    $facets = new SearchlightFacets();
+  }
+  return $facets;
+}
+
+/**
+ * Parse and set active facets.
+ */
+function searchlight_facets_activate($packed) {
+  $facets = searchlight_facets();
+  foreach ($facets->unpack($packed) as $field => $value) {
+    $facets->setFacet($field, $value);
+  }
 }
 
 /**
