@@ -78,7 +78,7 @@ class SearchlightBackend {
     // If the search query is empty and the handler has the hideEmpty option
     // enabled, abort right here.
     $view->searchlight['query'] = trim($view->searchlight['query']);
-    if (empty($view->searchlight['query']) && $view->searchlight['handler']->options['hideEmpty']) {
+    if (empty($view->searchlight['query']) && $view->searchlight['options']['hideEmpty']) {
       return;
     }
 

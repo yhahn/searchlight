@@ -341,23 +341,24 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
     // Build the query.
-    $view = $datasource['view'];
-    $sql_query = drupal_clone($view->query);
-    $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
-    $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
-    $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
+    if ($view = searchlight_build_view($datasource['view'])) {
+      $sql_query = drupal_clone($view->query);
+      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+      $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
+      $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
-    // Build the info query.
-    $sql_query_info = drupal_clone($view->query);
-    $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
-    $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
-    $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
+      // Build the info query.
+      $sql_query_info = drupal_clone($view->query);
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+      $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
+      $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
-    // Assume serial ids on the base table and step by 1000.
-    $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
-    $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
-    $conf['conf']['sql_range_step'] = 1000;
-    $conf['conf']['sql_ranged_throttle'] = 0;
+      // Assume serial ids on the base table and step by 1000.
+      $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
+      $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
+      $conf['conf']['sql_range_step'] = 1000;
+      $conf['conf']['sql_ranged_throttle'] = 0;
+    }
 
     // Merge in attributes.
     $sql_attr = array();
@@ -371,44 +372,28 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
         $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
       }
-//     // Remove any fields that are not the id field or attribute field.
-//     $options = $this->get_option('searchlight_multivalue');
-//     $query = drupal_clone($this->view->query);
-//     foreach ($query->fields as $alias => $query_field) {
-//       if ($query_field['field'] === $this->view->base_field && $query_field['table'] === $this->view->base_table) {
-//         continue;
-//       }
-//       if ($query_field['field'] === $options['attribute']) {
-//         $attribute = $alias;
-//         $table = $query_field['table'];
-//         $field = $query_field['field'];
-//       }
-//       else {
-//         unset($query->fields[$alias]);
-//       }
-//     }
-//
-//     // Build MVA query.
-//     return array(
-//       'type' => 'sql_attr_multi',
-//       'name' => $attribute,
-//       'table' => $table,
-//       'field' => $field,
-//       'view' => $this->view->name,
-//       'display' => $this->view->display_handler->display->id,
-//       'mva_label_field' => $options['facet'],
-//       'mva_type' => 'uint',
-//       'mva_source' => 'query',
-//       'mva_query' => $this->db_query($query->query(), $query->get_where_args()),
-//     );
-
-      // if ($attribute['type'] === 'sql_attr_multi') {
-      //   $query = str_replace("\n", " \\\n", trim($attribute['mva_query']));
-      //   $sql_attr[] = "{$attribute['type']} = {$attribute['mva_type']} {$attribute['name']} from {$attribute['mva_source']}; {$query}";
-      // }
-      // else {
-      // }
     }
+
+    // Generate multivalue queries.
+    foreach ($datasource['multivalues'] as $multivalue) {
+      if ($view = searchlight_build_view($multivalue['view'])) {
+        $query = drupal_clone($view->query);
+        // Remove any fields that are not the id field or attribute field.
+        foreach ($query->fields as $alias => $query_field) {
+          if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
+            continue;
+          }
+          if ($query_field['field'] === $multivalue['field']['field']) {
+            continue;
+          }
+          unset($query->fields[$alias]);
+        }
+        $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
+        $mva_query = str_replace("\n", " \\\n", trim($mva_query));
+        $sql_attr[] = "sql_attr_multi = uint {$multivalue['field']['name']} from query; {$mva_query}";
+      }
+    }
+
     $sql_attr = array_unique($sql_attr);
     $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
 

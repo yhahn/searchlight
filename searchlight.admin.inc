@@ -18,7 +18,7 @@ function searchlight_settings_form($form_state) {
   $views = variable_get('searchlight_views', array());
   views_include('admin');
   foreach (views_fetch_base_tables() as $base_table => $info) {
-    $options = drupal_map_assoc(array_keys(searchlight_get_usable_views($base_table, 'searchlight_datasource')));
+    $options = drupal_map_assoc(array_keys(searchlight_get_views_by_display($base_table, 'searchlight_datasource')));
     if (!empty($options)) {
       $options = array(0 => '<'. t('Disabled') .'>') + $options;
       $form['searchlight_views'][$base_table] = array(

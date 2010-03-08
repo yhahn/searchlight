@@ -51,7 +51,7 @@ function searchlight_views_handlers() {
  */
 function searchlight_views_data() {
   $data = array();
-  $data['searchlight']['table']['group'] = t('Global');
+  $data['searchlight']['table']['group'] = t('Search');
   $data['searchlight']['table']['join'] = array(
     '#global' => array(),
   );
