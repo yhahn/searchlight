@@ -7,20 +7,40 @@ class SearchlightFacets {
     $this->active = array();
   }
 
+  /**
+   * Retrieve any valid active facets for the provided datasource.
+   */
+  function activeFacets($datasource) {
+    $facets = array();
+    foreach ($this->active as $key => $value) {
+      if (isset($datasource['fields'][$key]) || isset($datasource['multivalues'][$key])) {
+        $facets[$key] = $value;
+      }
+    }
+    return $facets;
+  }
+
   function setFacet($key, $value) {
     $this->active[$key] = $value;
   }
 
-  function getFacet($key) {
-    return isset($this->active[$key]) ? $this->active[$key] : NULL;
+  function getFacet($key = NULL) {
+    if (isset($key)) {
+      return isset($this->active[$key]) ? $this->active[$key] : NULL;
+    }
+    return $this->active;
   }
 
-  function delFacet($key) {
-    if (isset($this->active[$key])) {
-      unset($this->active[$key]);
-      return TRUE;
+  function delFacet($key = NULL) {
+    if (isset($key)) {
+      if (isset($this->active[$key])) {
+        unset($this->active[$key]);
+        return TRUE;
+      }
+      return FALSE;
     }
-    return FALSE;
+    $this->active = array();
+    return TRUE;
   }
 
   /**

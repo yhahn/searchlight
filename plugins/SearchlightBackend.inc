@@ -79,10 +79,18 @@ class SearchlightBackend {
     // Skip Views' query execution - we will do it ourselves.
     $view->executed = TRUE;
 
+    // Retrieve active facets. We will consider the presence of any active
+    // facets to mean the search query is *not* empty.
+    $view->searchlight['active_facets'] = searchlight_facets()->activeFacets($view->searchlight['datasource']);
+
     // If the search query is empty and the handler has the hideEmpty option
     // enabled, abort right here.
     $view->searchlight['query'] = trim($view->searchlight['query']);
-    if (empty($view->searchlight['query']) && $view->searchlight['options']['hideEmpty']) {
+    if (
+      $view->searchlight['options']['hideEmpty'] &&
+      empty($view->searchlight['query']) &&
+      empty($view->searchlight['active_facets'])
+    ) {
       return;
     }
 
@@ -110,6 +118,11 @@ class SearchlightBackend {
           $this->setFilter($view->searchlight, $translated['field'], $translated['operator'], $translated['args']);
         }
       }
+    }
+
+    // Set filters for active facets.
+    foreach ($view->searchlight['active_facets'] as $field => $arg) {
+      $this->setFilter($view->searchlight, $field, '=', array($arg));
     }
 
     // Set sorts.
