@@ -4,6 +4,8 @@
  * System settings form for Searchlight.
  */
 function searchlight_settings_form($form_state) {
+  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.js');
+
   $form = array();
 
   // Datasource views selection.
@@ -48,14 +50,19 @@ function searchlight_settings_form($form_state) {
     '#type' => 'select',
     '#options' => array(0 => '< '. t('Choose a backend') .' >'),
     '#default_value' => variable_get('searchlight_backend', 'sphinx'),
+    '#attributes' => array(
+      'class' => 'searchlight-backend-select',
+    ),
   );
   foreach (searchlight_registry('backend') as $key => $info) {
     $form['backend']['searchlight_backend']['#options'][$key] = $info['title'];
     $backend = searchlight_get_backend($key);
-    $form['backend']["searchlight_backend_{$key}"] = $backend->settingsForm(variable_get("searchlight_backend_{$key}", array()));
-    $form['backend']["searchlight_backend_{$key}"]['#tree'] = TRUE;
-    $form['backend']["searchlight_backend_{$key}"]['#attributes'] = array(
-      'class' => "searchlight-backend-{$key}",
+    $form["searchlight_backend_{$key}"] = $backend->settingsForm(variable_get("searchlight_backend_{$key}", array()));
+    $form["searchlight_backend_{$key}"]['#tree'] = TRUE;
+    $form["searchlight_backend_{$key}"]['#title'] = $info['title'];
+    $form["searchlight_backend_{$key}"]['#type'] = 'fieldset';
+    $form["searchlight_backend_{$key}"]['#attributes'] = array(
+      'class' => "searchlight-backend-settings searchlight-backend-{$key}",
     );
   }
 
