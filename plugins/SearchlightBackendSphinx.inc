@@ -206,75 +206,35 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     return $items;
-  }
 
-  /**
-   * Render the facet using its view handler.
-   */
-  function render_facet($attribute, &$items) {
-    $rendered = array();
-    if ($attribute['type'] === 'sql_attr_multi') {
-      $view = views_get_view($attribute['view']);
-      $view->set_display($attribute['display']);
-      $view->build();
-
-      $options = $view->execute_display();
-      if (!empty($options['mva_label_field']) && !empty($view->field[$options['mva_label_field']])) {
-        $handler = $view->field[$options['mva_label_field']];
-        $handler_fields = array($handler->real_field);
-
-        // Claim: The table of the label field contains both the MVA field and
-        // the label field itself (and are sometimes the same thing).
-        $ids = array_keys($items);
-        $placeholders = is_numeric($ids[0]) ? db_placeholders($ids, 'int') : db_placeholders($ids, 'text');
-        $query =
-          "SELECT {$attribute['field']} AS {$attribute['name']}, {$handler->real_field} AS {$handler->field_alias}
-          FROM {{$handler->table}} {$handler->table}
-          WHERE {$handler->table}.{$attribute['field']} IN ($placeholders)";
-        $result = db_query($query, $ids);
-
-        // Now render each row.
-        while ($row = db_fetch_object($result)) {
-          $items[$row->{$attribute['name']}]['rendered'] = $handler->render($row);
-        }
-        $label = $handler->label();
-      }
-    }
-    else {
-      $view = sphinx_views_get_view($this->view->base_table);
-      $view->build();
-
-      // Detect which field handler generated this attribute. Real pain.
-      if (isset($view->field[$attribute['field']])) {
-        $handler = $view->field[$attribute['field']];
-      }
-      else {
-        foreach ($view->field as $field) {
-          if ($field->real_field === $attribute['field'] || (!empty($field->additional_fields) && in_array($attribute['field'], $field->additional_fields))) {
-            $handler = $field;
-            break;
-          }
-        }
-      }
-
-      // Fake some rows so we can use the pre_render method.
-      if (!empty($handler)) {
-        $rows = array();
-        foreach (array_keys($items) as $id) {
-          $row = new stdClass();
-          $row->{$attribute['name']} = $id;
-          $rows[] = $row;
-        }
-        $handler->pre_render($rows);
-
-        // Now render each row.
-        foreach ($rows as $row) {
-          $items[$row->{$attribute['name']}]['rendered'] = $handler->render($row);
-        }
-        $label = $handler->label();
-      }
-    }
-    return array('label' => $label, 'items' => $items);
+    // @TODO multivalue facet rendering
+//     if ($attribute['type'] === 'sql_attr_multi') {
+//       $view = views_get_view($attribute['view']);
+//       $view->set_display($attribute['display']);
+//       $view->build();
+// 
+//       $options = $view->execute_display();
+//       if (!empty($options['mva_label_field']) && !empty($view->field[$options['mva_label_field']])) {
+//         $handler = $view->field[$options['mva_label_field']];
+//         $handler_fields = array($handler->real_field);
+// 
+//         // Claim: The table of the label field contains both the MVA field and
+//         // the label field itself (and are sometimes the same thing).
+//         $ids = array_keys($items);
+//         $placeholders = is_numeric($ids[0]) ? db_placeholders($ids, 'int') : db_placeholders($ids, 'text');
+//         $query =
+//           "SELECT {$attribute['field']} AS {$attribute['name']}, {$handler->real_field} AS {$handler->field_alias}
+//           FROM {{$handler->table}} {$handler->table}
+//           WHERE {$handler->table}.{$attribute['field']} IN ($placeholders)";
+//         $result = db_query($query, $ids);
+// 
+//         // Now render each row.
+//         while ($row = db_fetch_object($result)) {
+//           $items[$row->{$attribute['name']}]['rendered'] = $handler->render($row);
+//         }
+//         $label = $handler->label();
+//       }
+//     }
   }
 
   function drushSearchd() {
