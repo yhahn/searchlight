@@ -56,5 +56,5 @@ function theme_searchlight_facet_link($field, $item) {
  * Theme function for an individual (active) facet link.
  */
 function theme_searchlight_facet_active($field, $item) {
-  return "<div class='searchlight-facet'>{$item['title']}</div>";
+  return "<div class='searchlight-facet'>{$item['title']} <span class='remove'>{$item['link']}</span></div>";
 }
