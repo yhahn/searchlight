@@ -200,8 +200,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $this->queryInit($facet);
     }
 
-    // @TODO: make configurable:
-    // - # of items to show on a per facet basis
     switch ($field['datatype']) {
       case 'timestamp':
         $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
@@ -213,7 +211,19 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $facet['client']->SetArrayResult($field['usage'] === 'multivalue');
         break;
     }
-    $facet['client']->SetLimits(0, 5);
+
+    // The facet is active ensure it's limited to 1 result entry. For
+    // multivalue facets, multiple entries can be returned even if the
+    // facet is active.
+    if (searchlight_facets()->getFacet($field['name'])) {
+      $facet['client']->SetLimits(0, 1);
+    }
+    else {
+      // @TODO: make configurable:
+      // - # of items to show on a per facet basis
+      $facet['client']->SetLimits(0, 5);
+    }
+
     $result = $this->queryExecute($facet);
     $items = array();
     foreach ($result['result'] as $id) {
