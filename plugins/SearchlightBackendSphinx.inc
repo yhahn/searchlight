@@ -194,14 +194,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // Make a copy for building this facet.
     $facet = $searchlight;
 
-    // Init the Sphinx client. It may not exist if there has bene no search
+    // Init the Sphinx client. It may not exist if there has been no search
     // on this page.
     if (!isset($facet['client'])) {
       $this->queryInit($facet);
     }
 
     // @TODO: make configurable:
-    // - date facet grouping
     // - # of items to show on a per facet basis
     switch ($field['datatype']) {
       case 'timestamp':
@@ -211,11 +210,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         break;
       default:
         $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+        $facet['client']->SetArrayResult($field['usage'] === 'multivalue');
         break;
     }
     $facet['client']->SetLimits(0, 5);
     $result = $this->queryExecute($facet);
-
     $items = array();
     foreach ($result['result'] as $id) {
       if (isset($facet['results']['matches'][$id]['attrs'])) {
@@ -228,7 +227,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             case 'timestamp':
               $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
               break;
-            case 'default':
+            default:
               $id = $attr['@groupby'];
               break;
           }
@@ -237,35 +236,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     return $items;
-
-    // @TODO multivalue facet rendering
-//     if ($attribute['type'] === 'sql_attr_multi') {
-//       $view = views_get_view($attribute['view']);
-//       $view->set_display($attribute['display']);
-//       $view->build();
-// 
-//       $options = $view->execute_display();
-//       if (!empty($options['mva_label_field']) && !empty($view->field[$options['mva_label_field']])) {
-//         $handler = $view->field[$options['mva_label_field']];
-//         $handler_fields = array($handler->real_field);
-// 
-//         // Claim: The table of the label field contains both the MVA field and
-//         // the label field itself (and are sometimes the same thing).
-//         $ids = array_keys($items);
-//         $placeholders = is_numeric($ids[0]) ? db_placeholders($ids, 'int') : db_placeholders($ids, 'text');
-//         $query =
-//           "SELECT {$attribute['field']} AS {$attribute['name']}, {$handler->real_field} AS {$handler->field_alias}
-//           FROM {{$handler->table}} {$handler->table}
-//           WHERE {$handler->table}.{$attribute['field']} IN ($placeholders)";
-//         $result = db_query($query, $ids);
-// 
-//         // Now render each row.
-//         while ($row = db_fetch_object($result)) {
-//           $items[$row->{$attribute['name']}]['rendered'] = $handler->render($row);
-//         }
-//         $label = $handler->label();
-//       }
-//     }
   }
 
   function drushSearchd() {
@@ -370,25 +340,22 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
         $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
       }
-    }
-
-    // Generate multivalue queries.
-    foreach ($datasource['multivalues'] as $multivalue) {
-      if ($view = searchlight_build_view($multivalue['view'])) {
+      // Generate multivalue queries.
+      else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
         $query = drupal_clone($view->query);
         // Remove any fields that are not the id field or attribute field.
         foreach ($query->fields as $alias => $query_field) {
           if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
             continue;
           }
-          if ($query_field['field'] === $multivalue['field']['field']) {
+          if ($query_field['field'] === $field['field']) {
             continue;
           }
           unset($query->fields[$alias]);
         }
         $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
         $mva_query = str_replace("\n", " \\\n", trim($mva_query));
-        $sql_attr[] = "sql_attr_multi = uint {$multivalue['field']['name']} from query; {$mva_query}";
+        $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
       }
     }
 

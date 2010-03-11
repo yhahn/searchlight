@@ -14,28 +14,21 @@ class searchlight_plugin_display_multivalue extends searchlight_plugin_display_d
    * Generate an array representing a full description of this multivalue.
    */
   function execute() {
-    $this->view->build();
-
     $multivalue = array(
-      'field' => array(),
-      'label' => array(),
+      'label_field' => array(),
       'base_table' => $this->view->base_table,
       'view' => "{$this->view->name}:{$this->view->current_display}",
     );
-
     $options = $this->get_option($this->my_name());
-    $handlers = $this->get_handlers('field');
-    foreach ($handlers as $handler) {
-      $fields = $this->get_fields($handler);
-      foreach ($fields as $name => $info) {
-        if ($options['field'] === $name) {
-          $info['usage'] = 'multivalue_field';
-          $multivalue['field'] = $info;
-        }
-        else if ($options['label'] === $name) {
-          $info['usage'] = 'multivalue_label';
-          $multivalue['label'] = $info;
-        }
+    $fields = $this->get_fields();
+    foreach ($fields as $name => $info) {
+      if ($options['field'] === $name) {
+        $info['usage'] = 'multivalue';
+        $multivalue = array_merge($multivalue, $info);
+      }
+      else if ($options['label_field'] === $name) {
+        $info['usage'] = 'multivalue';
+        $multivalue['label_field'] = $info;
       }
     }
     return $multivalue;
@@ -50,16 +43,9 @@ class searchlight_plugin_display_multivalue extends searchlight_plugin_display_d
       case $this->my_name():
         $subform = array('#tree' => TRUE);
         $options = $this->get_option($this->my_name());
-
-        $clone = $this->view->clone_view();
-        $clone->build();
-        $field_options = array();
-        $handlers = $clone->display_handler->get_handlers('field');
-        foreach ($handlers as $handler) {
-          $fields = $this->get_fields($handler);
-          foreach ($fields as $name => $info) {
-            $field_options[$name] = $info['label'];
-          }
+        $fields = $this->get_fields();
+        foreach ($fields as $name => $info) {
+          $field_options[$name] = $info['label'];
         }
         $subform['field'] = array(
           '#type' => 'select',
@@ -68,12 +54,12 @@ class searchlight_plugin_display_multivalue extends searchlight_plugin_display_d
           '#options' => $field_options,
           '#default_value' => isset($options['field']) ? $options['field'] : NULL,
         );
-        $subform['label'] = array(
+        $subform['label_field'] = array(
           '#type' => 'select',
           '#title' => t('Label display'),
           '#description' => t('The selected field will be used to display labels for this attribute when used as facet.'),
           '#options' => $field_options,
-          '#default_value' => isset($options['label']) ? $options['label'] : NULL,
+          '#default_value' => isset($options['label_field']) ? $options['label_field'] : NULL,
         );
         $form[$this->my_name()] = $subform;
         break;

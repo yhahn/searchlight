@@ -370,23 +370,54 @@ class SearchlightBackend {
    * Render a facet using its corresponding field handler.
    */
   function facetRender(&$searchlight, $field, $items) {
-    $view = searchlight_build_view($searchlight['datasource']['view']);
+    $view = ($field['usage'] === 'multivalue') ? $field['view'] : $searchlight['datasource']['view'];
+    $view = searchlight_build_view($view);
 
-    // Detect which handler is responsible for this field.
-    foreach ($view->field as $field_handler) {
-      if ($field_handler->field_alias === $field['name']) {
-        $handler = $field_handler;
-        break;
+    // Detect which handler is responsible for this field and build fake
+    // resultset for it to process.
+    if ($field['usage'] === 'multivalue') {
+      foreach ($view->field as $field_handler) {
+        if (in_array($field_handler->field_alias, array($field['name'], $field['label_field']['name'], TRUE))) {
+          $handler = $field_handler;
+
+          // Multivalue fields must build a new Views query in order to
+          // retrieve any secondary label field values.
+          $query = new views_query($field['table'], $field['field']);
+          $ids = array_keys($items);
+
+          // Add WHERE condition on item ids.
+          $query->add_where(0, "{$field['table']}.{$field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
+
+          // Add label field.
+          $label_alias = $query->add_field($field['label_field']['table'], $field['label_field']['field']);
+          $result = db_query($query->query(), $ids);
+
+          $rows = array();
+          while ($row = db_fetch_object($result)) {
+            $row->{$field['name']} = $row->{$field['field']};
+            $row->{$field['label_field']['name']} = $row->{$label_alias};
+            $rows[$row->{$field['name']}] = $row;
+          }
+          break;
+        }
+      }
+    }
+    else {
+      foreach ($view->field as $field_handler) {
+        if ($field_handler->field_alias === $field['name']) {
+          $handler = $field_handler;
+          $rows = array();
+          foreach ($items as $item) {
+            $row = new stdClass();
+            $row->{$field['name']} = $item['id'];
+            $rows[$item['id']] = $row;
+          }
+          break;
+        }
       }
     }
     // Fake some rows so we can use the pre_render method.
     if (!empty($handler)) {
-      $rows = array();
-      foreach ($items as $item) {
-        $row = new stdClass();
-        $row->{$field['name']} = $item['id'];
-        $rows[$item['id']] = $row;
-      }
       $handler->pre_render($rows);
 
       // Now render each row.

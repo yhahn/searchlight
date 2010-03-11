@@ -13,7 +13,7 @@ class SearchlightFacets {
   function activeFacets($datasource) {
     $facets = array();
     foreach ($this->active as $key => $value) {
-      if (isset($datasource['fields'][$key]) || isset($datasource['multivalues'][$key])) {
+      if (isset($datasource['fields'][$key])) {
         $facets[$key] = $value;
       }
     }

@@ -62,30 +62,36 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
   }
 
   /**
-   * For a given handler, retrieve all fields including additional_fields.
+   * Retrieve all fields from field handlers including additional_fields.
    * Requires that the handler belong to a built view.
    */
-  protected function get_fields($handler) {
+  protected function get_fields() {
+    $clone = $this->view->clone_view();
+    $clone->build();
+    $handlers = $clone->display_handler->get_handlers('field');
+
     $fields = array();
-    if ($handler->real_field !== $handler->view->base_field) {
-      $fields[$handler->field_alias] = array(
-        'label' => $handler->ui_name() . " ({$handler->real_field})",
-        'datatype' => $this->get_datatype($handler, $handler->table, $handler->real_field),
-        'table' => $handler->table,
-        'field' => $handler->real_field,
-        'name' => $handler->field_alias,
-      );
-    }
-    if (!empty($handler->additional_fields)) {
-      foreach ($handler->additional_fields as $extra) {
-        if (is_string($extra) && $extra !== $handler->view->base_field) {
-          $fields[$handler->aliases[$extra]] = array(
-            'label' => $handler->ui_name() . " ({$extra})",
-            'datatype' => $this->get_datatype($handler, $handler->table, $extra),
-            'table' => $handler->table,
-            'field' => $extra,
-            'name' => $handler->aliases[$extra],
-          );
+    foreach ($handlers as $handler) {
+      if ($handler->real_field !== $handler->view->base_field) {
+        $fields[$handler->field_alias] = array(
+          'label' => $handler->ui_name() . " ({$handler->real_field})",
+          'datatype' => $this->get_datatype($handler, $handler->table, $handler->real_field),
+          'table' => $handler->table,
+          'field' => $handler->real_field,
+          'name' => $handler->field_alias,
+        );
+      }
+      if (!empty($handler->additional_fields)) {
+        foreach ($handler->additional_fields as $extra) {
+          if (is_string($extra) && $extra !== $handler->view->base_field) {
+            $fields[$handler->aliases[$extra]] = array(
+              'label' => $handler->ui_name() . " ({$extra})",
+              'datatype' => $this->get_datatype($handler, $handler->table, $extra),
+              'table' => $handler->table,
+              'field' => $extra,
+              'name' => $handler->aliases[$extra],
+            );
+          }
         }
       }
     }
@@ -103,7 +109,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
           $view = views_get_view($view->name);
           $view->set_display($display->id);
           $multivalue = $view->execute_display();
-          $multivalues[$multivalue['field']['name']] = $multivalue;
+          $multivalues[$multivalue['name']] = $multivalue;
           $view->destroy();
         }
       }
@@ -160,7 +166,6 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
     $this->view->build();
     $datasource = array(
       'fields' => array(),
-      'multivalues' => array(),
       'base_table' => $this->view->base_table,
       'id' => searchlight_get_datasource_id($this->view->base_table),
       'view' => "{$this->view->name}:{$this->view->current_display}",
@@ -168,20 +173,10 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
 
     // Iterate through each handler and generate full field information.
     $datasource['fields'] = $options['fields'];
-    $handlers = $this->display->handler->get_handlers('field');
-    foreach ($handlers as $field => $handler) {
-      $fields = $this->get_fields($handler);
-      foreach ($fields as $name => $info) {
-        if (isset($datasource['fields'][$name])) {
-          $datasource['fields'][$name] += $info;
-        }
-      }
-    }
-    // Multivalues.
-    $datasource['multivalues'] = $options['multivalues'];
-    foreach ($this->get_multivalues() as $name => $multivalue) {
-      if (isset($datasource['multivalues'][$name])) {
-        $datasource['multivalues'][$name] += $multivalue;
+    $fields = array_merge($this->get_fields(), $this->get_multivalues());
+    foreach ($fields as $name => $info) {
+      if (isset($datasource['fields'][$name])) {
+        $datasource['fields'][$name] += $info;
       }
     }
     return $datasource;
@@ -204,108 +199,75 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
 
         $form_option['fields'] = array('#tree' => TRUE, '#theme' => 'searchlight_plugin_display_datasource');
 
-        $clone = $this->view->clone_view();
-        $clone->build();
-        $handlers = $clone->display_handler->get_handlers('field');
-        foreach ($handlers as $handler) {
-          $fields = $this->get_fields($handler);
-          foreach ($fields as $name => $info) {
-            $form_option['fields'][$name] = array(
-              '#title' => $info['label'],
-              '#tree' => TRUE,
-            );
-            $usage_id = form_clean_id("attributes-{$name}-usage");
-            $facet_id = form_clean_id("attributes-{$name}-facet");
-            $settings_id = form_clean_id("attributes-{$name}-settings");
+        $fields = array_merge($this->get_fields(), $this->get_multivalues());
+        foreach ($fields as $name => $info) {
+          $form_option['fields'][$name] = array(
+            '#title' => $info['label'],
+            '#tree' => TRUE,
+          );
+          $usage_id = form_clean_id("attributes-{$name}-usage");
+          $facet_id = form_clean_id("attributes-{$name}-facet");
+          $settings_id = form_clean_id("attributes-{$name}-settings");
 
-            // Datatype
-            $form_option['fields'][$name]['datatype'] = array(
-              '#type' => 'markup',
-              '#value' => "<code>{$info['datatype']}</code>",
-            );
+          // Datatype
+          $form_option['fields'][$name]['datatype'] = array(
+            '#type' => 'markup',
+            '#value' => "<code>{$info['datatype']}</code>",
+          );
 
-            // Usage
+          // Usage
+          if (!empty($info['usage']) && $info['usage'] === 'multivalue') {
+            $default_usage = isset($options['fields'][$name]['usage']) ? $options['fields'][$name]['usage'] : 'multivalue';
+            $form_option['fields'][$name]['usage'] = array(
+              '#type' => 'select',
+              '#options' => array(FALSE => t('Disabled'), 'multivalue' => t('Multivalue')),
+              '#default_value' => $default_usage,
+              '#id' => $usage_id,
+            );
+          }
+          else {
             $default_usage = ($info['datatype'] === 'text') ? 'content' : 'attribute';
             $default_usage = isset($options['fields'][$name]['usage']) ? $options['fields'][$name]['usage'] : $default_usage;
             $form_option['fields'][$name]['usage'] = array(
               '#type' => 'select',
-              '#options' => array('content' => t('Content'), 'attribute' => t('Attribute')),
+              '#options' => array( 'content' => t('Content'), 'attribute' => t('Attribute')),
               '#default_value' => $default_usage,
               '#id' => $usage_id,
             );
-
-            // Facet
-            $default_facet = ($default_usage === 'attribute');
-            $default_facet = isset($options['field'][$name]['facet']) ? $options['field'][$name]['facet'] : $default_facet;
-            $form_option['fields'][$name]['facet'] = array(
-              '#type' => 'checkbox',
-              '#default_value' => $default_facet,
-              '#process' => array('views_process_dependency'),
-              '#dependency' => array($usage_id => array('attribute')),
-              '#id' => $facet_id,
-            );
-
-            // Per-datatype settings
-            switch ($info['datatype']) {
-              case 'timestamp':
-                $form_option['fields'][$name]['granularity'] = array(
-                  '#type' => 'select',
-                  '#options' => array(
-                    'day' => t('Day'),
-                    'month' => t('Month'),
-                    'year' => t('Year'),
-                  ),
-                  '#default_value' => isset($options['fields'][$name]['granularity']) ? $options['fields'][$name]['granularity'] : 'month',
-                  '#process' => array('views_process_dependency'),
-                  '#dependency' => array($facet_id => array(TRUE)),
-                  '#id' => $settings_id,
-                );
-                break;
-              default:
-                // Placeholder for now.
-                $form_option['fields'][$name]['settings'] = array('#type' => 'markup', '#value' => '');
-                break;
-            }
           }
-        }
-
-        // Multi-valued attributes.
-        $form_option['multivalues'] = array('#tree' => TRUE, '#theme' => 'searchlight_plugin_display_datasource');
-        foreach ($this->get_multivalues() as $multivalue) {
-          $name = $multivalue['field']['name'];
-          $usage_id = form_clean_id("attributes-{$name}-usage");
-          $facet_id = form_clean_id("attributes-{$name}-facet");
-
-          $form_option['multivalues'][$name] = array(
-            '#title' => $multivalue['field']['label'],
-            '#tree' => TRUE,
-          );
-
-          // Datatype
-          $form_option['multivalues'][$name]['datatype'] = array(
-            '#type' => 'markup',
-            '#value' => "<code>{$multivalue['field']['datatype']}</code>",
-          );
-
-          // Usage
-          $default_usage = 'multivalue';
-          $default_usage = isset($options['multivalues'][$name]['usage']) ? $options['multivalues'][$name]['usage'] : $default_usage;
-          $form_option['multivalues'][$name]['usage'] = array(
-            '#type' => 'select',
-            '#options' => array(0 => t('<'. t('Disabled') .'>'), 'multivalue' => t('Multivalue')),
-            '#default_value' => $default_usage,
-            '#id' => $usage_id,
-          );
 
           // Facet
-          $default_facet = ($default_usage === 'multivalue');
-          $default_facet = isset($options['multivalues'][$name]['facet']) ? $options['multivalues'][$name]['facet'] : $default_facet;
-          $form_option['multivalues'][$name]['facet'] = array(
+          $default_facet = in_array($default_usage, array('attribute', 'multivalue'), TRUE);
+          $default_facet = isset($options['fields'][$name]['facet']) ? $options['fields'][$name]['facet'] : $default_facet;
+          $form_option['fields'][$name]['facet'] = array(
             '#type' => 'checkbox',
             '#default_value' => $default_facet,
-            '#dependency' => array($usage_id => array('multivalue')),
+            '#process' => array('views_process_dependency'),
+            '#dependency' => array($usage_id => array('attribute', 'multivalue')),
             '#id' => $facet_id,
           );
+
+          // Per-datatype settings
+          switch ($info['datatype']) {
+            case 'timestamp':
+              $form_option['fields'][$name]['granularity'] = array(
+                '#type' => 'select',
+                '#options' => array(
+                  'day' => t('Day'),
+                  'month' => t('Month'),
+                  'year' => t('Year'),
+                ),
+                '#default_value' => isset($options['fields'][$name]['granularity']) ? $options['fields'][$name]['granularity'] : 'month',
+                '#process' => array('views_process_dependency'),
+                '#dependency' => array($facet_id => array(TRUE)),
+                '#id' => $settings_id,
+              );
+              break;
+            default:
+              // Placeholder for now.
+              $form_option['fields'][$name]['settings'] = array('#type' => 'markup', '#value' => '');
+              break;
+          }
         }
 
         $form[$this->my_name()] = $form_option;
