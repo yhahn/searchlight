@@ -216,6 +216,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
             );
             $usage_id = form_clean_id("attributes-{$name}-usage");
             $facet_id = form_clean_id("attributes-{$name}-facet");
+            $settings_id = form_clean_id("attributes-{$name}-settings");
 
             // Datatype
             $form_option['fields'][$name]['datatype'] = array(
@@ -243,6 +244,28 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
               '#dependency' => array($usage_id => array('attribute')),
               '#id' => $facet_id,
             );
+
+            // Per-datatype settings
+            switch ($info['datatype']) {
+              case 'timestamp':
+                $form_option['fields'][$name]['granularity'] = array(
+                  '#type' => 'select',
+                  '#options' => array(
+                    'day' => t('Day'),
+                    'month' => t('Month'),
+                    'year' => t('Year'),
+                  ),
+                  '#default_value' => isset($options['fields'][$name]['granularity']) ? $options['fields'][$name]['granularity'] : 'month',
+                  '#process' => array('views_process_dependency'),
+                  '#dependency' => array($facet_id => array(TRUE)),
+                  '#id' => $settings_id,
+                );
+                break;
+              default:
+                // Placeholder for now.
+                $form_option['fields'][$name]['settings'] = array('#type' => 'markup', '#value' => '');
+                break;
+            }
           }
         }
 

@@ -203,11 +203,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // @TODO: make configurable:
     // - date facet grouping
     // - # of items to show on a per facet basis
-    if ($field['datatype'] === 'timestamp') {
-      $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_MONTH, '@group desc');
-    }
-    else {
-      $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+    switch ($field['datatype']) {
+      case 'timestamp':
+        $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
+        $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
+        $facet['client']->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
+        break;
+      default:
+        $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+        break;
     }
     $facet['client']->SetLimits(0, 5);
     $result = $this->queryExecute($facet);
@@ -217,17 +221,16 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if (isset($facet['results']['matches'][$id]['attrs'])) {
         $attr = $facet['results']['matches'][$id]['attrs'];
         if (isset($attr['@groupby'], $attr['@count'])) {
-          // Handle ordinal conversion.
-          if ($field['datatype'] === 'text') {
-            $id = $this->getOrdinal($searchlight, $field['name'], $attr['@groupby']);
-          }
-          // @TODO: how do we want to handle date formatting? : |
-          // Perhaps bypass the field handler entirely?
-          else if ($field['datatype'] === 'timestamp') {
-            $id = mktime(0, 0, 0, substr($attr['@groupby'], 4), 1, substr($attr['@groupby'], 0, 4));
-          }
-          else {
-            $id = $attr['@groupby'];
+          switch ($field['datatype']) {
+            case 'text':
+              $id = $this->getOrdinal($searchlight, $field['name'], $attr['@groupby']);
+              break;
+            case 'timestamp':
+              $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
+              break;
+            case 'default':
+              $id = $attr['@groupby'];
+              break;
           }
           $items[$id] = array('id' => $id, 'count' => $attr['@count']);
         }
@@ -508,5 +511,20 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     return $ordinals;
+  }
+
+  /**
+   * Convert a Sphinx datestring into a timestamp. Requires a datestring
+   * (e.g. 201010) and a target granularity: day, month, year.
+   */
+  function getTimestamp($datestring, $granularity) {
+    switch ($granularity) {
+      case 'day':
+        return mktime(0, 0, 0, substr($datestring, 4, 2), substr($datestring, 6, 2), substr($datestring, 0, 4));
+      case 'month':
+        return mktime(0, 0, 0, substr($datestring, 4, 2), 1, substr($datestring, 0, 4));
+      case 'year':
+        return mktime(0, 0, 0, 1, 1, $datestring);
+    }
   }
 }

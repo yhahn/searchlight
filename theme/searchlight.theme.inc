@@ -33,7 +33,7 @@ function theme_searchlight_plugin_display_datasource($form) {
     }
     $rows[] = $row;
   }
-  $output = theme('table', array(t('Field'), t('Datatype'), t('Usage'), t('Show facet')), $rows);
+  $output = theme('table', array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''), $rows);
   $output .= drupal_render($form);
   return $output;
 }

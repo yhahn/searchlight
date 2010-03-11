@@ -121,15 +121,17 @@ class SearchlightBackend {
     }
 
     // Set filters for active facets.
-    foreach ($view->searchlight['active_facets'] as $field => $arg) {
-      switch ($view->searchlight['datasource']['fields'][$field]['datatype']) {
+    foreach ($view->searchlight['active_facets'] as $name => $arg) {
+      $field = $view->searchlight['datasource']['fields'][$name];
+      switch ($field['datatype']) {
         case 'timestamp':
-          $range = $this->dateRange($arg, 'month');
-          $this->setFilter($view->searchlight, $field, '>', array($range['from']));
-          $this->setFilter($view->searchlight, $field, '<', array($range['to']));
+          $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
+          $range = $this->dateRange($arg, $granularity);
+          $this->setFilter($view->searchlight, $name, '>', array($range['from']));
+          $this->setFilter($view->searchlight, $name, '<', array($range['to']));
           break;
         default:
-          $this->setFilter($view->searchlight, $field, '=', array($arg));
+          $this->setFilter($view->searchlight, $name, '=', array($arg));
           break;
       }
     }
