@@ -224,14 +224,12 @@ function _searchlight_views_default_views() {
       ),
       'users_uid' => array(
         'usage' => 'attribute',
-        'facet' => 1,
+        'facet' => 0,
       ),
       'node_type' => array(
         'usage' => 'attribute',
         'facet' => 1,
       ),
-    ),
-    'multivalues' => array(
       'term_data_tid' => array(
         'usage' => 'multivalue',
         'facet' => 1,
@@ -390,20 +388,6 @@ function _searchlight_views_default_views() {
     ),
   ));
   $handler->override_option('sorts', array(
-    'uid' => array(
-      'order' => 'DESC',
-      'id' => 'uid',
-      'table' => 'users',
-      'field' => 'uid',
-      'relationship' => 'none',
-    ),
-    'type' => array(
-      'order' => 'DESC',
-      'id' => 'type',
-      'table' => 'node',
-      'field' => 'type',
-      'relationship' => 'none',
-    ),
     'search' => array(
       'order' => 'DESC',
       'id' => 'search',
@@ -524,7 +508,7 @@ function _searchlight_views_default_views() {
   $handler = $view->new_display('searchlight_multivalue', 'Terms', 'searchlight_multivalue_1');
   $handler->override_option('searchlight_multivalue', array(
     'field' => 'term_data_tid',
-    'label' => 'term_data_name',
+    'label_field' => 'term_data_name',
   ));
   $translatables['searchlight_term_data'] = array(
     t('Defaults'),
