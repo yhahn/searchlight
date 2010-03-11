@@ -122,7 +122,16 @@ class SearchlightBackend {
 
     // Set filters for active facets.
     foreach ($view->searchlight['active_facets'] as $field => $arg) {
-      $this->setFilter($view->searchlight, $field, '=', array($arg));
+      switch ($view->searchlight['datasource']['fields'][$field]['datatype']) {
+        case 'timestamp':
+          $range = $this->dateRange($arg, 'month');
+          $this->setFilter($view->searchlight, $field, '>', array($range['from']));
+          $this->setFilter($view->searchlight, $field, '<', array($range['to']));
+          break;
+        default:
+          $this->setFilter($view->searchlight, $field, '=', array($arg));
+          break;
+      }
     }
 
     // Set sorts.
@@ -311,6 +320,32 @@ class SearchlightBackend {
    * Set a pager/limit parameter for the search backend.
    */
   function setPager(&$searchlight, $offset, $items_per_page) {
+  }
+
+  /**
+   * Utility date methods =====================================================
+   */
+
+  /**
+   * Retrieve a from & to timestamps for a given granularity unit and base
+   * timestamp.
+   */
+  function dateRange($timestamp, $granularity = 'month') {
+    switch ($granularity) {
+      case 'month':
+        $from = mktime(0, 0, 0, date('m', $timestamp), 1, date('Y', $timestamp));
+        $to   = mktime(23, 59, 59, date('m', $timestamp), cal_days_in_month(CAL_GREGORIAN, date('m', $timestamp), date('Y', $timestamp)), date('Y', $timestamp));
+        break;
+      case 'day':
+        $from = mktime(0, 0, 0, date('m', $timestamp), date('d', $timestamp), date('Y', $timestamp));
+        $to   = mktime(23, 59, 59, date('m', $timestamp), date('d', $timestamp), date('Y', $timestamp));
+        break;
+      case 'year':
+        $from = mktime(0, 0, 0, 1, 1, date('Y', $timestamp));
+        $to   = mktime(23, 59, 59, 12, cal_days_in_month(CAL_GREGORIAN, 12, date('Y', $timestamp)), date('Y', $timestamp));
+        break;
+    }
+    return array('from' => $from, 'to' => $to);
   }
 
   /**

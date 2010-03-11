@@ -1,5 +1,9 @@
 <?php
 
+define('SEARCHLIGHT_SPHINX_FILTER_MAX', 100000000000);
+define('SEARCHLIGHT_SPHINX_FILTER_MIN', 0);
+
+
 class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of settingsDefault().
@@ -78,6 +82,30 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of setFilter().
    */
   function setFilter(&$searchlight, $field, $operator, $args) {
+    // If range filter has been requested, check for a previously added
+    // rangefilter against the same field. If the two ranges overlap, use a
+    // "between" range filter native to Sphinx instead.
+    if (in_array($operator, array('<', '>', '>=', '<='))) {
+      foreach ($searchlight['client']->_filters as $k => $filter) {
+        if ($filter['attr'] === $field && in_array($filter['type'], array(SPH_FILTER_RANGE, SPH_FILTER_FLOATRANGE))) {
+          unset($searchlight['client']->_filters[$k]);
+          switch ($operator) {
+            // Lessthan. We need to retain min and set the max.
+            case '<':
+            case '<=':
+              $max = eval("return {$args[0]};");
+              $searchlight['client']->SetFilterRange($field, $filter['min'], $max, FALSE);
+              return TRUE;
+            // Greaterthan. We need to retain max and set the min.
+            case '>':
+            case '>=':
+              $min = eval("return {$args[0]};");
+              $searchlight['client']->SetFilterRange($field, $min, $filter['max'], FALSE);
+              return TRUE;
+          }
+        }
+      }
+    }
     // @TODO: between range filters (e.g. >= AND <=)
     switch ($operator) {
       case '=':
@@ -90,24 +118,24 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $this->_SetFilter(&$searchlight, $field, $args, TRUE);
         return TRUE;
       case '>':
-        $max = 10000000000;
+        $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
         $min = eval("return {$args[0]};");
-        $this->sphinx->SetFilterRange($field, $min, $max, TRUE);
+        $searchlight['client']->SetFilterRange($field, $min, $max, TRUE);
         return TRUE;
       case '>=':
-        $max = 10000000000;
+        $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
         $min = eval("return {$args[0]};");
-        $this->sphinx->SetFilterRange($field, $min, $max, FALSE);
+        $searchlight['client']->SetFilterRange($field, $min, $max, FALSE);
         return TRUE;
       case '<':
-        $min = 0;
+        $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
         $max = eval("return {$args[0]};");
-        $this->sphinx->SetFilterRange($field, $min, $max, TRUE);
+        $searchlight['client']->SetFilterRange($field, $min, $max, TRUE);
         return TRUE;
       case '<=':
-        $min = 0;
+        $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
         $max = eval("return {$args[0]};");
-        $this->sphinx->SetFilterRange($field, $min, $max, FALSE);
+        $searchlight['client']->SetFilterRange($field, $min, $max, FALSE);
         return TRUE;
     }
   }
@@ -196,7 +224,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           // @TODO: how do we want to handle date formatting? : |
           // Perhaps bypass the field handler entirely?
           else if ($field['datatype'] === 'timestamp') {
-            $id = mktime(NULL, NULL, NULL, substr($attr['@groupby'], 4), NULL, substr($attr['@groupby'], 0, 4));
+            $id = mktime(0, 0, 0, substr($attr['@groupby'], 4), 1, substr($attr['@groupby'], 0, 4));
           }
           else {
             $id = $attr['@groupby'];
