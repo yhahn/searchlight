@@ -202,6 +202,22 @@ function searchlight_searchlight_registry() {
 }
 
 /**
+ * Implementation of hook_searchlight_node_access_realms_alter().
+ * Provide realms for commonly used node_access modules.
+ */
+function searchlight_searchlight_node_access_realms_alter(&$realms) {
+  // Standard node access realm.
+  $realms['all'] = 'all';
+
+  // OG access.
+  if (module_exists('og_access')) {
+    $realms['og_admin'] = 'og_admin';
+    $realms['og_public'] = 'og_public';
+    $realms['og_subscriber'] = 'og_subscriber';
+  }
+}
+
+/**
  * Factory/singleton static cache for facets handler.
  */
 function searchlight_facets($reset = FALSE) {

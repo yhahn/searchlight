@@ -42,6 +42,7 @@ function searchlight_views_handlers() {
       'searchlight_handler_argument_search' => array('parent' => 'views_handler_argument'),
       'searchlight_handler_filter_search' => array('parent' => 'views_handler_filter'),
       'searchlight_handler_sort_search' => array('parent' => 'views_handler_sort'),
+      'searchlight_handler_field_node_access' => array('parent' => 'views_handler_field'),
     ),
   );
 }
@@ -66,10 +67,66 @@ function searchlight_views_data() {
 }
 
 /**
+ * Implementation of hook_views_data_alter().
+ */
+function searchlight_views_data_alter(&$data) {
+  if (!empty($data['node_access']['nid']) && empty($data['node_access']['nid']['field'])) {
+    $data['node_access']['nid']['field'] = array(
+      'handler' => 'searchlight_handler_field_node_access',
+      'help' => t('Node access fields for indexing by Searchlight search backends.'),
+    );
+  }
+}
+
+/**
  * Implementation of hook_views_query_alter().
  */
 function searchlight_views_query_alter(&$view, &$query) {
   if (isset($view->searchlight) && $backend = searchlight_default_backend()) {
     $backend->viewsExecute($view);
+  }
+}
+
+/**
+ * Implementation of hook_views_default_views_alter().
+ */
+function searchlight_views_default_views_alter(&$views) {
+  $realms = array();
+  $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
+  while ($row = db_fetch_object($result)) {
+    $realms[$row->realm] = $row->realm;
+  }
+  // Allow modules to declare their realms in an alter hook. This allows
+  // searchlight datasources to include references to node_access realms
+  // prior to the creation of any nodes that actually use those realms in
+  // node_access entries.
+  drupal_alter('searchlight_node_access_realms', $realms);
+
+  if (!empty($realms)) {
+    $view = new view;
+    $view->name = 'searchlight_node_access';
+    $view->base_table = 'node';
+    $view->api_version = 2;
+    foreach ($realms as $realm) {
+      $handler = $view->new_display('searchlight_multivalue', $realm, "searchlight_{$realm}");
+      $handler->override_option('arguments', array());
+      $handler->override_option('filters', array());
+      $handler->override_option('relationships', array());
+      $handler->override_option('sorts', array());
+      $handler->override_option('fields', array(
+        'nid' => array(
+          'id' => 'nid',
+          'table' => 'node_access',
+          'field' => 'nid',
+          'relationship' => 'none',
+          'realm' => $realm,
+        ),
+      ));
+      $handler->override_option('searchlight_multivalue', array(
+        'field' => "node_access_gid_{$realm}",
+        'label_field' => "node_access_gid_{$realm}",
+      ));
+    }
+    $views[$view->name] = $view;
   }
 }

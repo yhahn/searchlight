@@ -136,6 +136,10 @@ class SearchlightBackend {
       }
     }
 
+    // If base table is node, add node access. Since node_access can require
+    // complex conditions (in particular, OR), delegate to backend.
+    $this->setNodeAccess($view->searchlight);
+
     // Set sorts.
     foreach ($view->query->orderby as $orderby) {
       if ($translated = $this->translateOrderby($view->searchlight, $orderby, $view->query->fields)) {
@@ -322,6 +326,12 @@ class SearchlightBackend {
    * Set a pager/limit parameter for the search backend.
    */
   function setPager(&$searchlight, $offset, $items_per_page) {
+  }
+
+  /**
+   * Set node_access attribute filters.
+   */
+  function setNodeAccess(&$searchlight, $grants) {
   }
 
   /**

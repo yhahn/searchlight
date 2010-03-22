@@ -235,6 +235,7 @@ function _searchlight_views_default_views() {
         'facet' => 1,
       ),
     ),
+    'node_access' => 1,
   ));
   $translatables['searchlight_node'] = array(
     t('Defaults'),

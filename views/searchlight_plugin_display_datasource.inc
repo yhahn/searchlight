@@ -67,6 +67,7 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    */
   protected function get_fields() {
     $clone = $this->view->clone_view();
+    $clone->set_display($this->view->current_display);
     $clone->build();
     $handlers = $clone->display_handler->get_handlers('field');
 
@@ -82,14 +83,22 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
         );
       }
       if (!empty($handler->additional_fields)) {
-        foreach ($handler->additional_fields as $extra) {
-          if (is_string($extra) && $extra !== $handler->view->base_field) {
-            $fields[$handler->aliases[$extra]] = array(
-              'label' => $handler->ui_name() . " ({$extra})",
-              'datatype' => $this->get_datatype($handler, $handler->table, $extra),
-              'table' => $handler->table,
-              'field' => $extra,
-              'name' => $handler->aliases[$extra],
+        foreach ($handler->additional_fields as $identifier => $info) {
+          $table = $handler->table;
+          $field = $info;
+          // If the additional fields have specified table/field in an array,
+          // use these.
+          if (is_array($info) && isset($info['field'])) {
+            $table = isset($info['table']) ? $info['table'] : $table;
+            $field = $info['field'];
+          }
+          if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+            $fields[$handler->aliases[$field]] = array(
+              'label' => $handler->ui_name() . " ({$field})",
+              'datatype' => $this->get_datatype($handler, $table, $field),
+              'table' => $table,
+              'field' => $field,
+              'name' => $handler->aliases[$field],
             );
           }
         }
@@ -104,17 +113,39 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
   protected function get_multivalues() {
     $multivalues = array();
     foreach (searchlight_get_views_by_display($this->view->base_table, 'searchlight_multivalue') as $view) {
+      if ($view->name !== 'searchlight_node_access') {
+        foreach ($view->display as $display) {
+          if ($display->display_plugin === 'searchlight_multivalue') {
+            $view = views_get_view($view->name);
+            $view->set_display($display->id);
+            $multivalue = $view->execute_display();
+            $multivalues[$multivalue['name']] = $multivalue;
+            $view->destroy();
+          }
+        }
+      }
+    }
+    return $multivalues;
+  }
+
+  /**
+   * Build and retrieve node_access multivalue information.
+   */
+  protected function get_nodeaccess() {
+    views_invalidate_cache();
+    $nodeaccess = array();
+    if ($view = views_get_view('searchlight_node_access')) {
       foreach ($view->display as $display) {
         if ($display->display_plugin === 'searchlight_multivalue') {
           $view = views_get_view($view->name);
           $view->set_display($display->id);
           $multivalue = $view->execute_display();
-          $multivalues[$multivalue['name']] = $multivalue;
+          $nodeaccess[$multivalue['name']] = $multivalue;
           $view->destroy();
         }
       }
     }
-    return $multivalues;
+    return $nodeaccess;
   }
 
   /**
@@ -179,6 +210,15 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
         $datasource['fields'][$name] += $info;
       }
     }
+
+    // Add in nodeaccess information.
+    if ($this->view->base_table === 'node' && !empty($options['node_access'])) {
+      $nodeaccess = $this->get_nodeaccess();
+      foreach ($nodeaccess as $name => $info) {
+        $datasource['fields'][$name] = $info;
+      }
+    }
+
     return $datasource;
   }
 
@@ -268,6 +308,17 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
               $form_option['fields'][$name]['settings'] = array('#type' => 'markup', '#value' => '');
               break;
           }
+        }
+
+        // In reality, these are multivalue fields that are generated
+        // programmatically.
+        if ($this->view->base_table === 'node') {
+          $form_option['node_access'] = array(
+            '#title' => t('Node access'),
+            '#description' => t('Include node access information in datasource'),
+            '#type' => 'checkbox',
+            '#default_value' => isset($options['node_access']) ? $options['node_access'] : TRUE,
+          );
         }
 
         $form[$this->my_name()] = $form_option;

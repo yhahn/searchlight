@@ -188,6 +188,31 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
+   * Override of setNodeAccess().
+   * For Sphinx API usage of filter ORs, see:
+   * - http://www.sphinxsearch.com/faq.html#filter-or
+   * - http://www.sphinxsearch.com/forum/view.html?id=3440
+   */
+  function setNodeAccess(&$searchlight) {
+    if ($searchlight['base_table'] === 'node' && !user_access('administer nodes')) {
+      $grants = node_access_grants('view');
+      if (!empty($grants)) {
+        $grants_sql = array();
+        foreach ($grants as $realm => $gids) {
+          foreach ($gids as $gid) {
+            $grants_sql[] = "IF(IN(node_access_gid_{$realm}, {$gid}), 1, 0)";
+          }
+        }
+        if (count($grants_sql)) {
+          $grants_sql = implode('+', $grants_sql);
+          $searchlight['client']->SetSelect("*, ({$grants_sql}) AS sphinx_node_access");
+          $searchlight['client']->SetFilterRange('sphinx_node_access', 1, 1000);
+        }
+      }
+    }
+  }
+
+  /**
    * Override of facetBuild().
    */
   function facetBuild(&$searchlight, $field) {
@@ -198,6 +223,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // on this page.
     if (!isset($facet['client'])) {
       $this->queryInit($facet);
+
+      // Add in node access filters if we're initing the query ourselves.
+      $this->setNodeAccess($facet);
     }
 
     switch ($field['datatype']) {
