@@ -14,6 +14,14 @@ function searchlight_views_plugins() {
     'accept attachments' => FALSE,
   );
   return array(
+    'query' => array(
+      'searchlight_sphinx' => array(
+        'title' => t('Searchlight Sphinx'),
+        'help' => t('Searchlight Sphinx query plugin.'),
+        'handler' => 'searchlight_plugin_query_sphinx',
+        'parent' => 'views_query',
+      ),
+    ),
     'display' => array(
       'searchlight_datasource' => $base + array(
         'title' => t('Searchlight datasource'),
@@ -114,12 +122,18 @@ function searchlight_views_default_views_alter(&$views) {
       $handler->override_option('relationships', array());
       $handler->override_option('sorts', array());
       $handler->override_option('fields', array(
-        'nid' => array(
+        'realm' => array(
           'id' => 'nid',
           'table' => 'node_access',
           'field' => 'nid',
           'relationship' => 'none',
           'realm' => $realm,
+        ),
+        'nid' => array(
+          'id' => 'nid',
+          'table' => 'node',
+          'field' => 'nid',
+          'relationship' => 'none',
         ),
       ));
       $handler->override_option('searchlight_multivalue', array(
