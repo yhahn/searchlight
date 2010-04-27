@@ -40,7 +40,11 @@ function searchlight_schema() {
  */
 function searchlight_enable() {
   db_query('TRUNCATE {searchlight_search}');
-  $entities = array('node' => 'nid','comments' => 'cid', 'users' => 'uid');
+  $entities = array(
+    'node' => 'nid',
+    //'comments' => 'cid',
+    //'users' => 'uid',
+  );
   foreach ($entities as $type => $id) {
     db_query("INSERT INTO {searchlight_search} (type, id, status)
               SELECT '". $type ."', ". $id .", 0 FROM {". $type ."}");
