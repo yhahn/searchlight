@@ -3,15 +3,14 @@
 class searchlight_plugin_query extends views_plugin_query_default {
   var $backend;
   var $client;
-
   var $datasource;
   var $datasource_id;
-
   var $search_filter;
   var $search_options;
   var $search_result;
   var $search_sort;
   var $search_query;
+  var $searchlight;
 
   /**
    * Override of init().
@@ -30,6 +29,9 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->search_result = array();
     $this->search_sort = array();
     $this->search_query = '';
+
+    // This flag lets others know we are a searchlight-based view.
+    $this->searchlight = TRUE;
   }
 
   /**
@@ -98,7 +100,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if (!empty($this->search_options['hideEmpty']) && empty($this->search_query)) {
       return;
     }
-
     $this->init_pager($view);
     if ($this->pager->use_pager()) {
       $this->pager->set_current_page($view->current_page);
@@ -140,7 +141,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       $this->add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");
 
       $view->build_info['query'] = $this->query();
-      $view->build_info['count_query'] = $this->query(TRUE);
+      $view->build_info['count_query'] = "SELECT FALSE";
       $view->build_info['query_args'] = $this->get_where_args();
     }
   }
@@ -159,5 +160,24 @@ class searchlight_plugin_query extends views_plugin_query_default {
       return current($args);
     }
     return $args;
+  }
+
+  function execute(&$view) {
+    // Store values prior to execute().
+    $offset = $this->offset;
+    $limit = $this->limit;
+    $current_page = $this->pager->current_page;
+    $this->offset = $this->limit = 0;
+
+    parent::execute($view);
+    if (!empty($this->search_result)) {
+      $view->total_rows = $this->pager->total_items = $this->search_result['total'];
+      $this->pager->set_current_page($current_page);
+      $this->pager->update_page_info();
+    }
+
+    // Restore original values.
+    $this->offset = $offset;
+    $this->limit = $limit;
   }
 }

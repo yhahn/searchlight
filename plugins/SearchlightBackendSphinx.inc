@@ -209,7 +209,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function setPager(&$client, $offset, $limit) {
     $limit = !empty($limit) ? $limit : 1000;
     if (!empty($offset) || !empty($limit)) {
-      $client->SetLimits($offset, $limit);
+      $client->SetLimits((int) $offset, (int) $limit);
     }
   }
 
