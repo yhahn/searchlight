@@ -389,6 +389,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['conf']['sql_db']   = trim(urldecode($url['path']), '/');
     $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
+    // Index information
+    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource['id'];
+    $conf['index']['docinfo'] = 'extern';
+    $conf['index']['mlock'] = 0;
+    $conf['index']['morphology'] = 'stem_en';
+    $conf['index']['min_word_len'] = 1;
+    $conf['index']['charset_type'] = 'utf-8';
+    $conf['index']['html_strip'] = 0;
+
     // Build the query.
     if ($view = searchlight_build_view($datasource['view'])) {
       $sql_query = drupal_clone($view->query);
@@ -407,50 +416,41 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
       $conf['conf']['sql_range_step'] = 1000;
       $conf['conf']['sql_ranged_throttle'] = 0;
-    }
 
-    // Merge in attributes.
-    $sql_attr = array();
-    $sphinx_type = array(
-      'text'      => 'sql_attr_str2ordinal',
-      'int'       => 'sql_attr_uint',
-      'float'     => 'sql_attr_float',
-      'timestamp' => 'sql_attr_timestamp',
-    );
-    foreach ($datasource['fields'] as $field) {
-      if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
-        $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
-      }
-      // Generate multivalue queries.
-      else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
-        $query = drupal_clone($view->query);
-        // Remove any fields that are not the id field or attribute field.
-        foreach ($query->fields as $alias => $query_field) {
-          if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
-            continue;
-          }
-          if ($query_field['field'] === $field['field']) {
-            continue;
-          }
-          unset($query->fields[$alias]);
+      // Merge in attributes.
+      $sql_attr = array();
+      $sphinx_type = array(
+        'text'      => 'sql_attr_str2ordinal',
+        'int'       => 'sql_attr_uint',
+        'float'     => 'sql_attr_float',
+        'timestamp' => 'sql_attr_timestamp',
+      );
+      foreach ($datasource['fields'] as $field) {
+        if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
+          $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
         }
-        $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
-        $mva_query = str_replace("\n", " \\\n", trim($mva_query));
-        $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
+        // Generate multivalue queries.
+        else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
+          $query = drupal_clone($view->query);
+          // Remove any fields that are not the id field or attribute field.
+          foreach ($query->fields as $alias => $query_field) {
+            if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
+              continue;
+            }
+            if ($query_field['field'] === $field['field']) {
+              continue;
+            }
+            unset($query->fields[$alias]);
+          }
+          $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
+          $mva_query = str_replace("\n", " \\\n", trim($mva_query));
+          $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
+        }
       }
+
+      $sql_attr = array_unique($sql_attr);
+      $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
     }
-
-    $sql_attr = array_unique($sql_attr);
-    $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
-
-    // Index information
-    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource['id'];
-    $conf['index']['docinfo'] = 'extern';
-    $conf['index']['mlock'] = 0;
-    $conf['index']['morphology'] = 'stem_en';
-    $conf['index']['min_word_len'] = 1;
-    $conf['index']['charset_type'] = 'utf-8';
-    $conf['index']['html_strip'] = 0;
 
     return $conf;
   }
