@@ -5,31 +5,36 @@
  * Implementation of hook_views_plugins().
  */
 function searchlight_views_plugins() {
-  $base = array(
-    'path' => drupal_get_path('module', 'searchlight') . '/views',
-    'theme' => 'views_view',
-    'uses hook menu' => FALSE,
-    'use ajax' => FALSE,
-    'use pager' => FALSE,
-    'accept attachments' => FALSE,
-  );
   return array(
     'query' => array(
-      'searchlight_sphinx' => array(
-        'title' => t('Searchlight Sphinx'),
-        'help' => t('Searchlight Sphinx query plugin.'),
-        'handler' => 'searchlight_plugin_query_sphinx',
+      'searchlight' => array(
+        'path' => drupal_get_path('module', 'searchlight') . '/views',
+        'title' => t('Searchlight'),
+        'help' => t('Searchlight query plugin.'),
+        'handler' => 'searchlight_plugin_query',
         'parent' => 'views_query',
       ),
     ),
     'display' => array(
-      'searchlight_datasource' => $base + array(
+      'searchlight_datasource' => array(
+        'path' => drupal_get_path('module', 'searchlight') . '/views',
+        'theme' => 'views_view',
+        'uses hook menu' => FALSE,
+        'use ajax' => FALSE,
+        'use pager' => FALSE,
+        'accept attachments' => FALSE,
         'title' => t('Searchlight datasource'),
         'help' => t('Expose a base table to Searchlight for indexing.'),
         'handler' => 'searchlight_plugin_display_datasource',
         'admin' => t('Searchlight datasource'),
       ),
-      'searchlight_multivalue' => $base + array(
+      'searchlight_multivalue' => array(
+        'path' => drupal_get_path('module', 'searchlight') . '/views',
+        'theme' => 'views_view',
+        'uses hook menu' => FALSE,
+        'use ajax' => FALSE,
+        'use pager' => FALSE,
+        'accept attachments' => FALSE,
         'title' => t('Searchlight multivalue'),
         'help' => t('Expose a view as an multivalue attribute to be used with a Searchlight datasource.'),
         'handler' => 'searchlight_plugin_display_multivalue',
@@ -87,11 +92,43 @@ function searchlight_views_data_alter(&$data) {
 }
 
 /**
- * Implementation of hook_views_query_alter().
+ * Implementation of hook_views_pre_build().
  */
-function searchlight_views_query_alter(&$view, &$query) {
-  if (isset($view->searchlight) && $backend = searchlight_default_backend()) {
-    $backend->viewsExecute($view);
+function searchlight_views_pre_build(&$view) {
+  $searchlight = FALSE;
+
+  // Init the searchlight query plugin if the view uses a searchlight filter or argument.
+  foreach (array('filter', 'argument') as $type) {
+    $handlers = $view->display_handler->get_handlers($type);
+    foreach ($handlers as $handler) {
+      if ($handler->table === 'searchlight') {
+        $searchlight = TRUE;
+        break;
+      }
+    }
+  }
+  // The following is a copy of the $view->query_init() method, with the only
+  // difference being that we use the searchlight backend plugin rather than
+  // the default views query plugin and pass the backend to the query plugin.
+  if ($searchlight && $backend = searchlight_default_backend()) {
+    if (!empty($view->query)) {
+      $class = get_class($view->query);
+      if ($class && $class != 'stdClass') {
+        // return if query is already initialized.
+        return;
+      }
+    }
+
+    // Create and initialize the query object.
+    $views_data = views_fetch_data($view->base_table);
+    $view->base_field = $views_data['table']['base']['field'];
+    if (!empty($views_data['table']['base']['database'])) {
+      $view->base_database = $views_data['table']['base']['database'];
+    }
+
+    // Create and initialize the query object.
+    $view->query = views_get_plugin('query', 'searchlight');
+    $view->query->init($view->base_table, $view->base_field, $backend);
   }
 }
 
