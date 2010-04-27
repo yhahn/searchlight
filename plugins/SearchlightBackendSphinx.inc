@@ -80,7 +80,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function executeQuery(&$client, $datasource, $query = '') {
     $result = $client->Query($query, $datasource['id']);
     if (!empty($result['matches'])) {
-      return array('result' => array_keys($result['matches']), 'total' => $result['total']);
+      return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
     return FALSE;
   }
@@ -238,28 +238,19 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of facetBuild().
    */
-  function facetBuild(&$searchlight, $field) {
+  function facetBuild(&$client, $datasource, $query, $field) {
     // Make a copy for building this facet.
-    $facet = $searchlight;
-
-    // Init the Sphinx client. It may not exist if there has been no search
-    // on this page.
-    if (!isset($facet['client'])) {
-      $this->queryInit($facet);
-
-      // Add in node access filters if we're initing the query ourselves.
-      $this->setNodeAccess($facet);
-    }
+    $facet = drupal_clone($client);
 
     switch ($field['datatype']) {
       case 'timestamp':
         $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
         $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-        $facet['client']->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
+        $facet->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
         break;
       default:
-        $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $facet['client']->SetArrayResult($field['usage'] === 'multivalue');
+        $facet->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+        $facet->SetArrayResult($field['usage'] === 'multivalue');
         break;
     }
 
@@ -267,36 +258,38 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // multivalue facets, multiple entries can be returned even if the
     // facet is active.
     if (searchlight_facets()->getFacet($field['name'])) {
-      $facet['client']->SetLimits(0, 1);
+      $facet->SetLimits(0, 1);
     }
     else {
       // @TODO: make configurable:
       // - # of items to show on a per facet basis
-      $facet['client']->SetLimits(0, 5);
+      $facet->SetLimits(0, 5);
     }
 
-    $result = $this->queryExecute($facet);
-    $items = array();
-    foreach ($result['result'] as $id) {
-      if (isset($facet['results']['matches'][$id]['attrs'])) {
-        $attr = $facet['results']['matches'][$id]['attrs'];
-        if (isset($attr['@groupby'], $attr['@count'])) {
-          switch ($field['datatype']) {
-            case 'text':
-              $id = $this->getOrdinal($searchlight, $field['name'], $attr['@groupby']);
-              break;
-            case 'timestamp':
-              $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
-              break;
-            default:
-              $id = $attr['@groupby'];
-              break;
+    if ($result = $this->executeQuery($facet, $datasource, $query)) {
+      $items = array();
+      foreach ($result['result'] as $id) {
+        if (isset($result['raw']['matches'][$id]['attrs'])) {
+          $attr = $result['raw']['matches'][$id]['attrs'];
+          if (isset($attr['@groupby'], $attr['@count'])) {
+            switch ($field['datatype']) {
+              case 'text':
+                $id = $this->getOrdinal($datasource, $field['name'], $attr['@groupby']);
+                break;
+              case 'timestamp':
+                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
+                break;
+              default:
+                $id = $attr['@groupby'];
+                break;
+            }
+            $items[$id] = array('id' => $id, 'count' => $attr['@count']);
           }
-          $items[$id] = array('id' => $id, 'count' => $attr['@count']);
         }
       }
+      return $items;
     }
-    return $items;
+    return FALSE;
   }
 
   function drushSearchd() {
