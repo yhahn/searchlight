@@ -1,10 +1,69 @@
 <?php
 
 /**
+ * Implementation of hook_schema().
+ */
+function searchlight_schema() {
+  $schema = array();
+  $schema['searchlight_search'] = array(
+    'description' => t('Stores a record of an items status in the index.'),
+    'fields' => array(
+      'type' => array(
+        'description' => t('The type of item.'),
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE
+      ),
+      'id' => array(
+        'description' => t('The primary identifier for an item.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'status' => array(
+        'description' => t('Boolean indicating whether the item should be available in the index.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+    ),
+    'indexes' => array(
+      'status' => array('status'),
+    ),
+    'primary key' => array('type, id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function searchlight_enable() {
+  db_query('TRUNCATE {searchlight_search}');
+  $entities = array(
+    'node' => 'nid',
+    //'comments' => 'cid',
+    //'users' => 'uid',
+  );
+  foreach ($entities as $type => $id) {
+    db_query("INSERT INTO {searchlight_search} (type, id, status)
+              SELECT '". $type ."', ". $id .", 0 FROM {". $type ."}");
+  }
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function searchlight_install() {
+  drupal_install_schema('searchlight');
+}
+
+/**
  * Implementation of hook_uninstall().
  */
 function searchlight_uninstall() {
   variable_del('searchlight_views');
   variable_del('searchlight_backend');
   db_query("DELETE FROM {variable} WHERE name LIKE 'searchlight_backend_%'");
+  drupal_uninstall_schema('searchlight');
 }
