@@ -57,86 +57,93 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Override of queryInit().
+   * Override of initClient().
    */
-  function queryInit(&$searchlight) {
+  function initClient() {
     $this->includeSphinx();
     $client = new SphinxClient();
     $client->SetServer('localhost', (int) $this->settings['port']);
-    $client->SetMatchMode($searchlight['options']['matchMode']);
-    $searchlight['client'] = $client;
+    return $client;
   }
 
   /**
-   * Override of queryExecute().
+   * Override of executeQuery().
    */
-  function queryExecute(&$searchlight) {
-    $searchlight['results'] = $searchlight['client']->Query($searchlight['query'], $searchlight['datasource_id']);
-    return array(
-      'result' => array_keys($searchlight['results']['matches']),
-      'total_rows' => $searchlight['results']['total'],
-    );
+  function executeQuery(&$client, $datasource, $query = '') {
+    $result = $client->Query($query, $datasource['id']);
+    if (!empty($result['matches'])) {
+      return array('result' => array_keys($result['matches']), 'total' => $result['total']);
+    }
+    return FALSE;
   }
 
   /**
    * Override of setFilter().
    */
-  function setFilter(&$searchlight, $field, $operator, $args) {
-    // If range filter has been requested, check for a previously added
-    // rangefilter against the same field. If the two ranges overlap, use a
-    // "between" range filter native to Sphinx instead.
-    if (in_array($operator, array('<', '>', '>=', '<='))) {
-      foreach ($searchlight['client']->_filters as $k => $filter) {
-        if ($filter['attr'] === $field && in_array($filter['type'], array(SPH_FILTER_RANGE, SPH_FILTER_FLOATRANGE))) {
-          unset($searchlight['client']->_filters[$k]);
-          switch ($operator) {
-            // Lessthan. We need to retain min and set the max.
-            case '<':
-            case '<=':
-              $max = eval("return {$args[0]};");
-              $searchlight['client']->SetFilterRange($field, $filter['min'], $max, FALSE);
-              return TRUE;
-            // Greaterthan. We need to retain max and set the min.
-            case '>':
-            case '>=':
-              $min = eval("return {$args[0]};");
-              $searchlight['client']->SetFilterRange($field, $min, $filter['max'], FALSE);
-              return TRUE;
+  function setFilter(&$client, $datasource, $filters) {
+    if (!empty($filters)) {
+      foreach ($filters as $params) {
+        $field    = $params['field'];
+        $operator = $params['operator'];
+        $args     = $params['args'];
+
+        // If range filter has been requested, check for a previously added
+        // rangefilter against the same field. If the two ranges overlap, use a
+        // "between" range filter native to Sphinx instead.
+        if (in_array($operator, array('<', '>', '>=', '<='))) {
+          foreach ($client->_filters as $k => $filter) {
+            if ($filter['attr'] === $field && in_array($filter['type'], array(SPH_FILTER_RANGE, SPH_FILTER_FLOATRANGE))) {
+              unset($client->_filters[$k]);
+              switch ($operator) {
+                // Lessthan. We need to retain min and set the max.
+                case '<':
+                case '<=':
+                  $max = eval("return {$args[0]};");
+                  $client->SetFilterRange($field, $filter['min'], $max, FALSE);
+                  return TRUE;
+                // Greaterthan. We need to retain max and set the min.
+                case '>':
+                case '>=':
+                  $min = eval("return {$args[0]};");
+                  $client->SetFilterRange($field, $min, $filter['max'], FALSE);
+                  return TRUE;
+              }
+            }
           }
         }
+        // @TODO: between range filters (e.g. >= AND <=)
+        switch ($operator) {
+          case '=':
+            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
+            return TRUE;
+          case 'IN':
+            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
+            return TRUE;
+          case 'NOT IN':
+            $this->_SetFilter($client, $datasource, $field, $args, TRUE);
+            return TRUE;
+          case '>':
+            $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
+            $min = eval("return {$args[0]};");
+            $client->SetFilterRange($field, $min, $max, TRUE);
+            return TRUE;
+          case '>=':
+            $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
+            $min = eval("return {$args[0]};");
+            $client->SetFilterRange($field, $min, $max, FALSE);
+            return TRUE;
+          case '<':
+            $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
+            $max = eval("return {$args[0]};");
+            $client->SetFilterRange($field, $min, $max, TRUE);
+            return TRUE;
+          case '<=':
+            $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
+            $max = eval("return {$args[0]};");
+            $client->SetFilterRange($field, $min, $max, FALSE);
+            return TRUE;
+        }
       }
-    }
-    // @TODO: between range filters (e.g. >= AND <=)
-    switch ($operator) {
-      case '=':
-        $this->_SetFilter(&$searchlight, $field, $args, FALSE);
-        return TRUE;
-      case 'IN':
-        $this->_SetFilter(&$searchlight, $field, $args, FALSE);
-        return TRUE;
-      case 'NOT IN':
-        $this->_SetFilter(&$searchlight, $field, $args, TRUE);
-        return TRUE;
-      case '>':
-        $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
-        $min = eval("return {$args[0]};");
-        $searchlight['client']->SetFilterRange($field, $min, $max, TRUE);
-        return TRUE;
-      case '>=':
-        $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
-        $min = eval("return {$args[0]};");
-        $searchlight['client']->SetFilterRange($field, $min, $max, FALSE);
-        return TRUE;
-      case '<':
-        $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
-        $max = eval("return {$args[0]};");
-        $searchlight['client']->SetFilterRange($field, $min, $max, TRUE);
-        return TRUE;
-      case '<=':
-        $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
-        $max = eval("return {$args[0]};");
-        $searchlight['client']->SetFilterRange($field, $min, $max, FALSE);
-        return TRUE;
     }
   }
 
@@ -144,7 +151,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Wrapper of $sphinx->SetFilter().
    * Convert any string values to ordinals before passing through.
    */
-  function _SetFilter(&$searchlight, $attribute, $values, $exclude = FALSE) {
+  function _SetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
     $ordinals = array();
     foreach ($values as $arg) {
       $arg = trim($arg);
@@ -152,39 +159,50 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $ordinals[] = $arg;
       }
       else {
-        $ordinal = $this->getOrdinal($searchlight, $attribute, $arg);
+        $ordinal = $this->getOrdinal($datasource, $attribute, $arg);
         if (is_numeric($ordinal)) {
           $ordinals[] = $ordinal;
         }
       }
     }
-    return $searchlight['client']->SetFilter($attribute, $ordinals, $exclude);
+    return $client->SetFilter($attribute, $ordinals, $exclude);
+  }
+
+  /**
+   * Override of setOptions().
+   */
+  function setOptions(&$client, $options) {
+    if (isset($options['matchMode'])) {
+      $client->SetMatchMode($options['matchMode']);
+    }
   }
 
   /**
    * Override of setSort().
    */
-  function setSort(&$searchlight, $field, $direction) {
-    if (!isset($searchlight['sphinx_sort'])) {
-      $searchlight['sphinx_sort'] = array();
+  function setSort(&$client, $sorts) {
+    if (!empty($sorts)) {
+      $sphinx_sorts = array();
+      foreach ($sorts as $sort) {
+        if ($sort['field'] === 'searchlight_weight') {
+          $sphinx_sorts[] = "@weight {$sort['order']}";
+        }
+        else {
+          $sphinx_sorts[] = "{$sort['field']} {$sort['order']}";
+        }
+      }
+      $client->setSortMode(SPH_SORT_EXTENDED, implode(', ', $sphinx_sorts));
     }
-    // @TODO: Add support for SPH_SORT_TIME_SEGMENTS.
-    if ($field === 'searchlight_weight') {
-      $searchlight['sphinx_sort'][] = "@weight {$direction}";
-    }
-    else {
-      $searchlight['sphinx_sort'][] = "{$field} {$direction}";
-    }
-    $searchlight['client']->setSortMode(SPH_SORT_EXTENDED, implode(', ', $searchlight['sphinx_sort']));
   }
 
   /**
    * Override of setPager().
    */
-  function setPager(&$searchlight, $offset, $items_per_page) {
-    // Max out at 1000 items.
-    $items_per_page = !empty($items_per_page) ? $items_per_page : 1000;
-    $searchlight['client']->SetLimits($offset, $items_per_page);
+  function setPager(&$client, $offset, $limit) {
+    $limit = !empty($limit) ? $limit : 1000;
+    if (!empty($offset) || !empty($limit)) {
+      $client->SetLimits($offset, $limit);
+    }
   }
 
   /**
@@ -193,21 +211,18 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * - http://www.sphinxsearch.com/faq.html#filter-or
    * - http://www.sphinxsearch.com/forum/view.html?id=3440
    */
-  function setNodeAccess(&$searchlight) {
-    if ($searchlight['base_table'] === 'node' && !user_access('administer nodes')) {
-      $grants = node_access_grants('view');
-      if (!empty($grants)) {
-        $grants_sql = array();
-        foreach ($grants as $realm => $gids) {
-          foreach ($gids as $gid) {
-            $grants_sql[] = "IF(IN(node_access_gid_{$realm}, {$gid}), 1, 0)";
-          }
+  function setNodeAccess(&$client, $grants) {
+    if (!empty($grants)) {
+      $grants_sql = array();
+      foreach ($grants as $realm => $gids) {
+        foreach ($gids as $gid) {
+          $grants_sql[] = "IF(IN(node_access_gid_{$realm}, {$gid}), 1, 0)";
         }
-        if (count($grants_sql)) {
-          $grants_sql = implode('+', $grants_sql);
-          $searchlight['client']->SetSelect("*, ({$grants_sql}) AS sphinx_node_access");
-          $searchlight['client']->SetFilterRange('sphinx_node_access', 1, 1000);
-        }
+      }
+      if (count($grants_sql)) {
+        $grants_sql = implode('+', $grants_sql);
+        $client->SetSelect("*, ({$grants_sql}) AS sphinx_node_access");
+        $client->SetFilterRange('sphinx_node_access', 1, 1000);
       }
     }
   }
@@ -443,25 +458,27 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Get the ordinal integer for a given string, or vice versa.
    */
-  function getOrdinal(&$searchlight, $attribute_name, $value, $reset = FALSE) {
-    if (!isset($this->ordinals[$searchlight['base_table']]) || $reset) {
-      $cid = "searchlight_sphinx_ordinals_{$searchlight['base_table']}";
+  function getOrdinal($datasource, $attribute_name, $value, $reset = FALSE) {
+    $datasource_id = $datasource->id;
+
+    if (!isset($this->ordinals[$datasource_id]) || $reset) {
+      $cid = "searchlight_sphinx_ordinals_{$datasource_id}";
       if (!$reset && $cache = cache_get($cid)) {
-        $this->ordinals[$searchlight['base_table']] = $cache->data;
+        $this->ordinals[$datasource_id] = $cache->data;
       }
-      if ($reset || !isset($this->ordinals[$searchlight['base_table']])) {
-        $mapping = $this->getOrdinals($searchlight['datasource']);
+      if ($reset || !isset($this->ordinals[$datasource_id])) {
+        $mapping = $this->getOrdinals($datasource);
         if (!empty($mapping)) {
           cache_set($cid, $mapping);
         }
-        $this->ordinals[$searchlight['base_table']] = $mapping;
+        $this->ordinals[$datasource_id] = $mapping;
       }
     }
     if (is_numeric($value)) {
-      return array_search($value, $this->ordinals[$searchlight['base_table']][$attribute_name]);
+      return array_search($value, $this->ordinals[$datasource_id][$attribute_name]);
     }
     else {
-      return isset($this->ordinals[$searchlight['base_table']][$attribute_name][$value]) ? $this->ordinals[$searchlight['base_table']][$attribute_name][$value] : FALSE;
+      return isset($this->ordinals[$datasource_id][$attribute_name][$value]) ? $this->ordinals[$datasource_id][$attribute_name][$value] : FALSE;
     }
   }
 
