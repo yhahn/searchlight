@@ -91,6 +91,18 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
 }
 
 /**
+ * Implementation of hook_nodeapi()
+ */
+function searchlight_nodeadpi($node, $op) {
+  if ($op == 'insert') {
+    db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
+  }
+  elseif ($op == 'update') {
+    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
+  }
+}
+
+/**
  * Implementation of hook_purl_provider().
  */
 function searchlight_purl_provider() {

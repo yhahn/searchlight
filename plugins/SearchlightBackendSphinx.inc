@@ -321,6 +321,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       drupal_flush_all_caches();
+      db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
       variable_set('searchlight_sphinx_last', time());
       return drush_log('Indexing complete.', 'success');
     }
