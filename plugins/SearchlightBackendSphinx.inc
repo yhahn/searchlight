@@ -440,6 +440,18 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     return $conf;
   }
 
+  function sphinxDeltaQuery(&$sql_query) {
+      $join = new views_join();
+      $join->construct('searchlight_search', 'node', 'nid', 'id', "searchlight_search.type = 'node' AND searchlight_search.status = 0", 'INNER');
+      $sql_query->table_queue['searchlight_search'] = array(
+        'table' => 'searchlight_search',
+        'num' => 1,
+        'alias' => 'searchlight_search',
+        'join' => $join,
+        'relationship' => $sql_query->basetable,
+      );
+  }
+
   /**
   * Get the Sphinx searchd settings.
   */
