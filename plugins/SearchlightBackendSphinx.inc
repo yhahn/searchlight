@@ -11,6 +11,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function settingsDefault() {
     return array(
       'port' => 9312,
+      'delta_ttl' => 0,
     );
   }
 
@@ -23,6 +24,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#title' => t('searchd port'),
       '#type' => 'textfield',
       '#default_value' => $this->settings['port'],
+      '#size' => 6,
+    );
+    $form['delta_ttl'] = array(
+      '#title' => t('Delta index TTL'),
+      '#description' => t('In seconds. Set to "0" to re-index on every run.'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['delta_ttl'],
       '#size' => 6,
     );
     return $form;
@@ -289,12 +297,31 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // Create the sphinx directory if it doesn't exist.
     $file_path = conf_path() .'/sphinx/indexes';
     if (file_check_directory($file_path, TRUE)) {
-      drush_op('drush_shell_exec', 'indexer --all --config ' . drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf');
+      // build list of this site's indexes
+      $indexes = array();
+      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
+        $indexes[] = searchlight_get_datasource_id($base_table);
+      }
+
+      // Determine if we should update deltas only.
+      $options = variable_get('searchlight_backend_sphinx', array());
+      if ($options['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $ops['delta_ttl']) > time()) {
+        foreach ($indexes as $k => $v) {
+          $indexes[$k] = $v .'_delta';
+        }
+      }
+
+      $conf_file = drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf';
+
+      drush_op('drush_shell_exec', 'indexer --rotate --config ' .$conf_file. ' ' . implode(' ', $indexes));
       $output = drush_shell_exec_output();
       foreach ($output as $line) {
         drush_print($line);
       }
+
+      // Clear caches so that sphinx id -> facet name mapping is updated.
       drupal_flush_all_caches();
+      variable_set('searchlight_sphinx_last', time());
       return drush_log('Indexing complete.', 'success');
     }
     return drush_log("An error ocurred while indexing.", 'error');
