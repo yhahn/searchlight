@@ -62,7 +62,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function queryInit(&$searchlight) {
     $this->includeSphinx();
     $client = new SphinxClient();
-    $client->SetServer('localhost', $this->settings['port']);
+    $client->SetServer('localhost', (int) $this->settings['port']);
     $client->SetMatchMode($searchlight['options']['matchMode']);
     $searchlight['client'] = $client;
   }
