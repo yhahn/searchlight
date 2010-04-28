@@ -330,7 +330,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $datasources = array();
       foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
         if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
-          $datasources[$base_table] = $this->sphinxDatasourceConf($datasource);
+          $datasources = array_merge($datasources, $this->sphinxDatasourceConf($datasource));
         }
       }
       // Generate configuration file from datasources.
@@ -378,61 +378,81 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['index']['charset_type'] = 'utf-8';
     $conf['index']['html_strip'] = 0;
 
+    $options = variable_get('searchlight_backend_sphinx', array());
+    $delta = FALSE;
+    $ret = array();
+
     // Build the query.
     if ($view = searchlight_build_view($datasource['view'])) {
-      $sql_query = drupal_clone($view->query);
-      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
-      $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
-      $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
-
-      // Build the info query.
-      $sql_query_info = drupal_clone($view->query);
-      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
-      $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
-      $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
-
-      // Assume serial ids on the base table and step by 1000.
-      $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
-      $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
-      $conf['conf']['sql_range_step'] = 1000;
-      $conf['conf']['sql_ranged_throttle'] = 0;
-
-      // Merge in attributes.
-      $sql_attr = array();
-      $sphinx_type = array(
-        'text'      => 'sql_attr_str2ordinal',
-        'int'       => 'sql_attr_uint',
-        'float'     => 'sql_attr_float',
-        'timestamp' => 'sql_attr_timestamp',
-      );
-      foreach ($datasource['fields'] as $field) {
-        if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
-          $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
+      do {
+        $sql_query = drupal_clone($view->query);
+        $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+        if ($delta) {
+          $this->sphinxDeltaQuery($query);
         }
-        // Generate multivalue queries.
-        else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
-          $query = drupal_clone($view->query);
-          // Remove any fields that are not the id field or attribute field.
-          foreach ($query->fields as $alias => $query_field) {
-            if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
-              continue;
-            }
-            if ($query_field['field'] === $field['field']) {
-              continue;
-            }
-            unset($query->fields[$alias]);
+        $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
+        $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
+
+        // Build the info query.
+        $sql_query_info = drupal_clone($view->query);
+        $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+        if ($delta) {
+          $this->sphinxDeltaQuery($query);
+        }
+        $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
+        $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
+
+        // Assume serial ids on the base table and step by 1000.
+        $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
+        $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
+        $conf['conf']['sql_range_step'] = 1000;
+        $conf['conf']['sql_ranged_throttle'] = 0;
+
+        // Merge in attributes.
+        $sql_attr = array();
+        $sphinx_type = array(
+          'text'      => 'sql_attr_str2ordinal',
+          'int'       => 'sql_attr_uint',
+          'float'     => 'sql_attr_float',
+          'timestamp' => 'sql_attr_timestamp',
+        );
+        foreach ($datasource['fields'] as $field) {
+          if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
+            $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
           }
-          $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
-          $mva_query = str_replace("\n", " \\\n", trim($mva_query));
-          $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
+          // Generate multivalue queries.
+          else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
+            $query = drupal_clone($view->query);
+            // Remove any fields that are not the id field or attribute field.
+            foreach ($query->fields as $alias => $query_field) {
+              if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
+                continue;
+              }
+              if ($query_field['field'] === $field['field']) {
+                continue;
+              }
+              unset($query->fields[$alias]);
+            }
+            if ($delta) {
+              $this->sphinxDeltaQuery($query);
+            }
+            $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
+            $mva_query = str_replace("\n", " \\\n", trim($mva_query));
+            $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
+          }
         }
-      }
 
-      $sql_attr = array_unique($sql_attr);
-      $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
+        $sql_attr = array_unique($sql_attr);
+        $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
+        $conf['conf']['id'] .= ($delta ? '_delta' : '');
+        $ret[$conf['conf']['id']] = $conf;
+
+        $delta = !$delta;
+      } while ($options['delta_ttl'] && $delta == TRUE);
+
     }
 
-    return $conf;
+    return $ret;
   }
 
   function sphinxDeltaQuery(&$sql_query) {
