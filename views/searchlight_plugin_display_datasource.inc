@@ -35,6 +35,19 @@ class searchlight_plugin_display_datasource extends views_plugin_display {
    */
   protected function get_datatype($handler, $table, $field) {
     $attribute = array();
+
+    // Ensure that pseudo table names are traced back to their literal tables
+    // that actually have a schema definition.
+    $data = views_fetch_data();
+    if (isset($data[$table]['table']['join'])) {
+      foreach ($data[$table]['table']['join'] as $join_info) {
+        if (isset($join_info['table']) && $join_info['table'] !== $table) {
+          $table = $join_info['table'];
+          break;
+        }
+      }
+    }
+
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
       $class = get_class($handler);
