@@ -78,6 +78,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
+    // Determine if we need to query a delta and main index.
+    $index = $datasource['id'];
+    $options = variable_get('searchlight_backend_sphinx', array());
+    if ($options['delta_ttl']) {
+      $index .= ";{$index}_delta";
+    }
+
     $result = $client->Query($query, $datasource['id']);
     if (!empty($result['matches'])) {
       return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
