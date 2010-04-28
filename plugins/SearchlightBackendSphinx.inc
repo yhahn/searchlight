@@ -80,8 +80,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function executeQuery(&$client, $datasource, $query = '') {
     // Determine if we need to query a delta and main index.
     $index = $datasource['id'];
-    $options = variable_get('searchlight_backend_sphinx', array());
-    if ($options['delta_ttl']) {
+    if ($this->settings['delta_ttl']) {
       $index .= ";{$index}_delta";
     }
 
@@ -308,8 +307,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
 
       // Determine if we should update deltas only.
-      $options = variable_get('searchlight_backend_sphinx', array());
-      if ($options['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $ops['delta_ttl']) > time()) {
+      if ($this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $ops['delta_ttl']) > time()) {
         foreach ($indexes as $k => $v) {
           $indexes[$k] = $v .'_delta';
         }
@@ -387,7 +385,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['index']['charset_type'] = 'utf-8';
     $conf['index']['html_strip'] = 0;
 
-    $options = variable_get('searchlight_backend_sphinx', array());
     $delta = FALSE;
     $ret = array();
 
@@ -457,7 +454,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $ret[$conf['conf']['id']] = $conf;
 
         $delta = !$delta;
-      } while ($options['delta_ttl'] && $delta == TRUE);
+      } while ($this->settings['delta_ttl'] && $delta == TRUE);
 
     }
 
