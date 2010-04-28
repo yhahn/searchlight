@@ -191,18 +191,18 @@ function searchlight_views_default_views_alter(&$views) {
       $handler->override_option('relationships', array());
       $handler->override_option('sorts', array());
       $handler->override_option('fields', array(
+        'nid' => array(
+          'id' => 'nid',
+          'table' => 'node',
+          'field' => 'nid',
+          'relationship' => 'none',
+        ),
         'realm' => array(
           'id' => 'nid',
           'table' => 'node_access',
           'field' => 'nid',
           'relationship' => 'none',
           'realm' => $realm,
-        ),
-        'nid' => array(
-          'id' => 'nid',
-          'table' => 'node',
-          'field' => 'nid',
-          'relationship' => 'none',
         ),
       ));
       $handler->override_option('searchlight_multivalue', array(
