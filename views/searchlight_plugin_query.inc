@@ -121,8 +121,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
 
     // Execute the search.
-    $this->backend->setOptions($this->client, $this->search_options);
-    $this->backend->setSort($this->client, $this->search_sort);
+    $this->backend->setOptions($this->client, $this->datasource, $this->search_options);
+    $this->backend->setSort($this->client, $this->datasource, $this->search_sort);
     $this->backend->setFilter($this->client, $this->datasource, $this->search_filter);
     $this->backend->setPager($this->client, $this->offset, $this->limit);
 

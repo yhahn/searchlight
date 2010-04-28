@@ -57,7 +57,8 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
             // Only render active facets
             foreach ($facets->activeFacets($view->query->datasource) as $name => $value) {
               $field = $view->query->datasource['fields'][$name];
-              $items = $backend->facetBuild($view->query->client, $view->query->datasource, $view->query->search_query, $field);
+              $query = drupal_clone($view->query);
+              $items = $backend->facetBuild($query, $field);
               if (!empty($items) && $rendered = $backend->facetRender($view->query->datasource, $field, $items)) {
                 $output .= theme('searchlight_facet', $rendered);
               }
@@ -76,7 +77,8 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
             // Get fields that are enabled as facets and are inactive
             foreach ($view->query->datasource['fields'] as $field) {
               if (!empty($field['facet']) && !$facets->getFacet($field['name'])) {
-                $items = $backend->facetBuild($view->query->client, $view->query->datasource, $view->query->search_query, $field);
+                $query = drupal_clone($view->query);
+                $items = $backend->facetBuild($query, $field);
                 if (!empty($items) && $rendered = $backend->facetRender($view->query->datasource, $field, $items)) {
                   $output .= theme('searchlight_facet', $rendered);
                 }

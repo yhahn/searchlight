@@ -85,7 +85,7 @@ class SearchlightBackend {
   /**
    * Set any custom options for the search backend.
    */
-  function setOptions(&$client, $options) {
+  function setOptions(&$client, $datasource, $options) {
   }
 
   /**
@@ -97,7 +97,7 @@ class SearchlightBackend {
   /**
    * Set a sort parameter for the search backend.
    */
-  function setSort(&$client, $sorts) {
+  function setSort(&$client, $datasource, $sorts) {
   }
 
   /**

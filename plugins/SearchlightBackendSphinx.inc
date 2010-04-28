@@ -177,7 +177,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of setOptions().
    */
-  function setOptions(&$client, $options) {
+  function setOptions(&$client, $datasource, $options) {
     if (isset($options['matchMode'])) {
       $client->SetMatchMode($options['matchMode']);
     }
@@ -186,7 +186,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of setSort().
    */
-  function setSort(&$client, $sorts) {
+  function setSort(&$client, $datasource, $sorts) {
     if (!empty($sorts)) {
       $sphinx_sorts = array();
       foreach ($sorts as $sort) {
@@ -236,19 +236,16 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of facetBuild().
    */
-  function facetBuild(&$client, $datasource, $query, $field) {
-    // Make a copy for building this facet.
-    $facet = drupal_clone($client);
-
+  function facetBuild($query, $field) {
     switch ($field['datatype']) {
       case 'timestamp':
         $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
         $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-        $facet->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
+        $query->client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
         break;
       default:
-        $facet->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $facet->SetArrayResult($field['usage'] === 'multivalue');
+        $query->client->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+        $query->client->SetArrayResult($field['usage'] === 'multivalue');
         break;
     }
 
@@ -256,15 +253,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // multivalue facets, multiple entries can be returned even if the
     // facet is active.
     if (searchlight_facets()->getFacet($field['name'])) {
-      $facet->SetLimits(0, 1);
+      $query->client->SetLimits(0, 1);
     }
     else {
       // @TODO: make configurable:
       // - # of items to show on a per facet basis
-      $facet->SetLimits(0, 5);
+      $query->client->SetLimits(0, 5);
     }
 
-    if ($result = $this->executeQuery($facet, $datasource, $query)) {
+    if ($result = $this->executeQuery($query->client, $query->datasource, $query->search_query)) {
       $items = array();
       foreach ($result['result'] as $id) {
         if (isset($result['raw']['matches'][$id]['attrs'])) {
