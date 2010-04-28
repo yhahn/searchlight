@@ -31,6 +31,15 @@ class searchlight_plugin_display_multivalue extends searchlight_plugin_display_d
         $multivalue['label_field'] = $info;
       }
     }
+
+    // Override explicitly specified properties if available.
+    if (!empty($options['override'])) {
+      foreach ($options['override'] as $key => $value) {
+        if (!empty($value)) {
+          $multivalue[$key] = $value;
+        }
+      }
+    }
     return $multivalue;
   }
 

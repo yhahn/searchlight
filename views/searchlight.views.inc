@@ -144,19 +144,33 @@ function searchlight_views_query_alter(&$view) {
     if (!empty($active_facets)) {
       $view->query->search_options['hideEmpty'] = FALSE;
 
-      // Set filters for active facets.
+      // Set filters for active facets. Note that query->add_where() is **NOT**
+      // used as this may force undesirable joins on the SQL version of the
+      // query.
       foreach ($active_facets as $name => $field) {
         $arg = searchlight_facets()->getFacet($name);
-        $table_alias = $view->query->ensure_table($field['table']);
         switch ($field['datatype']) {
           case 'timestamp':
             $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
             $range = $view->query->backend->dateRange($arg, $granularity);
-            $view->query->add_where(0, "{$table_alias}.{$field['name']} > %d", $range['from']);
-            $view->query->add_where(0, "{$table_alias}.{$field['name']} < %d", $range['to']);
+
+            $view->query->search_filter[] = array(
+              'field' => $field['name'],
+              'operator' => '>',
+              'args' => array($range['from']),
+            );
+            $view->query->search_filter[] = array(
+              'field' => $field['name'],
+              'operator' => '<',
+              'args' => array($range['to']),
+            );
             break;
           default:
-            $view->query->add_where(0, "{$table_alias}.{$field['name']} = '%s'", $arg);
+            $view->query->search_filter[] = array(
+              'field' => $field['name'],
+              'operator' => '=',
+              'args' => array($arg),
+            );
             break;
         }
       }
@@ -168,6 +182,9 @@ function searchlight_views_query_alter(&$view) {
  * Implementation of hook_views_default_views_alter().
  */
 function searchlight_views_default_views_alter(&$views) {
+  //
+  // Node access ==============================================================
+  //
   $realms = array();
   $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
   while ($row = db_fetch_object($result)) {
@@ -182,8 +199,10 @@ function searchlight_views_default_views_alter(&$views) {
   if (!empty($realms)) {
     $view = new view;
     $view->name = 'searchlight_node_access';
+    $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 2;
+    $view->api_version = 3.0-alpha1;
+    $handler = $view->new_display('default', 'Default', 'default');
     foreach ($realms as $realm) {
       $handler = $view->new_display('searchlight_multivalue', $realm, "searchlight_{$realm}");
       $handler->override_option('arguments', array());
@@ -208,6 +227,57 @@ function searchlight_views_default_views_alter(&$views) {
       $handler->override_option('searchlight_multivalue', array(
         'field' => "node_access_gid_{$realm}",
         'label_field' => "node_access_gid_{$realm}",
+      ));
+    }
+    $views[$view->name] = $view;
+  }
+
+  //
+  // Taxonomy =================================================================
+  //
+  if (module_exists('taxonomy')) {
+    $view = new view;
+    $view->name = 'searchlight_term_data';
+    $view->tag = 'searchlight';
+    $view->base_table = 'node';
+    $view->api_version = 3.0-alpha1;
+    $handler = $view->new_display('default', 'Default', 'default');
+    foreach (taxonomy_get_vocabularies() as $vocab) {
+      /* Display: Vocabulary */
+      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_'. $vocab->vid);
+      $handler->override_option('arguments', array());
+      $handler->override_option('relationships', array());
+      $handler->override_option('sorts', array());
+      $handler->override_option('fields', array(
+        'nid' => array(
+          'id' => 'nid',
+          'table' => 'node',
+          'field' => 'nid',
+          'relationship' => 'none',
+        ),
+        'name' => array(
+          'id' => 'name',
+          'table' => 'term_data',
+          'field' => 'name',
+          'relationship' => 'none',
+          'label' => $vocab->name,
+        ),
+      ));
+      $handler->override_option('filters', array(
+        'vid' => array(
+          'id' => 'vid',
+          'table' => 'term_data',
+          'field' => 'vid',
+          'value' => array($vocab->vid => $vocab->vid),
+        ),
+      ));
+      $handler->override_option('searchlight_multivalue', array(
+        'field' => 'term_data_tid',
+        'label_field' => 'term_data_name',
+        'override' => array(
+          'name' => 'term_data_tid_v'. $vocab->vid,
+          'label' => $vocab->name,
+        ),
       ));
     }
     $views[$view->name] = $view;
