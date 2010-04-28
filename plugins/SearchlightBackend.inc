@@ -222,10 +222,14 @@ class SearchlightBackend {
           $item = $items[$id];
           $item['title'] = strip_tags($handler->render($row));
           if (!empty($modifier)) {
-            $item['link'] = l(t('remove'), $_GET['q'], array('purl' => array('provider' => 'searchlight', 'id' => $modifier)));
+            $item['link'] = l(t('remove'), $_GET['q'], array(
+              'purl' => array('provider' => 'searchlight', 'id' => $modifier))
+            );
           }
           else {
-            $item['link'] = l(t('remove'), $_GET['q'], array('purl' => array('remove' => array('searchlight'))));
+            $item['link'] = l(t('remove'), $_GET['q'], array(
+              'purl' => array('remove' => array('searchlight')))
+            );
           }
           $rendered[$id] = theme('searchlight_facet_active', $field, $item);
         }
@@ -237,7 +241,10 @@ class SearchlightBackend {
           $modifier = $facets->getModifier('add', $field['name'], $id);
           $item = $items[$id];
           $item['title'] = strip_tags($handler->render($row));
-          $item['link'] = l($item['title'], $_GET['q'], array('purl' => array('provider' => 'searchlight', 'id' => $modifier)));
+          $item['link'] = l($item['title'], $_GET['q'], array(
+            'query' => drupal_query_string_encode($_GET, array('q')),
+            'purl' => array('provider' => 'searchlight', 'id' => $modifier))
+          );
           $rendered[$id] = theme('searchlight_facet_link', $field, $item);
         }
       }

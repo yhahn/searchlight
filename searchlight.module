@@ -48,9 +48,6 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   else if ($op === 'view') {
     switch ($delta) {
       case 'active':
-        return;
-
-        //@TODO
         if ($display = views_get_page_view()) {
           $view = $display->view;
           if (!empty($view->query->searchlight)) {
@@ -58,10 +55,10 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
             $backend = searchlight_default_backend();
             $facets = searchlight_facets();
             // Only render active facets
-            foreach ($facets->activeFacets($view->searchlight['datasource']) as $name => $value) {
-              $field = $view->searchlight['datasource']['fields'][$name];
-              $items = $backend->facetBuild($view->searchlight, $field);
-              if (!empty($field) && !empty($items) && $rendered = $backend->facetRender($view->searchlight, $field, $items)) {
+            foreach ($facets->activeFacets($view->query->datasource) as $name => $value) {
+              $field = $view->query->datasource['fields'][$name];
+              $items = $backend->facetBuild($view->query->client, $view->query->datasource, $view->query->search_query, $field);
+              if (!empty($items) && $rendered = $backend->facetRender($view->query->datasource, $field, $items)) {
                 $output .= theme('searchlight_facet', $rendered);
               }
             }
