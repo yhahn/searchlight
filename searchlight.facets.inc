@@ -133,7 +133,7 @@ class SearchlightFacets {
     // resultset for it to process.
     if ($field['usage'] === 'multivalue') {
       foreach ($view->field as $field_handler) {
-        if (in_array($field_handler->field_alias, array($field['name'], $field['label_field']['name'], TRUE))) {
+        if (in_array($field_handler->field_alias, array($field['name'], $field['label_field']['name']), TRUE)) {
           $handler = $field_handler;
 
           // Multivalue fields must build a new Views query in order to
@@ -145,6 +145,9 @@ class SearchlightFacets {
 
           // Add WHERE condition on item ids.
           $query->add_where(0, "{$field['table']}.{$field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
+
+          // Add base field.
+          $field_alias = $query->add_field($field['table'], $field['field']);
 
           // Add label field.
           $label_alias = $query->add_field($field['label_field']['table'], $field['label_field']['field']);

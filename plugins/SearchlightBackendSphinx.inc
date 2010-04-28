@@ -261,7 +261,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $query->client->SetLimits(0, 5);
     }
 
-    if ($result = $this->executeQuery($query->client, $query->datasource, $query->search_query)) {
+    $result = $this->executeQuery($query->client, $query->datasource, $query->search_query);
+    if ($result) {
       $items = array();
       foreach ($result['result'] as $id) {
         if (isset($result['raw']['matches'][$id]['attrs'])) {
@@ -269,7 +270,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           if (isset($attr['@groupby'], $attr['@count'])) {
             switch ($field['datatype']) {
               case 'text':
-                $id = $this->getOrdinal($datasource, $field['name'], $attr['@groupby']);
+                $id = $this->getOrdinal($query->datasource, $field['name'], $attr['@groupby']);
                 break;
               case 'timestamp':
                 $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
