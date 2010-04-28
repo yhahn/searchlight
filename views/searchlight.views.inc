@@ -136,27 +136,29 @@ function searchlight_views_pre_build(&$view) {
  * Implementation of hook_views_query_alter().
  */
 function searchlight_views_query_alter(&$view) {
-  // Retrieve active facets. We will consider the presence of any active
-  // facets to mean the search query is *not* empty.
-  $active_facets = searchlight_facets()->activeFacets($view->query->datasource);
+  if (!empty($view->query->searchlight)) {
+    // Retrieve active facets. We will consider the presence of any active
+    // facets to mean the search query is *not* empty.
+    $active_facets = searchlight_facets()->activeFacets($view->query->datasource);
 
-  if (!empty($active_facets)) {
-    $view->query->search_options['hideEmpty'] = FALSE;
+    if (!empty($active_facets)) {
+      $view->query->search_options['hideEmpty'] = FALSE;
 
-    // Set filters for active facets.
-    foreach ($active_facets as $name => $arg) {
-      $field = $view->query->datasource['fields'][$name];
-      $table_alias = $view->query->ensure_table($field['table']);
-      switch ($field['datatype']) {
-        case 'timestamp':
-          $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-          $range = $view->query->backend->dateRange($arg, $granularity);
-          $view->query->add_where(0, "{$table_alias}.{$field['name']} > %d", $range['from']);
-          $view->query->add_where(0, "{$table_alias}.{$field['name']} < %d", $range['to']);
-          break;
-        default:
-          $view->query->add_where(0, "{$table_alias}.{$field['name']} = '%s'", $arg);
-          break;
+      // Set filters for active facets.
+      foreach ($active_facets as $name => $field) {
+        $arg = searchlight_facets()->getFacet($name);
+        $table_alias = $view->query->ensure_table($field['table']);
+        switch ($field['datatype']) {
+          case 'timestamp':
+            $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
+            $range = $view->query->backend->dateRange($arg, $granularity);
+            $view->query->add_where(0, "{$table_alias}.{$field['name']} > %d", $range['from']);
+            $view->query->add_where(0, "{$table_alias}.{$field['name']} < %d", $range['to']);
+            break;
+          default:
+            $view->query->add_where(0, "{$table_alias}.{$field['name']} = '%s'", $arg);
+            break;
+        }
       }
     }
   }
