@@ -588,16 +588,25 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
   /**
    * Convert a Sphinx datestring into a timestamp. Requires a datestring
-   * (e.g. 201010) and a target granularity: day, month, year.
+   * (e.g. 201010) and a target granularity: day, month, year. We reverse-apply
+   * Drupal's timezone offset so that this date can be used with format_date(),
+   * etc. cleanly.
    */
   function getTimestamp($datestring, $granularity) {
+    global $user;
+    if (variable_get('configurable_timezones', 1) && $user->uid && strlen($user->timezone)) {
+      $timezone = $user->timezone;
+    }
+    else {
+      $timezone = variable_get('date_default_timezone', 0);
+    }
     switch ($granularity) {
       case 'day':
-        return mktime(0, 0, 0, substr($datestring, 4, 2), substr($datestring, 6, 2), substr($datestring, 0, 4));
+        return ($timezone * -1) + mktime(0, 0, 0, substr($datestring, 4, 2), substr($datestring, 6, 2), substr($datestring, 0, 4));
       case 'month':
-        return mktime(0, 0, 0, substr($datestring, 4, 2), 1, substr($datestring, 0, 4));
+        return ($timezone * -1) + mktime(0, 0, 0, substr($datestring, 4, 2), 1, substr($datestring, 0, 4));
       case 'year':
-        return mktime(0, 0, 0, 1, 1, $datestring);
+        return ($timezone * -1) + mktime(0, 0, 0, 1, 1, $datestring);
     }
   }
 }
