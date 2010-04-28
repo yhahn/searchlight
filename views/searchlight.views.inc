@@ -146,17 +146,16 @@ function searchlight_views_query_alter(&$view) {
     // Set filters for active facets.
     foreach ($active_facets as $name => $arg) {
       $field = $view->query->datasource['fields'][$name];
+      $table_alias = $view->query->ensure_table($field['table']);
       switch ($field['datatype']) {
         case 'timestamp':
           $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
           $range = $view->query->backend->dateRange($arg, $granularity);
-          $view->query->search_filter[] = array('field' => $name, 'operator' => '>', 'args' => array($range['from']));
-          $view->query->search_filter[] = array('field' => $name, 'operator' => '<', 'args' => array($range['to']));
-          // $view->query->backend->setFilter($view->query->client, $name, '>', array($range['from']));
-          // $view->query->backend->setFilter($view->query->client, $name, '<', array($range['to']));
+          $view->query->add_where(0, "{$table_alias}.{$field['name']} > %d", $range['from']);
+          $view->query->add_where(0, "{$table_alias}.{$field['name']} < %d", $range['to']);
           break;
         default:
-          $view->query->search_filter[] = array('field' => $name, 'operator' => '=', 'args' => array($arg));
+          $view->query->add_where(0, "{$table_alias}.{$field['name']} = '%s'", $arg);
           break;
       }
     }

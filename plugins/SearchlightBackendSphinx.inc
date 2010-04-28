@@ -120,7 +120,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
       // Now set range filters.
       foreach ($range_filters as $filter) {
-        $client->setFilterRange($filter['field'], $filter['min'], $filter['max'], $filter['exclude']);
+        // The exclude option on range filters appears to be broken in
+        // Sphinx 0.9.9. Update this code to support either operator once the
+        // problem is fixed upstream.
+        // $client->SetFilterRange($filter['field'], $filter['min'], $filter['max'], $filter['exclude']);
+        $client->SetFilterRange($filter['field'], $filter['min'], $filter['max'], FALSE);
       }
       // Equality & set filters filters.
       foreach ($filters as $params) {

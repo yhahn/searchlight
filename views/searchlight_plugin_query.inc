@@ -50,7 +50,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
         $table = $field[0];
         $field = $field[1];
         foreach ($this->datasource['fields'] as $name => $info) {
-          if ($info['table'] === $table && $info['field'] === $field) {
+          if ($info['table'] === $table && ($info['name'] === $field || $info['field'] === $field)) {
             // Get the arguments for this where clause.
             $args = array();
             $argnum = substr_count($clause, '%');
