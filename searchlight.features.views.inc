@@ -162,10 +162,6 @@ function _searchlight_views_default_views() {
         'usage' => 'attribute',
         'facet' => 1,
       ),
-      'term_data_tid' => array(
-        'usage' => 'multivalue',
-        'facet' => 1,
-      ),
     ),
     'node_access' => 1,
   );
