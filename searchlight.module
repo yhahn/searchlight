@@ -50,15 +50,15 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
       case 'active':
         if ($display = views_get_page_view()) {
           $view = $display->view;
-          if (!empty($view->searchlight)) {
+          if (!empty($view->query->searchlight)) {
             $output = '';
             $backend = searchlight_default_backend();
             $facets = searchlight_facets();
             // Only render active facets
-            foreach ($facets->activeFacets($view->searchlight['datasource']) as $name => $value) {
-              $field = $view->searchlight['datasource']['fields'][$name];
-              $items = $backend->facetBuild($view->searchlight, $field);
-              if ($rendered = $backend->facetRender($view->searchlight, $field, $items)) {
+            foreach ($facets->activeFacets($view->query->datasource) as $name => $value) {
+              $field = $view->query->datasource['fields'][$name];
+              $items = $backend->facetBuild($view->query->client, $view->query->datasource, $view->query->search_query, $field);
+              if (!empty($items) && $rendered = $backend->facetRender($view->query->datasource, $field, $items)) {
                 $output .= theme('searchlight_facet', $rendered);
               }
             }
@@ -69,15 +69,15 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
       case 'facets':
         if ($display = views_get_page_view()) {
           $view = $display->view;
-          if (!empty($view->searchlight)) {
+          if (!empty($view->query->searchlight)) {
             $output = '';
             $backend = searchlight_default_backend();
             $facets = searchlight_facets();
             // Get fields that are enabled as facets and are inactive
-            foreach ($view->searchlight['datasource']['fields'] as $field) {
+            foreach ($view->query->datasource['fields'] as $field) {
               if (!empty($field['facet']) && !$facets->getFacet($field['name'])) {
-                $items = $backend->facetBuild($view->searchlight, $field);
-                if ($rendered = $backend->facetRender($view->searchlight, $field, $items)) {
+                $items = $backend->facetBuild($view->query->client, $view->query->datasource, $view->query->search_query, $field);
+                if (!empty($items) && $rendered = $backend->facetRender($view->query->datasource, $field, $items)) {
                   $output .= theme('searchlight_facet', $rendered);
                 }
               }

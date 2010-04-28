@@ -80,7 +80,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function executeQuery(&$client, $datasource, $query = '') {
     $result = $client->Query($query, $datasource['id']);
     if (!empty($result['matches'])) {
-      return array('result' => array_keys($result['matches']), 'total' => $result['total']);
+      return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
     return FALSE;
   }
@@ -90,66 +90,53 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function setFilter(&$client, $datasource, $filters) {
     if (!empty($filters)) {
+      // Iterate through once to separate out range filters.
+      $range_filters = array();
+      foreach ($filters as $key => $params) {
+        $field    = $params['field'];
+        $operator = $params['operator'];
+        $args     = $params['args'];
+        if (in_array($operator, array('<', '>', '>=', '<='))) {
+          unset($filters[$key]);
+          switch ($operator) {
+            case '>':
+            case '>=':
+              $range_filters[$field]['field'] = $field;
+              $range_filters[$field]['max'] = isset($range_filters[$field]['max']) ? $range_filters[$field]['max'] : SEARCHLIGHT_SPHINX_FILTER_MAX;
+              $range_filters[$field]['min'] = eval("return {$args[0]};");
+              $range_filters[$field]['exclude'] = $operator === '>' ? TRUE : FALSE;
+              break;
+            case '<':
+            case '<=':
+              $range_filters[$field]['field'] = $field;
+              $range_filters[$field]['max'] = eval("return {$args[0]};");
+              $range_filters[$field]['min'] = isset($range_filters[$field]['min']) ? $range_filters[$field]['min'] : SEARCHLIGHT_SPHINX_FILTER_MIN;
+              $range_filters[$field]['exclude'] = $operator === '<' ? TRUE : FALSE;
+              break;
+            default:
+              break;
+          }
+        }
+      }
+      // Now set range filters.
+      foreach ($range_filters as $filter) {
+        $client->setFilterRange($filter['field'], $filter['min'], $filter['max'], $filter['exclude']);
+      }
+      // Equality & set filters filters.
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
         $args     = $params['args'];
-
-        // If range filter has been requested, check for a previously added
-        // rangefilter against the same field. If the two ranges overlap, use a
-        // "between" range filter native to Sphinx instead.
-        if (in_array($operator, array('<', '>', '>=', '<='))) {
-          foreach ($client->_filters as $k => $filter) {
-            if ($filter['attr'] === $field && in_array($filter['type'], array(SPH_FILTER_RANGE, SPH_FILTER_FLOATRANGE))) {
-              unset($client->_filters[$k]);
-              switch ($operator) {
-                // Lessthan. We need to retain min and set the max.
-                case '<':
-                case '<=':
-                  $max = eval("return {$args[0]};");
-                  $client->SetFilterRange($field, $filter['min'], $max, FALSE);
-                  return TRUE;
-                // Greaterthan. We need to retain max and set the min.
-                case '>':
-                case '>=':
-                  $min = eval("return {$args[0]};");
-                  $client->SetFilterRange($field, $min, $filter['max'], FALSE);
-                  return TRUE;
-              }
-            }
-          }
-        }
-        // @TODO: between range filters (e.g. >= AND <=)
         switch ($operator) {
           case '=':
             $this->_SetFilter($client, $datasource, $field, $args, FALSE);
-            return TRUE;
+            break;
           case 'IN':
             $this->_SetFilter($client, $datasource, $field, $args, FALSE);
-            return TRUE;
+            break;
           case 'NOT IN':
             $this->_SetFilter($client, $datasource, $field, $args, TRUE);
-            return TRUE;
-          case '>':
-            $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
-            $min = eval("return {$args[0]};");
-            $client->SetFilterRange($field, $min, $max, TRUE);
-            return TRUE;
-          case '>=':
-            $max = SEARCHLIGHT_SPHINX_FILTER_MAX;
-            $min = eval("return {$args[0]};");
-            $client->SetFilterRange($field, $min, $max, FALSE);
-            return TRUE;
-          case '<':
-            $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
-            $max = eval("return {$args[0]};");
-            $client->SetFilterRange($field, $min, $max, TRUE);
-            return TRUE;
-          case '<=':
-            $min = SEARCHLIGHT_SPHINX_FILTER_MIN;
-            $max = eval("return {$args[0]};");
-            $client->SetFilterRange($field, $min, $max, FALSE);
-            return TRUE;
+            break;
         }
       }
     }
@@ -238,28 +225,19 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of facetBuild().
    */
-  function facetBuild(&$searchlight, $field) {
+  function facetBuild(&$client, $datasource, $query, $field) {
     // Make a copy for building this facet.
-    $facet = $searchlight;
-
-    // Init the Sphinx client. It may not exist if there has been no search
-    // on this page.
-    if (!isset($facet['client'])) {
-      $this->queryInit($facet);
-
-      // Add in node access filters if we're initing the query ourselves.
-      $this->setNodeAccess($facet);
-    }
+    $facet = drupal_clone($client);
 
     switch ($field['datatype']) {
       case 'timestamp':
         $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
         $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-        $facet['client']->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
+        $facet->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
         break;
       default:
-        $facet['client']->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $facet['client']->SetArrayResult($field['usage'] === 'multivalue');
+        $facet->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+        $facet->SetArrayResult($field['usage'] === 'multivalue');
         break;
     }
 
@@ -267,36 +245,38 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // multivalue facets, multiple entries can be returned even if the
     // facet is active.
     if (searchlight_facets()->getFacet($field['name'])) {
-      $facet['client']->SetLimits(0, 1);
+      $facet->SetLimits(0, 1);
     }
     else {
       // @TODO: make configurable:
       // - # of items to show on a per facet basis
-      $facet['client']->SetLimits(0, 5);
+      $facet->SetLimits(0, 5);
     }
 
-    $result = $this->queryExecute($facet);
-    $items = array();
-    foreach ($result['result'] as $id) {
-      if (isset($facet['results']['matches'][$id]['attrs'])) {
-        $attr = $facet['results']['matches'][$id]['attrs'];
-        if (isset($attr['@groupby'], $attr['@count'])) {
-          switch ($field['datatype']) {
-            case 'text':
-              $id = $this->getOrdinal($searchlight, $field['name'], $attr['@groupby']);
-              break;
-            case 'timestamp':
-              $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
-              break;
-            default:
-              $id = $attr['@groupby'];
-              break;
+    if ($result = $this->executeQuery($facet, $datasource, $query)) {
+      $items = array();
+      foreach ($result['result'] as $id) {
+        if (isset($result['raw']['matches'][$id]['attrs'])) {
+          $attr = $result['raw']['matches'][$id]['attrs'];
+          if (isset($attr['@groupby'], $attr['@count'])) {
+            switch ($field['datatype']) {
+              case 'text':
+                $id = $this->getOrdinal($datasource, $field['name'], $attr['@groupby']);
+                break;
+              case 'timestamp':
+                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
+                break;
+              default:
+                $id = $attr['@groupby'];
+                break;
+            }
+            $items[$id] = array('id' => $id, 'count' => $attr['@count']);
           }
-          $items[$id] = array('id' => $id, 'count' => $attr['@count']);
         }
       }
+      return $items;
     }
-    return $items;
+    return FALSE;
   }
 
   function drushSearchd() {

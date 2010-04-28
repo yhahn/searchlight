@@ -133,6 +133,37 @@ function searchlight_views_pre_build(&$view) {
 }
 
 /**
+ * Implementation of hook_views_query_alter().
+ */
+function searchlight_views_query_alter(&$view) {
+  // Retrieve active facets. We will consider the presence of any active
+  // facets to mean the search query is *not* empty.
+  $active_facets = searchlight_facets()->activeFacets($view->query->datasource);
+
+  if (!empty($active_facets)) {
+    $view->query->search_options['hideEmpty'] = FALSE;
+
+    // Set filters for active facets.
+    foreach ($active_facets as $name => $arg) {
+      $field = $view->query->datasource['fields'][$name];
+      switch ($field['datatype']) {
+        case 'timestamp':
+          $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
+          $range = $view->query->backend->dateRange($arg, $granularity);
+          $view->query->search_filter[] = array('field' => $name, 'operator' => '>', 'args' => array($range['from']));
+          $view->query->search_filter[] = array('field' => $name, 'operator' => '<', 'args' => array($range['to']));
+          // $view->query->backend->setFilter($view->query->client, $name, '>', array($range['from']));
+          // $view->query->backend->setFilter($view->query->client, $name, '<', array($range['to']));
+          break;
+        default:
+          $view->query->search_filter[] = array('field' => $name, 'operator' => '=', 'args' => array($arg));
+          break;
+      }
+    }
+  }
+}
+
+/**
  * Implementation of hook_views_default_views_alter().
  */
 function searchlight_views_default_views_alter(&$views) {

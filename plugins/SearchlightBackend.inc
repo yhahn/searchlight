@@ -150,15 +150,15 @@ class SearchlightBackend {
    * 'id': The primary ID for this item.
    * 'count': The number of entries that belong to this facet item.
    */
-  function facetBuild(&$searchlight, $field) {
+  function facetBuild(&$client, $datasource, $query, $field) {
     return array();
   }
 
   /**
    * Render a facet using its corresponding field handler.
    */
-  function facetRender(&$searchlight, $field, $items) {
-    $view = ($field['usage'] === 'multivalue') ? $field['view'] : $searchlight['datasource']['view'];
+  function facetRender($datasource, $field, $items) {
+    $view = ($field['usage'] === 'multivalue') ? $field['view'] : $datasource['view'];
     $view = searchlight_build_view($view);
 
     // Detect which handler is responsible for this field and build fake
@@ -170,7 +170,9 @@ class SearchlightBackend {
 
           // Multivalue fields must build a new Views query in order to
           // retrieve any secondary label field values.
-          $query = new views_query($field['table'], $field['field']);
+          $query = views_get_plugin('query', 'views_query');
+          $query->init($field['table'], $field['field']);
+
           $ids = array_keys($items);
 
           // Add WHERE condition on item ids.
@@ -220,10 +222,14 @@ class SearchlightBackend {
           $item = $items[$id];
           $item['title'] = strip_tags($handler->render($row));
           if (!empty($modifier)) {
-            $item['link'] = l(t('remove'), $_GET['q'], array('purl' => array('provider' => 'searchlight', 'id' => $modifier)));
+            $item['link'] = l(t('remove'), $_GET['q'], array(
+              'purl' => array('provider' => 'searchlight', 'id' => $modifier))
+            );
           }
           else {
-            $item['link'] = l(t('remove'), $_GET['q'], array('purl' => array('remove' => array('searchlight'))));
+            $item['link'] = l(t('remove'), $_GET['q'], array(
+              'purl' => array('remove' => array('searchlight')))
+            );
           }
           $rendered[$id] = theme('searchlight_facet_active', $field, $item);
         }
@@ -235,7 +241,10 @@ class SearchlightBackend {
           $modifier = $facets->getModifier('add', $field['name'], $id);
           $item = $items[$id];
           $item['title'] = strip_tags($handler->render($row));
-          $item['link'] = l($item['title'], $_GET['q'], array('purl' => array('provider' => 'searchlight', 'id' => $modifier)));
+          $item['link'] = l($item['title'], $_GET['q'], array(
+            'query' => drupal_query_string_encode($_GET, array('q')),
+            'purl' => array('provider' => 'searchlight', 'id' => $modifier))
+          );
           $rendered[$id] = theme('searchlight_facet_link', $field, $item);
         }
       }
