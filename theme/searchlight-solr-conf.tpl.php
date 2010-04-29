@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?php print '<?xml version="1.0" encoding="UTF-8" ?>'; ?>
 <schema name="drupal-0.9.5" version="1.2">
   <types>
     <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true"/>
@@ -83,6 +83,7 @@
  </types>
 
  <fields>
+<?php /*
    <field name="id" type="string" indexed="true" stored="true" required="true" />
    <field name="site" type="string" indexed="true" stored="true"/>
    <field name="hash" type="string" indexed="true" stored="true"/>
@@ -184,6 +185,11 @@
         Alternately, change the type="ignored" to some other type e.g. "text" if you want
         unknown fields indexed and/or stored by default -->
    <dynamicField name="*" type="ignored" multiValued="true" />
+ */
+?>
+  <?php foreach($datasource as $f): ?>
+    <field name="<?php print $f['name'];?>"  type="<?php print $f['type'];?>" indexed="<?php print $f['indexed'];?>" stored="<?php print $f['stored'];?>" multiValued="<?php print $f['multiValued'];?>"/>
+  <?php endforeach; ?>
  </fields>
  <uniqueKey>id</uniqueKey>
 

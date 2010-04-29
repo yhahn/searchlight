@@ -309,26 +309,30 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $file_path = conf_path() .'/solr';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
-      $datasources = array();
       foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
         if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
-          $datasources = array_merge($datasources, $this->solrDatasourceConf($datasource));
+          // Generate configuration file from datasources.
+          $datasource = $this->solrDatasourceConf($datasource);
+          $solr_conf = theme('searchlight_solr_conf', $datasource, $this->solrSearchdConf());
+          var_dump($solr_conf);
+
+          // Write config to the filesystem
+          if ($solr_conf) {
+            $existing = file_exists("{$file_path}/schema.xml") ? file_get_contents("{$file_path}/schema.xml") : '';
+            if ($solr_conf === $existing) {
+              return drush_log("{$file_path}/schema.xml is unchanged.", 'success');
+            }
+            else {
+              file_put_contents("{$file_path}/schema.xml", $solr_conf);
+              return drush_log("{$file_path}/schema.xml was written successfully.", 'success');
+            }
+          }
         }
-      }
-      // Generate configuration file from datasources.
-      $solr_conf = theme('searchlight_solr_conf', $datasources, $this->solrSearchdConf());
-      if ($solr_conf) {
-        $existing = file_exists("{$file_path}/schema.xml") ? file_get_contents("{$file_path}/schema.xml") : '';
-        if ($solr_conf === $existing) {
-          return drush_log("{$file_path}/schema.xml is unchanged.", 'success');
-        }
-        else {
-          file_put_contents("{$file_path}/schema.xml", $solr_conf);
-          return drush_log("{$file_path}/schema.xml was written successfully.", 'success');
-        }
+        return drush_log("{$file_path}/schema.xml could not be written.", 'error');
+
+        break; // TODO support more than one schema file.
       }
     }
-    return drush_log("{$file_path}/schema.xml could not be written.", 'error');
   }
 
   /**
@@ -361,7 +365,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $schema[$f]['multiValued'] = TRUE;
       }
     }
-    return array($schema);
+    return $schema;
   }
 
   /**

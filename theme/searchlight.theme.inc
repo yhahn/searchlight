@@ -18,6 +18,31 @@ function template_preprocess_searchlight_sphinx_conf(&$vars) {
 }
 
 /**
+ * Preprocessor for theme('searchlight_solr_conf').
+ */
+function template_preprocess_searchlight_solr_conf(&$vars) {
+  $defaults = array(
+    'indexed' => 'true',
+    'stored' => 'false',
+    'multiValued' => 'false'
+  );
+  foreach($vars['datasource'] as $id => $field) {
+    // Populate defaults.
+    foreach($defaults as $k => $v) {
+      if (!isset($field[$k])) {
+        $vars['datasource'][$id][$k] = $v;
+      }
+    }
+    // Normalize boolean values
+    foreach ($field as $attribute => $value) {
+      if (is_bool($value)) {
+        $vars['datasource'][$id][$attribute] = ($value === TRUE ? 'true' : 'false');
+      }
+    }
+  }
+}
+
+/**
  * Theme function for searchlight datasource display form.
  */
 function theme_searchlight_plugin_display_datasource($form) {
