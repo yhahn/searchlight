@@ -280,8 +280,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function drushIndex() {
     // build list of this site's indexes
     $indexes = array();
-    foreach (variable_get('searchlight_views', array()) as $base_table => $view) {
-      $id = searchlight_get_datasource_id($base_table);
+    foreach (searchlight_datasource_load() as $datasource) {
+      $datasource->init();
+      $id = $datasource->id;
       list($view_name, $display_id) = explode(':', $view);
 
       // Build and execute the view
@@ -304,29 +305,25 @@ class SearchlightBackendSolr extends SearchlightBackend {
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $cores = array();
-      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
-        if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
-          $cores[] = $datasource['id'];
-          $core_path = $file_path .'/'. $datasource['id'];
-          if (!file_check_directory($core_path, TRUE)) {
-            return drush_log("/{$core_path} could not be written to.", 'error');
-          }
-          $core_path .= '/conf';
-          if (file_check_directory($core_path, TRUE)) {
-            // Generate configuration file from datasources.
-            $datasource = $this->solrDatasourceConf($datasource);
-            $files = array(
-              'schema.xml' => theme('searchlight_solr_schema', $datasource),
-              'solrconfig.xml' => theme('searchlight_solr_config'),
-            );
-            $this->solrWriteFiles($core_path, $files);
-          }
-          else {
-            return drush_log("/{$core_path} could not be written to.", 'error');
-          }
+      foreach (searchlight_datasource_load() as $datasource) {
+        $datasource->init();
+        $cores[] = $datasource->id;
+        $core_path = $file_path .'/'. $datasource->id;
+        if (!file_check_directory($core_path, TRUE)) {
+          return drush_log("/{$core_path} could not be written to.", 'error');
+        }
+        $core_path .= '/conf';
+        if (file_check_directory($core_path, TRUE)) {
+          // Generate configuration file from datasources.
+          $schema = $this->solrDatasourceConf($datasource);
+          $files = array(
+            'schema.xml' => theme('searchlight_solr_schema', $schema),
+            'solrconfig.xml' => theme('searchlight_solr_config'),
+          );
+          $this->solrWriteFiles($core_path, $files);
         }
         else {
-          return drush_log("Invalid data source.", 'error');
+          return drush_log("/{$core_path} could not be written to.", 'error');
         }
       }
       // Generate top level config.
@@ -345,14 +342,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
     // Configuration options.
     $conf = array('schema' => array(), 'conf' => array());
-    $conf['conf']['id'] = $datasource['id'];
+    $conf['conf']['id'] = $datasource->id;
 
     // Determine the primary id field of the view & determine if it is present.
-    $base_table = views_fetch_data($datasource['base_table']);
-    $base_schema = drupal_get_schema($datasource['base_table']);
-    // $base_field = $base_schema['field'][$base_table['table']['base']['field']];
-    foreach ($datasource['fields'] as $field) {
-      if ($field['table'] == $datasource['base_table'] && $field['name'] == $base_table['table']['base']['field']) {
+    $base_table = views_fetch_data($datasource->base_table);
+    $base_schema = drupal_get_schema($datasource->base_table);
+    foreach ($datasource->fields as $field) {
+      if ($field['table'] == $datasource->base_table && $field['name'] == $base_table['table']['base']['field']) {
         $conf['conf']['unique_key'] = 'true';
         break;
       }
@@ -360,16 +356,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
     // Add the primary field if it isn't present
     if (!isset($conf['conf']['unique_key'])) {
-      $datasource['fields'][] = array(
-        'name' => $datasource['base_table'] .'_'. $base_table['table']['base']['field'],
+      $datasource->fields[] = array(
+        'name' => $datasource->base_table .'_'. $base_table['table']['base']['field'],
         'datatype' => 'int',
         // 'required' => true,
       );
-      $conf['conf']['unique_key'] = $datasource['base_table'] .'_'. $base_table['table']['base']['field'];
+      $conf['conf']['unique_key'] = $datasource->base_table .'_'. $base_table['table']['base']['field'];
     }
 
     // Attributes: name, type, indexed, stored, required, multiValued, omitNorms
-    foreach ($datasource['fields'] as $field) {
+    foreach ($datasource->fields as $field) {
       $f = $field['name'];
       $conf['schema'][$f] = array(
         'name' => $f,
