@@ -176,11 +176,6 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
-    'searchlight_plugin_display_datasource' => array(
-      'arguments' => array('form' => array()),
-      'path' => drupal_get_path('module', 'searchlight') . '/theme',
-      'file' => 'searchlight.theme.inc',
-    ),
     'searchlight_facet' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
@@ -194,6 +189,11 @@ function searchlight_theme() {
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource' => array(
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_admin_datasource_edit' => array(
+      'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -451,6 +451,9 @@ function searchlight_datasource_delete($datasource) {
   return FALSE;
 }
 
+/**
+ * Menu access callback for datasource-related tasks.
+ */
 function searchlight_datasource_task_access($datasource, $op) {
   if (user_access('administer site configuration')) {
     switch ($op) {
@@ -498,17 +501,6 @@ function searchlight_get_datasource($base_table) {
     }
   }
   return !empty($datasources[$base_table]) ? $datasources[$base_table] : FALSE;
-}
-
-/**
- * Get a datasource ID for a given base table based on the current site DB name
- * to prevent conflicts in a multisite scenario.
- */
-function searchlight_get_datasource_id($base_table) {
-  global $db_url;
-  $url = is_array($db_url) ? $db_url['default'] : $db_url;
-  $url = parse_url($url);
-  return trim(urldecode($url['path']), '/') .'_'. $base_table;
 }
 
 /**

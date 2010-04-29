@@ -208,7 +208,7 @@ class SearchlightDatasource {
       '#prefix' => "<div id='datasource-fields'>",
       '#suffix' => "</div>",
       '#tree' => TRUE,
-      '#theme' => 'searchlight_plugin_display_datasource',
+      '#theme' => 'searchlight_admin_datasource_edit',
       '#title' => t('Fields'),
     );
 
@@ -284,7 +284,7 @@ class SearchlightDatasource {
     // @TODO: Handle multivalues.
     $form['multivalues'] = array(
       '#tree' => TRUE,
-      '#theme' => 'searchlight_plugin_display_datasource',
+      '#theme' => 'searchlight_admin_datasource_edit',
       '#title' => t('Multivalues'),
       '#prefix' => "<div id='datasource-multivalues'>",
       '#suffix' => "</div>",
