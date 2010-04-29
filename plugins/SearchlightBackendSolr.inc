@@ -313,33 +313,50 @@ class SearchlightBackendSolr extends SearchlightBackend {
         if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
           $core_path = $file_path .'/'. $datasource['id'];
           if (!file_check_directory($core_path, TRUE)) {
-            break;
+            return drush_log("/{$core_path} could not be written to.", 'error');
           }
           $core_path .= '/conf';
           if (file_check_directory($core_path, TRUE)) {
             // Generate configuration file from datasources.
             $datasource = $this->solrDatasourceConf($datasource);
-            $solr_conf = theme('searchlight_solr_schema', $datasource, $this->solrSearchdConf());
+            $files = array(
+              'schema.xml' => theme('searchlight_solr_schema', $datasource),
+              'solrconfig.xml' => theme('searchlight_solr_config'), //, $this->solrSearchdConf());
+            );
 
             // Write config to the filesystem
-            if ($solr_conf) {
-              $existing = file_exists("{$core_path}/schema.xml") ?
-                file_get_contents("{$core_path}/schema.xml") : '';
-
-              if ($solr_conf === $existing) {
-                return drush_log("{$core_path}/schema.xml is unchanged.", 'success');
+            foreach($files as $name => $contents) {
+              if ($contents) {
+                $existing = '';
+                if (file_exists("{$core_path}/{$name}")) {
+                  $existing = file_get_contents("{$core_path}/{$name}");
+                }
+                if ($content !== $existing) {
+                 file_put_contents("{$core_path}/{$name}", $contents);
+                 drush_log("{$core_path}/{$name} was written successfully.", 'success');
+                }
+                else {
+                  drush_log("{$core_path}/{$name} is unchanged.", 'success');
+                }
               }
               else {
-                file_put_contents("{$core_path}/schema.xml", $solr_conf);
-                return drush_log("{$core_path}/schema.xml was written successfully.", 'success');
+                drush_log("{$core_path}/{$name} was not generated.", 'warning');
               }
             }
+
+          }
+          else {
+            return drush_log("/{$core_path} could not be written to.", 'error');
           }
         }
-        return drush_log("{$file_path}/$core_path/schema.xml could not be written.", 'error');
-
-        break; // TODO support more than one schema file.
+        else {
+          return drush_log("Invalid data source.", 'error');
+        }
+        break; // TODO support more than one "core" file.
       }
+    }
+    else {
+      return drush_log("/{$filepath} could not be written to.", 'error');
     }
   }
 
