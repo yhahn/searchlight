@@ -12,10 +12,10 @@ class SearchlightFacets {
    */
   function allFacets($datasource) {
     $facets = array();
-    foreach ($datasource['fields'] as $name => $field) {
-      if (!empty($field['facet'])) {
+    foreach ($datasource->fields as $name => $field) {
+      // if (!empty($field['facet'])) {
         $facets[$name] = $field;
-      }
+      // }
     }
     return $facets;
   }
@@ -126,8 +126,13 @@ class SearchlightFacets {
    * Render a facet using its corresponding field handler.
    */
   function render($datasource, $field, $items) {
-    $view = ($field['usage'] === 'multivalue') ? $field['view'] : $datasource['view'];
-    $view = searchlight_build_view($view);
+    if ($field['usage'] === 'multivalue') {
+      $view = searchlight_build_view($field['view']);
+    }
+    else {
+      $view = $datasource->view->copy();
+      $view->build();
+    }
 
     // Detect which handler is responsible for this field and build fake
     // resultset for it to process.

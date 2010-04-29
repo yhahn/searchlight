@@ -22,7 +22,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->client = $backend->initClient();
 
     $this->datasource = searchlight_get_datasource($base_table);
-    $this->datasource_id = searchlight_get_datasource_id($base_table);
+    $this->datasource->init();
+    $this->datasource_id = $this->datasource->id;
 
     $this->search_filter = array();
     $this->search_options = array();
@@ -48,7 +49,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       if (count($field) === 2) {
         $table = $field[0];
         $field = $field[1];
-        foreach ($this->datasource['fields'] as $name => $info) {
+        foreach ($this->datasource->fields as $name => $info) {
           if ($info['table'] === $table && ($info['name'] === $field || $info['field'] === $field)) {
             // Get the arguments for this where clause.
             $args = array();
@@ -81,7 +82,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       }
       // Use table field info to retrieve datasource field name and add sort.
       if (isset($table, $field)) {
-        foreach ($this->datasource['fields'] as $name => $info) {
+        foreach ($this->datasource->fields as $name => $info) {
           if ($info['table'] === $table && $info['field'] === $field) {
             $this->search_sort[] = array('field' => $name, 'order' => $order); // "{$name} {$order}";
             break;

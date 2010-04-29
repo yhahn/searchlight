@@ -79,12 +79,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function executeQuery(&$client, $datasource, $query = '') {
     // Determine if we need to query a delta and main index.
-    $index = $datasource['id'];
+    $index = $datasource->id;
     if ($this->settings['delta_ttl']) {
       $index .= ";{$index}_delta";
     }
 
-    $result = $client->Query($query, $datasource['id']);
+    $result = $client->Query($query, $datasource->id);
     if (!empty($result['matches'])) {
       return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
@@ -302,8 +302,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     if (file_check_directory($file_path, TRUE)) {
       // build list of this site's indexes
       $indexes = array();
-      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
-        $indexes[] = searchlight_get_datasource_id($base_table);
+      foreach (searchlight_datasource_load() as $datasource) {
+        $datasource->init();
+        $indexes[] = $datasource->id;
       }
 
       // Determine if we should update deltas only.
@@ -335,10 +336,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $datasources = array();
-      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
-        if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
-          $datasources = array_merge($datasources, $this->sphinxDatasourceConf($datasource));
-        }
+      foreach (searchlight_datasource_load() as $datasource) {
+        $datasources = array_merge($datasources, $this->sphinxDatasourceConf($datasource));
       }
       // Generate configuration file from datasources.
       $sphinx_conf = theme('searchlight_sphinx_conf', $datasources, $this->sphinxSearchdConf());
@@ -360,6 +359,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Generate an array representing the conf and index settings for a datasource.
    */
   function sphinxDatasourceConf($datasource) {
+    $datasource->init();
+
     $conf = array('conf' => array(), 'index' => array());
 
     // Retrieve db info.
@@ -368,7 +369,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $url = parse_url($url);
 
     // Configuration options.
-    $conf['conf']['id'] = $datasource['id'];
+    $conf['conf']['id'] = $datasource->id;
     $conf['conf']['type'] = $db_type;
     $conf['conf']['sql_user'] = urldecode($url['user']);
     $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
@@ -377,7 +378,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
     // Index information
-    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource['id'];
+    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource->id;
     $conf['index']['docinfo'] = 'extern';
     $conf['index']['mlock'] = 0;
     $conf['index']['morphology'] = 'stem_en';
@@ -389,8 +390,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $ret = array();
 
     // Build the query.
-    if ($view = searchlight_build_view($datasource['view'])) {
+    $datasource->init();
+    $datasource->view->build();
+    if ($view = $datasource->view) {
       do {
+        // Slam the base field onto the query object.
+        $view->query->add_field($view->base_table, $view->base_field);
+        $base_field = $view->query->fields[$view->base_field];
+        $view->query->fields = array_merge(array($view->base_field => $base_field), $view->query->fields);
+
         $sql_query = drupal_clone($view->query);
         $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
         if ($delta) {
@@ -422,7 +430,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           'float'     => 'sql_attr_float',
           'timestamp' => 'sql_attr_timestamp',
         );
-        foreach ($datasource['fields'] as $field) {
+        // Generate attribute entries.
+        foreach ($datasource->fields as $field) {
           if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
             $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
           }
@@ -535,10 +544,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * if you know what you are doing.
    */
   function getOrdinals($datasource) {
+    $datasource->init();
+
     // Retrieve all ordinal attributes.
     $attributes = array();
-    if (!empty($datasource['fields'])) {
-      foreach ($datasource['fields'] as $name => $field) {
+    if (!empty($datasource->fields)) {
+      foreach ($datasource->fields as $name => $field) {
         if ($field['datatype'] === 'text' && $field['usage'] === 'attribute') {
           $attributes[$name] = $field;
         }
@@ -557,12 +568,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         // Dispatch a Sphinx query to retrieve the ordinal.
         $sphinx->SetGroupBy($name, SPH_GROUPBY_ATTR, '@count desc');
         $sphinx->SetGroupDistinct($name);
-        $result = $sphinx->Query(NULL, $datasource['id']);
+        $result = $sphinx->Query(NULL, $datasource->id);
 
         if (count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
           $ids = implode(',', array_keys($result['matches']));
-          $view = searchlight_build_view($datasource['view']);
+          $view = $datasource->view->copy();
+          $view->build();
           $view->set_items_per_page(0);
           $view->query->where = array();
           $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");

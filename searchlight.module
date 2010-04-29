@@ -1,20 +1,77 @@
 <?php
 
 include_once('searchlight.features.inc');
+include_once('searchlight.datasource.inc');
 
 /**
  * Implementation of hook_menu().
  */
 function searchlight_menu() {
   $items = array();
-  $items['admin/settings/search/searchlight'] = array(
-    'title' => 'Searchlight',
+  $items['admin/settings/search/datasource'] = array(
+    'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_settings_form'),
+    'page arguments' => array('searchlight_admin_datasource'),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
     'type' => module_exists('search') ? MENU_LOCAL_TASK : MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/search/datasource/list/%searchlight_datasource'] = array(
+    'title' => 'Datasource',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_datasource_edit', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_CALLBACK,
+    'weight' => -10,
+  );
+  $items['admin/settings/search/datasource/list/%searchlight_datasource/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_datasource_edit', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/search/datasource/list/%searchlight_datasource/delete'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_datasource_confirm', 5, 'revert'),
+    'access callback' => 'searchlight_datasource_task_access',
+    'access arguments' => array(5, 'delete'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/settings/search/datasource/list/%searchlight_datasource/revert'] = array(
+    'title' => 'Revert',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_datasource_confirm', 5, 'revert'),
+    'access callback' => 'searchlight_datasource_task_access',
+    'access arguments' => array(5, 'revert'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/settings/search/datasource/ahah/%/%'] = array(
+    'page callback' => 'searchlight_admin_datasource_ahah',
+    'page arguments' => array(5, 6),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/search/backend'] = array(
+    'title' => 'Backend',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_backend'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
   );
   return $items;
 }
@@ -29,9 +86,10 @@ function searchlight_menu_alter(&$items) {
     $items['admin/settings/search/core']['type'] = MENU_DEFAULT_LOCAL_TASK;
   }
   else {
-    $items['admin/settings/search'] = $items['admin/settings/search/searchlight'];
+    $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
     $items['admin/settings/search']['title'] = 'Search';
     $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
+    unset($items['admin/settings/search']['weight']);
   }
 }
 
@@ -85,7 +143,7 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
 /**
  * Implementation of hook_nodeapi()
  */
-function searchlight_nodeadpi($node, $op) {
+function searchlight_nodeapi($node, $op) {
   if ($op == 'insert') {
     db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
   }
@@ -135,6 +193,10 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_admin_datasource' => array(
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
   );
 }
 
@@ -152,8 +214,13 @@ function searchlight_views_api() {
  * Implementation of hook_ctools_plugin_api().
  */
 function searchlight_ctools_plugin_api($module, $api) {
-  if ($module === 'searchlight' && $api === 'plugins') {
-    return array('version' => 1);
+  if ($module === 'searchlight') {
+    switch ($api) {
+      case 'plugins':
+        return array('version' => 1);
+      case 'datasource':
+        return array('version' => 1);
+    }
   }
 }
 
@@ -306,9 +373,113 @@ function searchlight_build_view($identifier) {
 }
 
 /**
+ * Load & crud functions ==============================================
+ */
+
+/**
+ * Create a new datasource object.
+ */
+function searchlight_datasource_new($name, $base_table) {
+  ctools_include('export');
+  $datasource = ctools_export_new_object('searchlight_datasource');
+  $datasource->name = $name;
+  $datasource->base_table = $base_table;
+  return $datasource;
+}
+
+/**
+ * Datasource loader.
+ *
+ * @param $name
+ *   The name for this datasource.
+ *
+ * @return
+ *   Returns a fully-loaded datasource.
+ */
+function searchlight_datasource_load($name = NULL, $reset = FALSE) {
+  ctools_include('export');
+  static $datasources;
+  if (!isset($datasources) || $reset) {
+    if ($reset) {
+      ctools_export_load_object_reset('searchlight_datasource');
+    }
+    $datasources = ctools_export_load_object('searchlight_datasource', 'all');
+  }
+  if (isset($name)) {
+    return isset($datasources[$name]) ? $datasources[$name] : FALSE;
+  }
+  return $datasources;
+}
+
+/**
+ * Inserts or updates a datasource object into the database.
+ *
+ * @param $datasource
+ *   The datasource object to be saved.
+ *
+ * @return
+ *   Returns true on success, false on failure.
+ */
+function searchlight_datasource_save($datasource) {
+  $existing = searchlight_datasource_load($datasource->name, TRUE);
+  if ($existing && ($existing->export_type & EXPORT_IN_DATABASE)) {
+    drupal_write_record('searchlight_datasource', $datasource, 'name');
+  }
+  else {
+    drupal_write_record('searchlight_datasource', $datasource);
+  }
+  searchlight_datasource_load(NULL, TRUE);
+  searchlight_invalidate_cache();
+  return TRUE;
+}
+
+/**
+ * Deletes an existing datasource.
+ *
+ * @param $datasource
+ *   The datasource to be deleted.
+ *
+ * @return
+ *   Returns true on success, false on failure.
+ */
+function searchlight_datasource_delete($datasource) {
+  if (isset($datasource->name) && ($datasource->export_type & EXPORT_IN_DATABASE)) {
+    db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name);
+    searchlight_invalidate_cache();
+    return TRUE;
+  }
+  return FALSE;
+}
+
+function searchlight_datasource_task_access($datasource, $op) {
+  if (user_access('administer site configuration')) {
+    switch ($op) {
+      case 'revert':
+        return ($datasource->export_type & EXPORT_IN_DATABASE) && ($datasource->export_type & EXPORT_IN_CODE);
+      case 'delete':
+        return ($datasource->export_type & EXPORT_IN_DATABASE) && !($datasource->export_type & EXPORT_IN_CODE);
+      case 'disable':
+        return empty($datasource->disabled);
+      case 'enable':
+        return !empty($datasource->disabled);
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
  * Retrieve full datasource information for a given base table.
  */
-function searchlight_get_datasource($base_table, $reset = FALSE) {
+function searchlight_get_datasource($base_table) {
+  $datasources = searchlight_datasource_load();
+  foreach ($datasources as $datasource) {
+    if ($datasource->base_table === $base_table) {
+      return $datasource;
+    }
+  }
+  return FALSE;
+
   static $datasources = array();
   $reset = TRUE;
   if (!isset($datasources[$base_table]) || $reset) {

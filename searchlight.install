@@ -5,6 +5,53 @@
  */
 function searchlight_schema() {
   $schema = array();
+  $schema['searchlight_datasource'] = array(
+    'description' => t('Storage for Searchlight datasource configuration.'),
+    'export' => array(
+      'key' => 'name',
+      'object' => 'SearchlightDatasource',
+      'identifier' => 'searchlight_datasource',
+      'default hook' => 'searchlight_default_datasources',
+      'api' => array(
+        'owner' => 'searchlight',
+        'api' => 'datasource', // Base name for api include files.
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+    'fields' => array(
+      'name' => array(
+        'description' => 'The primary identifier for a datasource.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'base_table' => array(
+        'description' => 'The base table for this datasource.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fields' => array(
+        'description' => 'Serialized storage of datasource field settings.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
+      'filters' => array(
+        'description' => 'Serialized storage of datasource filter settings.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
+      'options' => array(
+        'description' => 'Serialized storage of other datasource options.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('name'),
+  );
   $schema['searchlight_search'] = array(
     'description' => t('Stores a record of an items status in the index.'),
     'fields' => array(

@@ -16,18 +16,6 @@ function searchlight_views_plugins() {
       ),
     ),
     'display' => array(
-      'searchlight_datasource' => array(
-        'path' => drupal_get_path('module', 'searchlight') . '/views',
-        'theme' => 'views_view',
-        'uses hook menu' => FALSE,
-        'use ajax' => FALSE,
-        'use pager' => FALSE,
-        'accept attachments' => FALSE,
-        'title' => t('Searchlight datasource'),
-        'help' => t('Expose a base table to Searchlight for indexing.'),
-        'handler' => 'searchlight_plugin_display_datasource',
-        'admin' => t('Searchlight datasource'),
-      ),
       'searchlight_multivalue' => array(
         'path' => drupal_get_path('module', 'searchlight') . '/views',
         'theme' => 'views_view',
@@ -39,7 +27,6 @@ function searchlight_views_plugins() {
         'help' => t('Expose a view as an multivalue attribute to be used with a Searchlight datasource.'),
         'handler' => 'searchlight_plugin_display_multivalue',
         'admin' => t('Searchlight multivalue'),
-        'parent' => 'searchlight_datasource',
       ),
     ),
   );
