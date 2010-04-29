@@ -262,10 +262,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   function drushSearchd() {
-    $file_path = conf_path() .'/solr/log';
-    if (file_check_directory($file_path, TRUE)) {
-      drush_op('drush_shell_exec', 'searchd --nodetach -c ' . drush_locate_root() .'/'. conf_path() . '/solr/solr.conf');
-      return drush_log('Search daemon started.', 'success');
+    $jar_path = '/usr/local/apache-solr-1.4.0/example'; // move to option.
+
+    $file_path = conf_path() .'/solr';
+    $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
+    $log_dir = $solr_home .'/log';
+    if (file_check_directory($log_dir, TRUE)) {
+      drush_op('drush_shell_exec', 'java -Dsolr.solr.home=' .$solr_home. ' -Djetty.home='. $jar_path.' -jar '. $jar_path .'/start.jar');
     }
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
