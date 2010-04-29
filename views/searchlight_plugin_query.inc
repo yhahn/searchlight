@@ -40,7 +40,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
   function add_where($group, $clause) {
     $where_args = func_get_args();
     $where_args = $this->get_args($where_args);
-    parent::add_where($group, $clause, $where_args);
 
     $split = preg_split('/[ ]([<>=!]*)|(IN)|(NOT IN)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
     if (count($split) >= 2) {
@@ -71,8 +70,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
-    $alias = parent::add_orderby($table, $field, $order, $alias, $params);
-
     if ($field === 'searchlight_weight') {
       $this->search_sort[] = array('field' => 'searchlight_weight', 'order' => $order); // "@weight {$order}";
     }
@@ -138,7 +135,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
       // @TODO: do this with placeholders, args.
       $ids = implode(',', $this->search_result['result']);
-      $this->add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");
+      parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");
 
       $view->build_info['query'] = $this->query();
       $view->build_info['count_query'] = "SELECT FALSE";

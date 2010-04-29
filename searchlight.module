@@ -54,12 +54,13 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
           $query = drupal_clone($display->view->query);
           // Render active facets
           foreach (searchlight_facets()->activeFacets($query->datasource) as $name => $field) {
-            $items = $query->backend->facetBuild($query, $field);
-            if (!empty($items) && $rendered = searchlight_facets()->render($query->datasource, $field, $items)) {
+            $id = searchlight_facets()->getFacet($name);
+            $items = array($id => array('id' => $id, 'count' => $display->view->total_rows));
+            if ($rendered = searchlight_facets()->render($query->datasource, $field, $items)) {
               $output .= theme('searchlight_facet', $rendered);
             }
           }
-          return array('subject' => t('Active search'), 'content' => $output);
+          return array('subject' => t('Active search (@count)', array('@count' => $display->view->total_rows)), 'content' => $output);
         }
         break;
       case 'facets':

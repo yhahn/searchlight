@@ -162,10 +162,6 @@ function _searchlight_views_default_views() {
         'usage' => 'attribute',
         'facet' => 1,
       ),
-      'term_data_tid' => array(
-        'usage' => 'multivalue',
-        'facet' => 1,
-      ),
     ),
     'node_access' => 1,
   );
@@ -282,82 +278,6 @@ function _searchlight_views_default_views() {
 /* Display: Page: search */
   $handler = $view->new_display('page', 'Page: search', 'page_1');
   $handler->display->display_options['path'] = 'search';
-
-  $views[$view->name] = $view;
-
-  // Exported view: searchlight_term_data
-  $view = new view;
-  $view->name = 'searchlight_term_data';
-  $view->description = 'Searchlight multivalue view for node terms.';
-  $view->tag = 'searchlight';
-  $view->view_php = '';
-  $view->base_table = 'node';
-  $view->is_cacheable = FALSE;
-  $view->api_version = 3.0-alpha1;
-  $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  
-/* Display: Defaults */
-  $handler = $view->new_display('default', 'Defaults', 'default');
-  $handler->display->display_options['access']['type'] = 'none';
-  $handler->display->display_options['cache']['type'] = 'none';
-  $handler->display->display_options['exposed_form']['type'] = 'basic';
-  $handler->display->display_options['pager']['type'] = 'full';
-  $handler->display->display_options['style_plugin'] = 'default';
-  $handler->display->display_options['row_plugin'] = 'fields';
-  /* Field: Node: Nid */
-  $handler->display->display_options['fields']['nid']['id'] = 'nid';
-  $handler->display->display_options['fields']['nid']['table'] = 'node';
-  $handler->display->display_options['fields']['nid']['field'] = 'nid';
-  $handler->display->display_options['fields']['nid']['alter']['alter_text'] = 0;
-  $handler->display->display_options['fields']['nid']['alter']['make_link'] = 0;
-  $handler->display->display_options['fields']['nid']['alter']['trim'] = 0;
-  $handler->display->display_options['fields']['nid']['alter']['word_boundary'] = 1;
-  $handler->display->display_options['fields']['nid']['alter']['ellipsis'] = 1;
-  $handler->display->display_options['fields']['nid']['alter']['strip_tags'] = 0;
-  $handler->display->display_options['fields']['nid']['alter']['html'] = 0;
-  $handler->display->display_options['fields']['nid']['hide_empty'] = 0;
-  $handler->display->display_options['fields']['nid']['empty_zero'] = 0;
-  $handler->display->display_options['fields']['nid']['link_to_node'] = 0;
-  /* Field: Taxonomy: Term */
-  $handler->display->display_options['fields']['name']['id'] = 'name';
-  $handler->display->display_options['fields']['name']['table'] = 'term_data';
-  $handler->display->display_options['fields']['name']['field'] = 'name';
-  $handler->display->display_options['fields']['name']['label'] = 'Terms';
-  $handler->display->display_options['fields']['name']['alter']['alter_text'] = 0;
-  $handler->display->display_options['fields']['name']['alter']['make_link'] = 0;
-  $handler->display->display_options['fields']['name']['alter']['trim'] = 0;
-  $handler->display->display_options['fields']['name']['alter']['word_boundary'] = 1;
-  $handler->display->display_options['fields']['name']['alter']['ellipsis'] = 1;
-  $handler->display->display_options['fields']['name']['alter']['strip_tags'] = 0;
-  $handler->display->display_options['fields']['name']['alter']['html'] = 0;
-  $handler->display->display_options['fields']['name']['link_to_taxonomy'] = 0;
-  
-/* Display: Terms */
-  $handler = $view->new_display('searchlight_multivalue', 'Terms', 'searchlight_multivalue_1');
-  $handler->display->display_options['defaults']['title'] = FALSE;
-  $handler->display->display_options['defaults']['use_ajax'] = FALSE;
-  $handler->display->display_options['defaults']['items_per_page'] = FALSE;
-  $handler->display->display_options['defaults']['distinct'] = FALSE;
-  $handler->display->display_options['defaults']['access'] = FALSE;
-  $handler->display->display_options['access']['type'] = 'none';
-  $handler->display->display_options['defaults']['cache'] = FALSE;
-  $handler->display->display_options['cache']['type'] = 'none';
-  $handler->display->display_options['defaults']['style_plugin'] = FALSE;
-  $handler->display->display_options['style_plugin'] = 'default';
-  $handler->display->display_options['defaults']['style_options'] = FALSE;
-  $handler->display->display_options['defaults']['row_plugin'] = FALSE;
-  $handler->display->display_options['row_plugin'] = 'fields';
-  $handler->display->display_options['defaults']['row_options'] = FALSE;
-  $handler->display->display_options['defaults']['exposed_block'] = FALSE;
-  $handler->display->display_options['defaults']['header'] = FALSE;
-  $handler->display->display_options['defaults']['footer'] = FALSE;
-  $handler->display->display_options['defaults']['empty'] = FALSE;
-  $handler->display->display_options['defaults']['sorts'] = FALSE;
-  $handler->display->display_options['defaults']['arguments'] = FALSE;
-  $handler->display->display_options['searchlight_multivalue'] = array(
-    'field' => 'term_data_tid',
-    'label_field' => 'term_data_name',
-  );
 
   $views[$view->name] = $view;
 

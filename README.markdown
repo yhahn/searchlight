@@ -34,13 +34,13 @@ Terminology
 -----------
 - A **backend** is a CTools plugin class that interfaces with a specific search
   technology.
-- A **datastore** is a backend-agnostic representation of a search datastore
+- A **datasource** is a backend-agnostic representation of a search datasource
   (aka index). In Searchlight, there are specific Views displays which help you
-  represent each base table (and joining tables) as a datastore.
+  represent each base table (and joining tables) as a datasource.
 - A **field** is a data element exposed to the search backend. Each field is
-  referenced by the **views alias** generated for it in its datastore view, and
+  referenced by the **views alias** generated for it in its datasource view, and
   contains additional metadata like: datatype (int, text, timestamp, etc.),
-  whether it should be exposed as a facet or not, etc. Each datastore contains
+  whether it should be exposed as a facet or not, etc. Each datasource contains
   definitions of one or more fields.
 
 
