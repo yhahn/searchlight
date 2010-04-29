@@ -3,12 +3,74 @@
 /**
  * Datasource management form.
  */
+function searchlight_admin_environment($form_state) {
+  $form = array(
+    '#theme' => 'searchlight_admin_list',
+    '#objects' => searchlight_environment_load(NULL, TRUE),
+  );
+  $form['new']['name'] = array(
+    '#title' => t('Name'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#maxlength' => 255,
+    '#size' => 15,
+    '#element_validate' => array('searchlight_admin_datasource_validate_name'),
+  );
+
+  $options = array();
+  foreach (searchlight_datasource_load() as $datasource) {
+    $options[$datasource->name] = $datasource->name;
+  }
+  $form['new']['datasource'] = array(
+    '#title' => t('Datasource'),
+    '#type' => 'select',
+    '#options' => $options,
+  );
+
+  $form['new']['submit'] = array(
+    '#value' => t('Create new environment'),
+    '#type' => 'submit',
+    '#submit' => array('searchlight_admin_environment_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Validate environment name values.
+ */
+function searchlight_admin_environment_validate_name($element, &$form_state) {
+  // Check for string identifier sanity
+  if (!preg_match('!^[a-z0-9_-]+$!', $element['#value'])) {
+    form_set_error('name', t('The environment name can only consist of lowercase letters, dashes, underscores, and numbers.'));
+  }
+  // Check for name collision
+  else if ($exists = searchlight_environment_load($element['#value'], TRUE)) {
+    form_set_error('name', t('A environment with this name already exists. Please choose another name or delete the existing environment before creating a new one.'));
+  }
+}
+
+/**
+ * Searchlight datasource form submit handler.
+ */
+function searchlight_admin_environment_submit(&$form, &$form_state) {
+  $environment = searchlight_environment_new($form_state['values']['name'], $form_state['values']['datasource']);
+  if (searchlight_environment_save($environment)) {
+    drupal_set_message(t('Saved environment %name.', array('%name' =>  $environment->name)));
+  }
+  else {
+    drupal_set_message(t('Could not save environment %name.', array('%name' => $environment->name)), 'error');
+  }
+}
+
+/**
+ * Datasource management form.
+ */
 function searchlight_admin_datasource($form_state) {
   $form = array(
-    '#theme' => 'searchlight_admin_datasource',
-    '#datasources' => searchlight_datasource_load(NULL, TRUE),
+    '#theme' => 'searchlight_admin_list',
+    '#objects' => searchlight_datasource_load(NULL, TRUE),
   );
-  $form['name'] = array(
+  $form['new']['name'] = array(
     '#title' => t('Name'),
     '#type' => 'textfield',
     '#required' => TRUE,
@@ -22,14 +84,14 @@ function searchlight_admin_datasource($form_state) {
   foreach (views_fetch_base_tables() as $table => $info) {
     $options[$table] = $info['title'];
   }
-  $form['base_table'] = array(
+  $form['new']['base_table'] = array(
     '#title' => t('Base table'),
     '#type' => 'select',
     '#options' => $options,
     '#element_validate' => array('searchlight_admin_datasource_validate_base_table'),
   );
 
-  $form['submit'] = array(
+  $form['new']['submit'] = array(
     '#value' => t('Create new datasource'),
     '#type' => 'submit',
     '#submit' => array('searchlight_admin_datasource_submit'),
@@ -141,18 +203,27 @@ function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
 /**
  * Confirmation form for datasource actions.
  */
-function searchlight_admin_datasource_confirm(&$form_state, $datasource, $op) {
+function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
+  switch ($type) {
+    case 'searchlight_datasource':
+      $type_name = t('datasource');
+      break;
+    case 'searchlight_environment':
+      $type_name = t('environment');
+      break;
+  }
   $form = array();
-  $form['datasource'] = array('#type' => 'value', '#value' => $datasource);
+  $form['type'] = array('#type' => 'value', '#value' => $type);
+  $form['object'] = array('#type' => 'value', '#value' => $object);
   $form['action'] = array('#type' => 'value', '#value' => $op);
   switch ($op) {
     case 'revert':
       $action = t('revert');
-      $message = t('This action will permanently remove any customizations made to this datasource.');
+      $message = t('This action will permanently remove any customizations made to this @type.', array('@type' => $type_name));
       break;
     case 'delete':
       $action = t('delete');
-      $message = t('This action will remove this datasource permanently from your site.');
+      $message = t('This action will remove this @type permanently from your site.', array('@type' => $type_name));
       break;
     case 'disable':
       $action = t('disable');
@@ -164,7 +235,7 @@ function searchlight_admin_datasource_confirm(&$form_state, $datasource, $op) {
       break;
   }
   $form = confirm_form($form,
-    t('Are you sure you want to !action the datasource %title?', array('%title' => $datasource->name, '!action' => $action)),
+    t('Are you sure you want to !action the @type %title?', array('%title' => $object->name, '@type' => $type_name, '!action' => $action)),
     'admin/settings/search',
     $message,
     drupal_ucfirst($action), t('Cancel')
@@ -175,16 +246,24 @@ function searchlight_admin_datasource_confirm(&$form_state, $datasource, $op) {
 /**
  * Submit handler for the searchlight_admin_datasource_confirm.
  */
-function searchlight_admin_datasource_confirm_submit($form, &$form_state) {
+function searchlight_admin_confirm_submit($form, &$form_state) {
   ctools_include('export');
-  $datasource = $form_state['values']['datasource'];
+  $object = $form_state['values']['object'];
   switch ($form_state['values']['action']) {
     case 'revert':
     case 'delete':
-      searchlight_datasource_delete($datasource);
+      switch ($form_state['values']['type']) {
+        case 'searchlight_datasource':
+          searchlight_datasource_delete($object);
+          $form_state['redirect'] = 'admin/settings/search/datasource';
+          break;
+        case 'searchlight_environment':
+          searchlight_environment_delete($object);
+          $form_state['redirect'] = 'admin/settings/search/environment';
+          break;
+      }
       break;
   }
-  $form_state['redirect'] = 'admin/settings/search';
 }
 
 /**

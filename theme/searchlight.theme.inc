@@ -87,42 +87,60 @@ function theme_searchlight_facet_active($field, $item) {
 /**
  * Generates the main datasource admin page.
  */
-function theme_searchlight_admin_datasource($form) {
+function theme_searchlight_admin_list($form) {
   drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.css");
 
   // Generate listing of existing datasources
-  foreach ($form['#datasources'] as $datasource) {
+  foreach ($form['#objects'] as $object) {
+    if ($object instanceof SearchlightDatasource) {
+      $extra = $object->base_table;
+      $path = 'datasource';
+      $name_label = t('Datasource');
+      $extra_label = t('Base table');
+    }
+    else if ($object instanceof SearchlightEnvironment) {
+      $extra = $object->datasource;
+      $path = 'environment';
+      $name_label = t('Environment');
+      $extra_label = t('Datasource');
+    }
+
     $row = array();
 
     // Info
     $storage = t('Default');
-    if ($datasource->export_type & EXPORT_IN_DATABASE) {
-      $storage = $datasource->export_type & EXPORT_IN_CODE ? t('Overridden') : t('Normal');
+    if ($object->export_type & EXPORT_IN_DATABASE) {
+      $storage = $object->export_type & EXPORT_IN_CODE ? t('Overridden') : t('Normal');
     }
-    $row[] = array('data' => $datasource->name, 'class' => 'datasource-name');
-    $row[] = array('data' => $datasource->base_table, 'class' => 'datasource-base-table');
-    $row[] = array('data' => $storage, 'class' => 'datasource-storage');
+    $row[] = array('data' => $object->name, 'class' => 'object-name');
+    $row[] = array('data' => $extra, 'class' => 'object-extra');
+    $row[] = array('data' => $storage, 'class' => 'object-storage');
 
     // Actions
     $links = array(
-      'edit'    => l(t('Edit'), "admin/settings/search/datasource/list/{$datasource->name}"),
-      'delete'  => l(t('Delete'), "admin/settings/search/datasource/list/{$datasource->name}/delete"),
-      'revert'  => l(t('Revert'), "admin/settings/search/datasource/list/{$datasource->name}/revert"),
+      'edit'    => l(t('Edit'), "admin/settings/search/{$path}/list/{$object->name}"),
+      'delete'  => l(t('Delete'), "admin/settings/search/{$path}/list/{$object->name}/delete"),
+      'revert'  => l(t('Revert'), "admin/settings/search/{$path}/list/{$object->name}/revert"),
     );
     foreach (array_keys($links) as $key) {
-      if (!searchlight_datasource_task_access($datasource, $key)) {
+      if (!searchlight_task_access($object, $key)) {
         unset($links[$key]);
       }
     }
-    $row[] = array('data' => implode(' | ', $links), 'class' => 'datasource-links');
+    $row[] = array('data' => implode(' | ', $links), 'class' => 'object-links');
     $rows[] = $row;
   }
-  $rows[] = array(
-    drupal_render($form['name']),
-    drupal_render($form['base_table']),
-    array('data' => drupal_render($form['submit']), 'colspan' => 2),
-  );
-  $output = theme('table', array(t('Datasource'), t('Base table'), t('Storage'), t('Operations')), $rows, array('class' => 'datasource-admin'));
+  $row = array();
+  foreach (element_children($form['new']) as $key) {
+    if ($form['new'][$key]['#type'] === 'submit') {
+      $row[] = array('data' => drupal_render($form['new'][$key]), 'colspan' => 2);
+    }
+    else {
+      $row[] = drupal_render($form['new'][$key]);
+    }
+  }
+  $rows[] = $row;
+  $output = theme('table', array($name_label, $extra_label, t('Storage'), t('Operations')), $rows, array('class' => 'object-admin'));
   $output .= drupal_render($form);
   return $output;
 }

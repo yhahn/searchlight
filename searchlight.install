@@ -52,6 +52,48 @@ function searchlight_schema() {
     ),
     'primary key' => array('name'),
   );
+  $schema['searchlight_environment'] = array(
+    'description' => t('Storage for Searchlight environment configuration.'),
+    'export' => array(
+      'key' => 'name',
+      'object' => 'SearchlightEnvironment',
+      'identifier' => 'searchlight_environment',
+      'default hook' => 'searchlight_default_environments',
+      'api' => array(
+        'owner' => 'searchlight',
+        'api' => 'environment', // Base name for api include files.
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+    'fields' => array(
+      'name' => array(
+        'description' => 'The primary identifier for an environment.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'datasource' => array(
+        'description' => 'The datasource for which this environment is used.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'facets' => array(
+        'description' => 'Serialized storage of environment facet settings.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
+      'options' => array(
+        'description' => 'Serialized storage of other environment options.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('name'),
+  );
   $schema['searchlight_search'] = array(
     'description' => t('Stores a record of an items status in the index.'),
     'fields' => array(
