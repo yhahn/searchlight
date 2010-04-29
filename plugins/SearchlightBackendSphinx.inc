@@ -394,11 +394,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $datasource->view->build();
     if ($view = $datasource->view) {
       do {
-        // Slam the base field onto the query object.
-        $view->query->add_field($view->base_table, $view->base_field);
-        $base_field = $view->query->fields[$view->base_field];
-        $view->query->fields = array_merge(array($view->base_field => $base_field), $view->query->fields);
-
         $sql_query = drupal_clone($view->query);
         $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
         if ($delta) {

@@ -49,6 +49,18 @@ class SearchlightDatasource {
     $handler->override_option('sorts', array());
 
     $fields = array();
+
+    // Force the base field onto the view if possible.
+    $data = views_fetch_data();
+    if (isset($data[$this->base_table]['table']['base']['field'])) {
+      $base_field = $data[$this->base_table]['table']['base']['field'];
+      $fields[$base_field] = array(
+        'id' => $base_field,
+        'table' => $this->base_table,
+        'field' => $base_field,
+        'relationship' => 'none'
+      );
+    }
     foreach ($this->getFields() as $name => $field) {
       $fields[$name] = array(
         'id' => $field['name'],
