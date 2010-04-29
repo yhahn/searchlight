@@ -26,17 +26,17 @@ function template_preprocess_searchlight_solr_conf(&$vars) {
     'stored' => 'false',
     'multiValued' => 'false'
   );
-  foreach($vars['datasource'] as $id => $field) {
+  foreach($vars['datasource']['schema'] as $id => $field) {
     // Populate defaults.
     foreach($defaults as $k => $v) {
       if (!isset($field[$k])) {
-        $vars['datasource'][$id][$k] = $v;
+        $vars['datasource']['schema'][$id][$k] = $v;
       }
     }
     // Normalize boolean values
     foreach ($field as $attribute => $value) {
       if (is_bool($value)) {
-        $vars['datasource'][$id][$attribute] = ($value === TRUE ? 'true' : 'false');
+        $vars['datasource']['schema'][$id][$attribute] = ($value === TRUE ? 'true' : 'false');
       }
     }
   }

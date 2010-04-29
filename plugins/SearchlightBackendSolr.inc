@@ -338,33 +338,52 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Generate an array representing the conf and index settings for a datasource.
    */
   function solrDatasourceConf($datasource) {
-    $conf = array('conf' => array(), 'index' => array());
 
     // Configuration options.
+    $conf = array('schema' => array(), 'conf' => array());
     $conf['conf']['id'] = $datasource['id'];
 
-    $schema = array();
+    // Determine the primary id field of the view & determine if it is present.
+    $base_table = views_fetch_data($datasource['base_table']);
+    $base_schema = drupal_get_schema($datasource['base_table']);
+    // $base_field = $base_schema['field'][$base_table['table']['base']['field']];
+    foreach ($datasource['fields'] as $field) {
+      if ($field['table'] == $datasource['base_table'] && $field['name'] == $base_table['table']['base']['field']) {
+        $conf['conf']['unique_key'] = 'true';
+        break;
+      }
+    }
 
-    // name, type, indexed, stored, required, multiValued, omitNorms
+    // Add the primary field if it isn't present
+    if (!isset($conf['conf']['unique_key'])) {
+      $datasource['fields'][] = array(
+        'name' => $datasource['base_table'] .'_'. $base_table['table']['base']['field'],
+        'datatype' => 'int',
+        // 'required' => true,
+      );
+      $conf['conf']['unique_key'] = $datasource['base_table'] .'_'. $base_table['table']['base']['field'];
+    }
+
+    // Attributes: name, type, indexed, stored, required, multiValued, omitNorms
     foreach ($datasource['fields'] as $field) {
       $f = $field['name'];
-      $schema[$f] = array(
+      $conf['schema'][$f] = array(
         'name' => $f,
       );
       switch ($field['datatype']) {
         case 'int':
-          $schema[$f]['type'] = 'integer';
+          $conf['schema'][$f]['type'] = 'integer';
           break;
         case 'text':
-          $schema[$f]['type'] = 'string';
+          $conf['schema'][$f]['type'] = 'string';
           break;
       }
 
       if ($field['usage'] == 'multivalue') {
-        $schema[$f]['multiValued'] = TRUE;
+        $conf['schema'][$f]['multiValued'] = TRUE;
       }
     }
-    return $schema;
+    return $conf;
   }
 
   /**

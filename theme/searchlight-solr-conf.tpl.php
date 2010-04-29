@@ -187,11 +187,11 @@
    <dynamicField name="*" type="ignored" multiValued="true" />
  */
 ?>
-  <?php foreach($datasource as $f): ?>
+  <?php foreach($datasource['schema'] as $f): ?>
     <field name="<?php print $f['name'];?>"  type="<?php print $f['type'];?>" indexed="<?php print $f['indexed'];?>" stored="<?php print $f['stored'];?>" multiValued="<?php print $f['multiValued'];?>"/>
   <?php endforeach; ?>
  </fields>
- <uniqueKey>id</uniqueKey>
+ <uniqueKey><?php print $datasource['conf']['unique_key']; ?></uniqueKey>
 
  <!-- field for the QueryParser to use when an explicit fieldname is absent -->
  <defaultSearchField>body</defaultSearchField>
