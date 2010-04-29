@@ -309,8 +309,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $file_path = conf_path() .'/solr';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
+      $cores = array();
       foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
         if ($datasource = searchlight_get_datasource($base_table, TRUE)) {
+          $cores[] = $datasource['id'];
           $core_path = $file_path .'/'. $datasource['id'];
           if (!file_check_directory($core_path, TRUE)) {
             return drush_log("/{$core_path} could not be written to.", 'error');
@@ -323,27 +325,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
               'schema.xml' => theme('searchlight_solr_schema', $datasource),
               'solrconfig.xml' => theme('searchlight_solr_config'), //, $this->solrSearchdConf());
             );
-
-            // Write config to the filesystem
-            foreach($files as $name => $contents) {
-              if ($contents) {
-                $existing = '';
-                if (file_exists("{$core_path}/{$name}")) {
-                  $existing = file_get_contents("{$core_path}/{$name}");
-                }
-                if ($content !== $existing) {
-                 file_put_contents("{$core_path}/{$name}", $contents);
-                 drush_log("{$core_path}/{$name} was written successfully.", 'success');
-                }
-                else {
-                  drush_log("{$core_path}/{$name} is unchanged.", 'success');
-                }
-              }
-              else {
-                drush_log("{$core_path}/{$name} was not generated.", 'warning');
-              }
-            }
-
+            $this->solrWriteFiles($core_path, $files);
           }
           else {
             return drush_log("/{$core_path} could not be written to.", 'error');
@@ -352,8 +334,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
         else {
           return drush_log("Invalid data source.", 'error');
         }
-        break; // TODO support more than one "core" file.
       }
+      // Generate top level config.
+      $files = array('solr.xml' => theme('searchlight_solr_cores', $cores));
+      $this->solrWriteFiles($file_path, $files);
     }
     else {
       return drush_log("/{$filepath} could not be written to.", 'error');
@@ -413,14 +397,38 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   /**
-  * Get the solr searchd settings.
-  */
+   * Get the solr searchd settings.
+   */
   function solrSearchdConf() {
     $searchd = array();
     $searchd['log'] = drush_locate_root() .'/'. conf_path() . '/solr/log/searchd.log';
     $searchd['query_log'] = drush_locate_root() .'/'. conf_path() . '/solr/log/query.log';
     $searchd['pid_file'] = drush_locate_root() .'/'. conf_path() . '/solr/log/searchd.pid';
     return $searchd;
+  }
+
+  /**
+   * Write config to the filesystem
+   */
+  function solrWriteFiles($path, $files) {
+    foreach($files as $name => $contents) {
+      if ($contents) {
+        $existing = '';
+        if (file_exists("{$path}/{$name}")) {
+          $existing = file_get_contents("{$path}/{$name}");
+        }
+        if ($contents !== $existing) {
+         file_put_contents("{$path}/{$name}", $contents);
+         drush_log("{$path}/{$name} was written successfully.", 'success');
+        }
+        else {
+          drush_log("{$path}/{$name} is unchanged.", 'success');
+        }
+      }
+      else {
+        drush_log("{$path}/{$name} was not generated.", 'warning');
+      }
+    }
   }
 
   /**

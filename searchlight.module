@@ -130,6 +130,12 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_solr_cores' => array(
+      'template' => 'searchlight-solr-cores',
+      'arguments' => array('cores' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
     'searchlight_plugin_display_datasource' => array(
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
