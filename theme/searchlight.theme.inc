@@ -18,9 +18,9 @@ function template_preprocess_searchlight_sphinx_conf(&$vars) {
 }
 
 /**
- * Preprocessor for theme('searchlight_solr_conf').
+ * Preprocessor for theme('searchlight_solr_schema').
  */
-function template_preprocess_searchlight_solr_conf(&$vars) {
+function template_preprocess_searchlight_solr_schema(&$vars) {
   $defaults = array(
     'indexed' => 'true',
     'stored' => 'false',
