@@ -193,8 +193,10 @@
  </fields>
  <uniqueKey><?php print $datasource['conf']['unique_key']; ?></uniqueKey>
 
+<?php /*
  <!-- field for the QueryParser to use when an explicit fieldname is absent -->
  <defaultSearchField>body</defaultSearchField>
+*/ ?>
 
  <!-- SolrQueryParser configuration: defaultOperator="AND|OR" -->
  <solrQueryParser defaultOperator="AND"/>

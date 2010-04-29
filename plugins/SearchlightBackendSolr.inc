@@ -262,50 +262,41 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   function drushSearchd() {
-    $jar_path = '/usr/local/apache-solr-1.4.0/example'; // move to option.
+    $jar_path = '/usr/local/apache-solr-1.4.0/example'; // TODO move to option.
 
     $file_path = conf_path() .'/solr';
     $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
     $log_dir = $solr_home .'/log';
     if (file_check_directory($log_dir, TRUE)) {
-      drush_op('drush_shell_exec', 'java -Dsolr.solr.home=' .$solr_home. ' -Djetty.home='. $jar_path.' -jar '. $jar_path .'/start.jar');
+      $opts .= '-Dsolr.solr.home='. $solr_home .' ';
+      $opts .= '-Djetty.logs='. $log_dir.' ';
+      $opts .= '-Djetty.home='. $jar_path.' ';
+      $opts .= '-jar '. $jar_path .'/start.jar';
+      drush_op('drush_shell_exec', 'java '. $opts);
     }
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
 
   function drushIndex() {
-    // Create the solr directory if it doesn't exist.
-    $file_path = conf_path() .'/solr/indexes';
-    if (file_check_directory($file_path, TRUE)) {
-      // build list of this site's indexes
-      $indexes = array();
-      foreach (array_keys(variable_get('searchlight_views', array())) as $base_table) {
-        $indexes[] = searchlight_get_datasource_id($base_table);
-      }
+    // build list of this site's indexes
+    $indexes = array();
+    foreach (variable_get('searchlight_views', array()) as $base_table => $view) {
+      $id = searchlight_get_datasource_id($base_table);
+      list($view_name, $display_id) = explode(':', $view);
 
-      // Determine if we should update deltas only.
-      $options = variable_get('searchlight_backend_solr', array());
-      if ($options['delta_ttl'] && (variable_get('searchlight_solr_last', 0) + $ops['delta_ttl']) > time()) {
-        foreach ($indexes as $k => $v) {
-          $indexes[$k] = $v .'_delta';
-        }
-      }
+      // Build and execute the view
+      $view = views_get_view($view_name);
+      // $o = $view->preview($display_id);
+      // Push the contents to Solr.
+      // $this->initClient();
+      // TODO
 
-      $conf_file = drush_locate_root() .'/'. conf_path() . '/solr/solr.conf';
-
-      drush_op('drush_shell_exec', 'indexer --rotate --config ' .$conf_file. ' ' . implode(' ', $indexes));
-      $output = drush_shell_exec_output();
-      foreach ($output as $line) {
-        drush_print($line);
-      }
-
-      // Clear caches so that solr id -> facet name mapping is updated.
-      drupal_flush_all_caches();
-      db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
-      variable_set('searchlight_solr_last', time());
+      // db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+      // variable_set('searchlight_solr_last', time());
       return drush_log('Indexing complete.', 'success');
+      // return drush_log("An error ocurred while indexing.", 'error');
+
     }
-    return drush_log("An error ocurred while indexing.", 'error');
   }
 
   function drushWriteConf() {
@@ -326,7 +317,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
             $datasource = $this->solrDatasourceConf($datasource);
             $files = array(
               'schema.xml' => theme('searchlight_solr_schema', $datasource),
-              'solrconfig.xml' => theme('searchlight_solr_config'), //, $this->solrSearchdConf());
+              'solrconfig.xml' => theme('searchlight_solr_config'),
             );
             $this->solrWriteFiles($core_path, $files);
           }
@@ -390,6 +381,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
         case 'text':
           $conf['schema'][$f]['type'] = 'string';
           break;
+        case 'timestamp':
+          $conf['schema'][$f]['type'] = 'date';
       }
 
       if ($field['usage'] == 'multivalue') {
@@ -397,17 +390,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
     }
     return $conf;
-  }
-
-  /**
-   * Get the solr searchd settings.
-   */
-  function solrSearchdConf() {
-    $searchd = array();
-    $searchd['log'] = drush_locate_root() .'/'. conf_path() . '/solr/log/searchd.log';
-    $searchd['query_log'] = drush_locate_root() .'/'. conf_path() . '/solr/log/query.log';
-    $searchd['pid_file'] = drush_locate_root() .'/'. conf_path() . '/solr/log/searchd.pid';
-    return $searchd;
   }
 
   /**
