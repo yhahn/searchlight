@@ -176,6 +176,29 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_solr_schema' => array(
+      'template' => 'searchlight-solr-schema',
+      'arguments' => array('datasource' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_solr_config' => array(
+      'template' => 'searchlight-solr-config',
+      //'arguments' => array('datasource' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_solr_cores' => array(
+      'template' => 'searchlight-solr-cores',
+      'arguments' => array('cores' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_plugin_display_datasource' => array(
+      'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
     'searchlight_facet' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
@@ -255,6 +278,14 @@ function searchlight_searchlight_plugins() {
         'parent' => 'SearchlightBackend',
       ),
     ),
+    'SearchlightBackendSolr' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'SearchlightBackendSolr.inc',
+        'class' => 'SearchlightBackendSolr',
+        'parent' => 'SearchlightBackend',
+      ),
+    ),
   );
 }
 
@@ -267,6 +298,10 @@ function searchlight_searchlight_registry() {
       'sphinx' => array(
         'title' => t('Sphinx'),
         'plugin' => 'SearchlightBackendSphinx',
+      ),
+      'solr' => array(
+        'title' => t('Solr'),
+        'plugin' => 'SearchlightBackendSolr',
       ),
     ),
   );

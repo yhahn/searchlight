@@ -18,6 +18,52 @@ function template_preprocess_searchlight_sphinx_conf(&$vars) {
 }
 
 /**
+ * Preprocessor for theme('searchlight_solr_schema').
+ */
+function template_preprocess_searchlight_solr_schema(&$vars) {
+  $defaults = array(
+    'indexed' => 'true',
+    'stored' => 'false',
+    'multiValued' => 'false'
+  );
+  foreach($vars['datasource']['schema'] as $id => $field) {
+    // Populate defaults.
+    foreach($defaults as $k => $v) {
+      if (!isset($field[$k])) {
+        $vars['datasource']['schema'][$id][$k] = $v;
+      }
+    }
+    // Normalize boolean values
+    foreach ($field as $attribute => $value) {
+      if (is_bool($value)) {
+        $vars['datasource']['schema'][$id][$attribute] = ($value === TRUE ? 'true' : 'false');
+      }
+    }
+  }
+}
+
+/**
+ * Theme function for searchlight datasource display form.
+ */
+function theme_searchlight_plugin_display_datasource($form) {
+  $output = '';
+  $rows = array();
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = $form[$key]['#title'];
+    foreach (element_children($form[$key]) as $cell) {
+      if (isset($form[$key][$cell]['#type']) && !in_array($form[$key][$cell]['#type'], array('hidden', 'value'))) {
+        $row[] = drupal_render($form[$key][$cell]);
+      }
+    }
+    $rows[] = $row;
+  }
+  $output = theme('table', array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''), $rows);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
  * Theme function for a facet.
  */
 function theme_searchlight_facet($facet) {
