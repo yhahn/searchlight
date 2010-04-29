@@ -314,7 +314,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
           // Generate configuration file from datasources.
           $datasource = $this->solrDatasourceConf($datasource);
           $solr_conf = theme('searchlight_solr_conf', $datasource, $this->solrSearchdConf());
-          var_dump($solr_conf);
 
           // Write config to the filesystem
           if ($solr_conf) {
