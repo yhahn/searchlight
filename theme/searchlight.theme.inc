@@ -130,7 +130,7 @@ function theme_searchlight_admin_datasource($form) {
 /**
  * Theme function for searchlight datasource display form.
  */
-function theme_searchlight_admin_datasource_edit($form) {
+function theme_searchlight_admin_datasource_fields($form) {
   $output = '';
   $rows = array();
 
