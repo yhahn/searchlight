@@ -39,18 +39,21 @@ class SearchlightEnvironment {
     return $this;
   }
 
+  /**
+   * Generate a set of renderable facet items.
+   */
   function render($type = 'active') {
     $rendered = array();
     foreach ($this->getFacets() as $name => $facet) {
       if ($plugin = $this->getPlugin($name)) {
         switch ($type) {
           case 'active':
-            if (searchlight_facets()->getFacet($name)) {
+            if (searchlight_facet_manager()->getFacet($name)) {
               $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
             }
             break;
           case 'inactive':
-            if (!searchlight_facets()->getFacet($name)) {
+            if (!searchlight_facet_manager()->getFacet($name)) {
               $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
             }
             break;
@@ -60,9 +63,16 @@ class SearchlightEnvironment {
     return $rendered;
   }
 
+  /**
+   * Generate a label for a facet display.
+   */
   function label($type = 'active') {
   }
 
+  /**
+   * Get a facet handler plugin, checking for a field-specific pluginf irst and
+   * using a fallback default handler if not found.
+   */
   function getPlugin($name) {
     $this->activate();
     if (!empty($this->query) && isset($this->query->datasource->fields[$name])) {
@@ -74,6 +84,9 @@ class SearchlightEnvironment {
     return FALSE;
   }
 
+  /**
+   * Retrieve enabled facets for this environment.
+   */
   function getFacets() {
     if (!isset($this->enabled)) {
       $this->enabled = array();
@@ -81,14 +94,20 @@ class SearchlightEnvironment {
       if (!empty($this->query)) {
         foreach ($this->facets as $name => $facet) {
           if (!empty($facet['enabled']) && isset($this->query->datasource->fields[$name])) {
+            // Set set #weight so element_sort can be used.
+            $facet['#weight'] = isset($facet['weight']) ? $facet['weight'] : 0;
             $this->enabled[$name] = $facet;
           }
         }
       }
+      uasort($this->enabled, 'element_sort');
     }
     return $this->enabled;
   }
 
+  /**
+   * Options form for configuring this environment.
+   */
   function optionsForm(&$form, &$form_state) {
     views_include('admin');
     views_include('form');
@@ -149,6 +168,9 @@ class SearchlightEnvironment {
     }
   }
 
+  /**
+   * Submit handler for options form.
+   */
   function optionsSubmit(&$form, &$form_state) {
     switch ($form_state['clicked_button']['#id']) {
       case 'edit-datasource-update':
