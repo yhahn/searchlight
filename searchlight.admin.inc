@@ -14,7 +14,7 @@ function searchlight_admin_environment($form_state) {
     '#required' => TRUE,
     '#maxlength' => 255,
     '#size' => 15,
-    '#element_validate' => array('searchlight_admin_datasource_validate_name'),
+    '#element_validate' => array('searchlight_admin_environment_validate_name'),
   );
 
   $options = array();
