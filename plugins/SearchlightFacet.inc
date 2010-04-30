@@ -1,9 +1,13 @@
 <?php
 
 class SearchlightFacet {
+  /**
+   * Build facet and counts using search backend.
+   */
   function build($query, $name, $limit) {
     $items = array();
-    if ($id = searchlight_facet_manager()->getFacet($name)) {
+    $id = searchlight_facet_manager()->getFacet($name);
+    if (isset($id)) {
       $items = array($id => array('id' => $id));
     }
     else {
@@ -14,6 +18,9 @@ class SearchlightFacet {
     return $items;
   }
 
+  /**
+   * Render all items of a facet.
+   */
   function render($query, $name, $limit) {
     $items = $this->build($query, $name, $limit);
     $field = $query->datasource->fields[$name];
@@ -82,8 +89,11 @@ class SearchlightFacet {
       $facets = searchlight_facet_manager();
       $rendered = array();
 
+      $is_active = $facets->getFacet($field['name']);
+      $is_active = isset($is_active);
+
       // Active facet.
-      if ($facets->getFacet($field['name'])) {
+      if ($is_active) {
         foreach ($rows as $id => $row) {
           // Generate a PURL modifier for this item.
           $modifier = $facets->getModifier('remove', $field['name'], $id);
@@ -121,4 +131,3 @@ class SearchlightFacet {
     return FALSE;
   }
 }
-

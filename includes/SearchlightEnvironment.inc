@@ -10,14 +10,19 @@ class SearchlightEnvironment {
   var $query;
   var $view;
 
-  function __construct() {
-    $this->name = '';
-    $this->datasource = '';
-    $this->facets = array();
-    $this->options = array();
+  function construct() {
+    $this->name = isset($this->name) ? $this->name : '';
+    $this->datasource = isset($this->datasource) ? $this->datasource : '';
+    $this->facets = !empty($this->facets) ? $this->facets : array();
+    $this->options = !empty($this->options) ? $this->options : array();
 
     $this->query = NULL;
     $this->view = NULL;
+
+    $this->options = $this->options + array(
+      'active_label' => t('Active search'),
+      'facets_label' => t('Search facets'),
+    );
   }
 
   /**
@@ -46,14 +51,15 @@ class SearchlightEnvironment {
     $rendered = array();
     foreach ($this->getFacets() as $name => $facet) {
       if ($plugin = $this->getPlugin($name)) {
+        $id = searchlight_facet_manager()->getFacet($name);
         switch ($type) {
           case 'active':
-            if (searchlight_facet_manager()->getFacet($name)) {
+            if (isset($id)) {
               $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
             }
             break;
-          case 'inactive':
-            if (!searchlight_facet_manager()->getFacet($name)) {
+          case 'facets':
+            if (!isset($id)) {
               $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
             }
             break;
@@ -64,9 +70,20 @@ class SearchlightEnvironment {
   }
 
   /**
-   * Generate a label for a facet display.
+   * Build a block suitable for return by hook_block('view').
    */
-  function label($type = 'active') {
+  function getBlock($delta) {
+    $output = '';
+    foreach ($this->render($delta) as $rendered) {
+      $output .= theme('searchlight_facet', $rendered);
+    }
+    if (!empty($output)) {
+      return array(
+        'subject' => filter_xss_admin($this->options["{$delta}_label"]),
+        'content' => $output,
+      );
+    }
+    return array();
   }
 
   /**
@@ -118,6 +135,20 @@ class SearchlightEnvironment {
       '#title' => t('Name'),
       '#type' => 'item',
       '#value' => $this->name,
+    );
+
+    $form['options']['#tree'] = TRUE;
+    $form['options']['active_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Active search label'),
+      '#description' => t('Subject for the active search block in this environment.'),
+      '#default_value' => $this->options['active_label'],
+    );
+    $form['options']['facets_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Facets label'),
+      '#description' => t('Subject for the facets block in this environment.'),
+      '#default_value' => $this->options['facets_label'],
     );
 
     $options = array();
@@ -178,7 +209,7 @@ class SearchlightEnvironment {
         break;
       case 'edit-save':
         $this->facets = $form_state['values']['facets'];
-        // $this->options = $form_state['values']['options'];
+        $this->options = $form_state['values']['options'];
         break;
     }
   }

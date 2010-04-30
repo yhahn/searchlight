@@ -159,26 +159,7 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   else if ($op === 'view' && strpos($delta, '_') !== FALSE) {
     list($delta, $name) = explode('_', $delta, 2);
     if (in_array($delta, array('active', 'facets'), TRUE) && $environment = searchlight_environment_load($name)) {
-      switch ($delta) {
-        case 'active':
-          $output = '';
-          if ($active_facets = $environment->activate()->render('active')) {
-            foreach ($active_facets as $rendered) {
-              $output .= theme('searchlight_facet', $rendered);
-            }
-            return array('subject' => $environment->label('active'), 'content' => $output);
-          }
-          break;
-        case 'facets':
-          $output = '';
-          if ($active_facets = $environment->activate()->render('inactive')) {
-            foreach ($active_facets as $rendered) {
-              $output .= theme('searchlight_facet', $rendered);
-            }
-            return array('subject' => $environment->label('inactive'), 'content' => $output);
-          }
-          break;
-      }
+      return $environment->activate()->getBlock($delta);
     }
   }
 }
@@ -478,6 +459,7 @@ function searchlight_datasource_new($name, $base_table) {
   $datasource = ctools_export_new_object('searchlight_datasource');
   $datasource->name = $name;
   $datasource->base_table = $base_table;
+  $datasource->construct();
   return $datasource;
 }
 
@@ -498,6 +480,11 @@ function searchlight_datasource_load($name = NULL, $reset = FALSE) {
       ctools_export_load_object_reset('searchlight_datasource');
     }
     $datasources = ctools_export_load_object('searchlight_datasource', 'all');
+    foreach ($datasources as $datasource) {
+      // Would love to use __construct() here but CTools export.inc has already
+      // blown away properties in its unpack step.
+      $datasource->construct();
+    }
   }
   if (isset($name)) {
     return isset($datasources[$name]) ? $datasources[$name] : FALSE;
@@ -553,6 +540,7 @@ function searchlight_environment_new($name, $datasource) {
   $environment = ctools_export_new_object('searchlight_environment');
   $environment->name = $name;
   $environment->datasource = $datasource;
+  $environment->construct();
   return $environment;
 }
 
@@ -573,6 +561,11 @@ function searchlight_environment_load($name = NULL, $reset = FALSE) {
       ctools_export_load_object_reset('searchlight_environment');
     }
     $environments = ctools_export_load_object('searchlight_environment', 'all');
+    foreach ($environments as $environment) {
+      // Would love to use __construct() here but CTools export.inc has already
+      // blown away properties in its unpack step.
+      $environment->construct();
+    }
   }
   if (isset($name)) {
     return isset($environments[$name]) ? $environments[$name] : FALSE;
