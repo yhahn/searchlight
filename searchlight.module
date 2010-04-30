@@ -1,7 +1,8 @@
 <?php
 
 include_once('searchlight.features.inc');
-include_once('searchlight.datasource.inc');
+include_once('includes/SearchlightDatasource.inc');
+include_once('includes/SearchlightEnvironment.inc');
 
 /**
  * Implementation of hook_menu().
@@ -41,8 +42,8 @@ function searchlight_menu() {
   $items['admin/settings/search/datasource/list/%searchlight_datasource/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_datasource_confirm', 5, 'revert'),
-    'access callback' => 'searchlight_datasource_task_access',
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
+    'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'delete'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
@@ -50,8 +51,8 @@ function searchlight_menu() {
   $items['admin/settings/search/datasource/list/%searchlight_datasource/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_datasource_confirm', 5, 'revert'),
-    'access callback' => 'searchlight_datasource_task_access',
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
+    'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'revert'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
@@ -64,6 +65,56 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_CALLBACK,
   );
+
+  $items['admin/settings/search/environment'] = array(
+    'title' => 'Environment',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_environment'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -5,
+  );
+  $items['admin/settings/search/environment/list/%searchlight_environment'] = array(
+    'title' => 'Environment',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_environment_edit', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_CALLBACK,
+    'weight' => -10,
+  );
+  $items['admin/settings/search/environment/list/%searchlight_environment/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_environment_edit', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/search/environment/list/%searchlight_environment/delete'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
+    'access callback' => 'searchlight_task_access',
+    'access arguments' => array(5, 'delete'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/settings/search/environment/list/%searchlight_environment/revert'] = array(
+    'title' => 'Revert',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
+    'access callback' => 'searchlight_task_access',
+    'access arguments' => array(5, 'revert'),
+    'file' => 'searchlight.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
   $items['admin/settings/search/backend'] = array(
     'title' => 'Backend',
     'page callback' => 'drupal_get_form',
@@ -211,11 +262,16 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
-    'searchlight_admin_datasource' => array(
+    'searchlight_admin_list' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource_fields' => array(
+      'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_admin_environment' => array(
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
@@ -487,19 +543,94 @@ function searchlight_datasource_delete($datasource) {
 }
 
 /**
- * Menu access callback for datasource-related tasks.
+ * Create a new environment object.
  */
-function searchlight_datasource_task_access($datasource, $op) {
+function searchlight_environment_new($name, $datasource) {
+  ctools_include('export');
+  $environment = ctools_export_new_object('searchlight_environment');
+  $environment->name = $name;
+  $environment->datasource = $datasource;
+  return $environment;
+}
+
+/**
+ * Datasource loader.
+ *
+ * @param $name
+ *   The name for this environment.
+ *
+ * @return
+ *   Returns a fully-loaded environment.
+ */
+function searchlight_environment_load($name = NULL, $reset = FALSE) {
+  ctools_include('export');
+  static $environments;
+  if (!isset($environments) || $reset) {
+    if ($reset) {
+      ctools_export_load_object_reset('searchlight_environment');
+    }
+    $environments = ctools_export_load_object('searchlight_environment', 'all');
+  }
+  if (isset($name)) {
+    return isset($environments[$name]) ? $environments[$name] : FALSE;
+  }
+  return $environments;
+}
+
+/**
+ * Inserts or updates a environment object into the database.
+ *
+ * @param $environment
+ *   The environment object to be saved.
+ *
+ * @return
+ *   Returns true on success, false on failure.
+ */
+function searchlight_environment_save($environment) {
+  $existing = searchlight_environment_load($environment->name, TRUE);
+  if ($existing && ($existing->export_type & EXPORT_IN_DATABASE)) {
+    drupal_write_record('searchlight_environment', $environment, 'name');
+  }
+  else {
+    drupal_write_record('searchlight_environment', $environment);
+  }
+  searchlight_environment_load(NULL, TRUE);
+  searchlight_invalidate_cache();
+  return TRUE;
+}
+
+/**
+ * Deletes an existing environment.
+ *
+ * @param $environment
+ *   The environment to be deleted.
+ *
+ * @return
+ *   Returns true on success, false on failure.
+ */
+function searchlight_environment_delete($environment) {
+  if (isset($environment->name) && ($environment->export_type & EXPORT_IN_DATABASE)) {
+    db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name);
+    searchlight_invalidate_cache();
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Menu access callback for config object-related tasks.
+ */
+function searchlight_task_access($object, $op) {
   if (user_access('administer site configuration')) {
     switch ($op) {
       case 'revert':
-        return ($datasource->export_type & EXPORT_IN_DATABASE) && ($datasource->export_type & EXPORT_IN_CODE);
+        return ($object->export_type & EXPORT_IN_DATABASE) && ($object->export_type & EXPORT_IN_CODE);
       case 'delete':
-        return ($datasource->export_type & EXPORT_IN_DATABASE) && !($datasource->export_type & EXPORT_IN_CODE);
+        return ($object->export_type & EXPORT_IN_DATABASE) && !($object->export_type & EXPORT_IN_CODE);
       case 'disable':
-        return empty($datasource->disabled);
+        return empty($object->disabled);
       case 'enable':
-        return !empty($datasource->disabled);
+        return !empty($object->disabled);
     }
     return TRUE;
   }
