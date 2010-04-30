@@ -138,7 +138,7 @@ function searchlight_views_query_alter(&$view) {
   if (!empty($view->query->searchlight)) {
     // Retrieve active facets. We will consider the presence of any active
     // facets to mean the search query is *not* empty.
-    $active_facets = searchlight_facets()->activeFacets($view->query->datasource);
+    $active_facets = searchlight_facet_manager()->activeFacets($view->query->datasource);
 
     if (!empty($active_facets)) {
       $view->query->search_options['hideEmpty'] = FALSE;
@@ -147,7 +147,7 @@ function searchlight_views_query_alter(&$view) {
       // used as this may force undesirable joins on the SQL version of the
       // query.
       foreach ($active_facets as $name => $field) {
-        $arg = searchlight_facets()->getFacet($name);
+        $arg = searchlight_facet_manager()->getFacet($name);
         switch ($field['datatype']) {
           case 'timestamp':
             $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';

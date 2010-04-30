@@ -3,7 +3,7 @@
 class SearchlightFacet {
   function build($query, $name, $limit) {
     $items = array();
-    if ($id = searchlight_facets()->getFacet($name)) {
+    if ($id = searchlight_facet_manager()->getFacet($name)) {
       $items = array($id => array('id' => $id));
     }
     else {
@@ -79,7 +79,7 @@ class SearchlightFacet {
       $handler->pre_render($rows);
 
       // Now render each row.
-      $facets = searchlight_facets();
+      $facets = searchlight_facet_manager();
       $rendered = array();
 
       // Active facet.

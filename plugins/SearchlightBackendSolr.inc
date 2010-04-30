@@ -210,7 +210,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
   /**
    * Override of facetBuild().
    */
-  function facetBuild($query, $field) {
+  function facetBuild($query, $field, $limit = 5) {
     switch ($field['datatype']) {
       case 'timestamp':
         $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
@@ -223,17 +223,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
         break;
     }
 
-    // The facet is active ensure it's limited to 1 result entry. For
-    // multivalue facets, multiple entries can be returned even if the
-    // facet is active.
-    if (searchlight_facets()->getFacet($field['name'])) {
-      $query->client->SetLimits(0, 1);
-    }
-    else {
-      // @TODO: make configurable:
-      // - # of items to show on a per facet basis
-      $query->client->SetLimits(0, 5);
-    }
+    // Set result limit.
+    $query->client->SetLimits(0, (int) $limit);
 
     $result = $this->executeQuery($query->client, $query->datasource, $query->search_query);
     if ($result) {

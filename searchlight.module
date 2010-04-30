@@ -203,9 +203,30 @@ function searchlight_purl_provider() {
     'searchlight' => array(
       'name' => t('Searchlight facets'),
       'description' => t('Sets one or more active facets.'),
-      'callback' => 'searchlight_facets_activate',
+      'callback' => 'searchlight_facet_manager_activate',
     ),
   );
+}
+
+/**
+ * Factory/singleton static cache for facet manager.
+ */
+function searchlight_facet_manager($reset = FALSE) {
+  static $facets;
+  if (!isset($facets) || $reset) {
+    module_load_include('inc', 'searchlight', 'includes/SearchlightFacetManager');
+    $facets = new SearchlightFacetManager();
+  }
+  return $facets;
+}
+
+/**
+ * PURL callback: parse and set active facets.
+ */
+function searchlight_facet_manager_activate($packed) {
+  foreach (searchlight_facet_manager()->unpack($packed) as $field => $value) {
+    searchlight_facet_manager()->setFacet($field, $value);
+  }
 }
 
 /**
@@ -381,28 +402,6 @@ function searchlight_searchlight_node_access_realms_alter(&$realms) {
     $realms['og_admin'] = 'og_admin';
     $realms['og_public'] = 'og_public';
     $realms['og_subscriber'] = 'og_subscriber';
-  }
-}
-
-/**
- * Factory/singleton static cache for facets handler.
- */
-function searchlight_facets($reset = FALSE) {
-  static $facets;
-  if (!isset($facets) || $reset) {
-    module_load_include('inc', 'searchlight', 'includes/SearchlightFacets');
-    $facets = new SearchlightFacets();
-  }
-  return $facets;
-}
-
-/**
- * PURL callback: parse and set active facets.
- */
-function searchlight_facets_activate($packed) {
-  $facets = searchlight_facets();
-  foreach ($facets->unpack($packed) as $field => $value) {
-    $facets->setFacet($field, $value);
   }
 }
 

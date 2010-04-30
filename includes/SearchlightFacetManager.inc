@@ -3,9 +3,12 @@
 /**
  * Class for handling management of active facets.
  */
-class SearchlightFacets {
+class SearchlightFacetManager {
   var $active;
 
+  /**
+   * Constructor.
+   */
   function __construct() {
     $this->active = array();
   }
@@ -13,27 +16,11 @@ class SearchlightFacets {
   /**
    * Retrieve any valid active facets for the provided datasource.
    */
-  function allFacets($datasource) {
+  function activeFacets($datasource) {
     $facets = array();
     foreach ($datasource->fields as $name => $field) {
       $facets[$name] = $field;
     }
-    return $facets;
-  }
-
-  /**
-   * Retrieve any valid active facets for the provided datasource.
-   */
-  function inactiveFacets($datasource) {
-    $facets = $this->allFacets($datasource);
-    return array_diff_key($facets, $this->active);
-  }
-
-  /**
-   * Retrieve any valid active facets for the provided datasource.
-   */
-  function activeFacets($datasource) {
-    $facets = $this->allFacets($datasource);
     return array_intersect_key($facets, $this->active);
   }
 
