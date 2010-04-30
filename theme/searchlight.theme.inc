@@ -212,6 +212,7 @@ function theme_searchlight_admin_environment($form) {
     array('data' => t('Weight'), 'header' => TRUE),
     array('data' => t('Items to show'), 'header' => TRUE),
   );
+  uasort($form['facets'], 'element_sort');
   foreach (element_children($form['facets']) as $key) {
     $row = array();
     foreach (element_children($form['facets'][$key]) as $cell) {
