@@ -343,6 +343,14 @@ function searchlight_searchlight_plugins() {
         'class' => 'SearchlightFacet',
       ),
     ),
+    'SearchlightFacetSearchQuery' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'SearchlightFacetSearchQuery.inc',
+        'class' => 'SearchlightFacetSearchQuery',
+        'parent' => 'SearchlightFacet',
+      ),
+    ),
   );
 }
 
@@ -363,8 +371,12 @@ function searchlight_searchlight_registry() {
     ),
     'facet' => array(
       'default' => array(
-        'title' => t('default'),
+        'title' => t('Default'),
         'plugin' => 'SearchlightFacet',
+      ),
+      'search_query' => array(
+        'title' => t('Search query'),
+        'plugin' => 'SearchlightFacetSearchQuery',
       ),
     ),
   );
