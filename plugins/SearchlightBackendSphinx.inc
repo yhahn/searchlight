@@ -388,7 +388,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $sql_query = drupal_clone($view->query);
         $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
         if ($delta) {
-          $this->queryFresh($query);
+          $this->queryFresh($sql_query);
         }
         $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
         $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
@@ -397,7 +397,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $sql_query_info = drupal_clone($view->query);
         $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
         if ($delta) {
-          $this->queryFresh($query);
+          $this->queryFresh($sql_query);
         }
         $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
         $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));

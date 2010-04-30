@@ -297,15 +297,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
       );
       $handler->override_option('sorts', $sorts);
 
-      // Build query object and add the "fresh" join.
       $datasource->view->build();
       $this->queryFresh($datasource->view->query);
+      // Build query object and add the "fresh" join.
+var_dump($datasource->view->query->query());die;
 
-      // TODO fix limit
-      // TODO double check join
+      // TODO make limit configurable, and do this right...
+      $datasource->view->query->limit = 100;
 
-      $datasource->view->pre_execute();
-      $items = $datasource->view->display_handler->preview();
+      //$datasource->view->pre_execute();
+      $items = $datasource->view->render();
       if (!empty($items)) {
         $solr = $this->initClient($datasource->id);
         $documents = array();

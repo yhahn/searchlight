@@ -157,6 +157,8 @@ class SearchlightBackend {
   /**
    * Build a views join and add it to view query to ensure only un-indexed
    * content is returned.
+   *
+   * TODO don't hard code node table info.
    */
   function queryFresh(&$sql_query) {
       $join = new views_join();
@@ -166,7 +168,7 @@ class SearchlightBackend {
         'num' => 1,
         'alias' => 'searchlight_search',
         'join' => $join,
-        'relationship' => $sql_query->basetable,
+        'relationship' => 'node',
       );
   }
 }
