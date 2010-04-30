@@ -312,7 +312,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         foreach($items as $item) {
           $document = new Apache_Solr_Document();
           foreach ($datasource->fields as $field) {
-            $document->{$field['name']} = $item->{$field['name']};
+            $document->{$field['name']} = $item[$field['name']];
           }
           $documents[] = $document;
         }
