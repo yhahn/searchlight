@@ -301,30 +301,32 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->view->build();
       $this->queryFresh($datasource->view->query);
 
+      // TODO fix limit
+      // TODO double check join
+
       $datasource->view->pre_execute();
       $items = $datasource->view->display_handler->preview();
       if (!empty($items)) {
-        $solr = $this->initClient();
+        $solr = $this->initClient($datasource->id);
         $documents = array();
         foreach($items as $item) {
           $document = new Apache_Solr_Document();
-          var_dump($datasource->fields);
           foreach ($datasource->fields as $field) {
             $document->{$field['name']} = $item->{$field['name']};
           }
           $documents[] = $document;
         }
 
-        $solr->addDocuments($document);
+        $solr->addDocuments($documents);
         // TODO don't mark everything, limit what we send
-        db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+        //db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+        return drush_log('Indexing complete.', 'success');
       }
 
-      // variable_set('searchlight_solr_last', time());
-      return drush_log('Indexing complete.', 'success');
-      // TODO error detection
-      // return drush_log("An error ocurred while indexing.", 'error');
+      variable_set('searchlight_solr_last', time());
+      return drush_log('Nothing to Index.', 'success');
     }
+    return drush_log("An error ocurred while indexing.", 'error');
   }
 
   function drushWriteConf() {
@@ -426,22 +428,25 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   function SolrAddBaseField(&$datasource) {
+
     $base_table = views_fetch_data($datasource->base_table);
     $base_field = $base_table['table']['base']['field']; 
 
     // Determine the primary id field of the view & determine if it is present.
     foreach ($datasource->fields as $field) {
       if ($field['table'] == $datasource->base_table && $field['name'] == $base_field) {
-        return $datasource->base_table .'_'. $base_field;
+        //return $datasource->base_table .'_'. $base_field;
+        return $base_field;
       }
     }
 
     // Add the primary field if it isn't present
     $datasource->fields[] = array(
-      'name' => $datasource->base_table .'_'. $base_field,
+      'name' => $base_field,
       'datatype' => 'int',
     );
-    return $datasource->base_table .'_'. $base_field;
+    // return $datasource->base_table .'_'. $base_field;
+    return $base_field;
   }
 
   /**
