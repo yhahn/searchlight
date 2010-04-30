@@ -165,7 +165,7 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
 }
 
 /**
- * Implementation of hook_nodeapi()
+ * Implementation of hook_nodeapi().
  */
 function searchlight_nodeapi($node, $op) {
   if ($op == 'insert') {
@@ -173,6 +173,22 @@ function searchlight_nodeapi($node, $op) {
   }
   elseif ($op == 'update') {
     db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
+  }
+  // @TODO: Deletion.
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function searchlight_comment(&$a1, $op) {
+  switch ($op) {
+    case 'insert':
+      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0);
+      break;
+    case 'update':
+      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']);
+      break;
+    // @TODO: Deletion.
   }
 }
 
