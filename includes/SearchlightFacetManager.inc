@@ -94,18 +94,18 @@ class SearchlightFacetManager {
     $method = variable_get('purl_method_searchlight', 'path');
     $key = variable_get('purl_method_searchlight_key', FALSE);
     if ($method === 'querystring') {
-      // If there is no modifier we want to exclude the facet query string
-      // (forces query string to be dropped).
-      if (empty($modifier)) {
-        $exclude[] = $key;
-      }
       // If we've been asked to retain all facets, we need to exclude all
       // query strings **except** the facet query string.
-      else if ($op === 'active') {
+      if ($op === 'active') {
         $exclude = drupal_map_assoc(array_keys($_GET));
         if (isset($exclude[$key])) {
           unset($exclude[$key]);
         }
+      }
+      // If there is no modifier we want to exclude the facet query string
+      // (forces query string to be dropped).
+      else if (empty($modifier)) {
+        $exclude[] = $key;
       }
     }
     $options['query'] = drupal_query_string_encode($_GET, $exclude);
