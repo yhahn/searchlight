@@ -279,6 +279,15 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->viewSetHandlers();
       $handler = $datasource->view->display_handler;
 
+      $view_fields = $handler->options['fields'];
+      foreach ($datasource->fields as $field) {
+        if ($field['datatype'] == 'timestamp') {
+          $view_fields[$field['name']]['date_format'] = 'custom';
+          $view_fields[$field['name']]['custom_date_format'] = 'Y-m-d\\TH:i:s\\Z';
+        }
+      }
+      $handler->override_option('fields', $view_fields);
+
       // Add sort
       $base_field = $this->SolrAddBaseField($datasource);
       $sorts[$base_field] = array(
@@ -288,34 +297,37 @@ class SearchlightBackendSolr extends SearchlightBackend {
       );
       $handler->override_option('sorts', $sorts);
 
-      // Build query object and add the "fresh" join.
       $datasource->view->build();
+      // Build query object and add the "fresh" join.
+      $datasource->view->built = false;
       $this->queryFresh($datasource->view->query);
 
-      $datasource->view->pre_execute();
-      $items = $datasource->view->display_handler->preview();
+      // TODO make limit configurable, and do this right...
+      $datasource->view->query->limit = 100;
+
+      //$datasource->view->pre_execute();
+      $items = $datasource->view->render();
       if (!empty($items)) {
-        $solr = $this->initClient();
+        $solr = $this->initClient($datasource->id);
         $documents = array();
         foreach($items as $item) {
           $document = new Apache_Solr_Document();
-          var_dump($datasource->fields);
           foreach ($datasource->fields as $field) {
-            $document->{$field['name']} = $item->{$field['name']};
+            $document->{$field['name']} = $item[$field['name']];
           }
           $documents[] = $document;
         }
 
-        $solr->addDocuments($document);
+        $solr->addDocuments($documents);
         // TODO don't mark everything, limit what we send
-        db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+        //db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+        return drush_log('Indexing complete.', 'success');
       }
 
-      // variable_set('searchlight_solr_last', time());
-      return drush_log('Indexing complete.', 'success');
-      // TODO error detection
-      // return drush_log("An error ocurred while indexing.", 'error');
+      variable_set('searchlight_solr_last', time());
+      return drush_log('Nothing to Index.', 'success');
     }
+    return drush_log("An error ocurred while indexing.", 'error');
   }
 
   function drushWriteConf() {
@@ -416,23 +428,29 @@ class SearchlightBackendSolr extends SearchlightBackend {
     module_load_include('php', 'searchlight', 'libraries/SolrPhpClient/Apache/Solr/Service');
   }
 
+  /**
+   * Make sure the base field is on the $datasource, and return it's name.
+   */
   function SolrAddBaseField(&$datasource) {
+
     $base_table = views_fetch_data($datasource->base_table);
     $base_field = $base_table['table']['base']['field']; 
 
     // Determine the primary id field of the view & determine if it is present.
     foreach ($datasource->fields as $field) {
       if ($field['table'] == $datasource->base_table && $field['name'] == $base_field) {
-        return $datasource->base_table .'_'. $base_field;
+        //return $datasource->base_table .'_'. $base_field;
+        return $base_field;
       }
     }
 
     // Add the primary field if it isn't present
     $datasource->fields[] = array(
-      'name' => $datasource->base_table .'_'. $base_field,
+      'name' => $base_field,
       'datatype' => 'int',
     );
-    return $datasource->base_table .'_'. $base_field;
+    // return $datasource->base_table .'_'. $base_field;
+    return $base_field;
   }
 
   /**
