@@ -157,18 +157,16 @@ class SearchlightBackend {
   /**
    * Build a views join and add it to view query to ensure only un-indexed
    * content is returned.
-   *
-   * TODO don't hard code node table info.
    */
   function queryFresh(&$sql_query) {
-      $join = new views_join();
-      $join->construct('searchlight_search', 'node', 'nid', 'id', "searchlight_search.type = 'node' AND searchlight_search.status = 0", 'INNER');
-      $sql_query->table_queue['searchlight_search'] = array(
-        'table' => 'searchlight_search',
-        'num' => 1,
-        'alias' => 'searchlight_search',
-        'join' => $join,
-        'relationship' => 'node',
-      );
+    $join = new views_join();
+    $join->construct('searchlight_search', $sql_query->base_table, $sql_query->base_field, 'id', "searchlight_search.type = '{$sql_query->base_table}' AND searchlight_search.status = 0", 'INNER');
+    $sql_query->table_queue['searchlight_search'] = array(
+      'table' => 'searchlight_search',
+      'num' => 1,
+      'alias' => 'searchlight_search',
+      'join' => $join,
+      'relationship' => $sql_query->base_table,
+    );
   }
 }
