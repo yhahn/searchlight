@@ -63,6 +63,37 @@ function searchlight_admin_environment_submit(&$form, &$form_state) {
 }
 
 /**
+ * Edit form for environment.
+ */
+function searchlight_admin_environment_edit($form_state, $environment) {
+  $form = array();
+  $form['#environment'] = $environment;
+  $form['#environment_name'] = $environment->name;
+  $environment->optionsForm($form, $form_state);
+
+  $form['buttons']['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  $form['buttons']['cancel'] = array(
+    '#type' => 'markup',
+    '#value' => l(t('Cancel'), 'admin/settings/search/environment'),
+  );
+  return $form;
+}
+
+/**
+ * Submit handler for searchlight_admin_environment_edit().
+ */
+function searchlight_admin_environment_edit_submit(&$form, $form_state) {
+  if (!empty($form['#environment'])) {
+    $form['#environment']->optionsSubmit($form, $form_state);
+    searchlight_environment_save($form['#environment']);
+    drupal_set_message(t('Environment @environment saved.', array('@environment' => $form['#environment']->name)));
+  }
+}
+
+/**
  * Datasource management form.
  */
 function searchlight_admin_datasource($form_state) {

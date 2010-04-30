@@ -192,3 +192,38 @@ function theme_searchlight_admin_datasource_fields($form) {
   $output .= drupal_render($form);
   return $output;
 }
+
+/**
+ * Theme function for searchlight environment form.
+ */
+function theme_searchlight_admin_environment($form) {
+  drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
+  $output = '';
+  $output .= drupal_render($form['name']);
+
+  $rows = array();
+  $rows[] = array(
+    array('data' => drupal_render($form['datasource']['datasource']), 'colspan' => 3),
+    array('data' => drupal_render($form['datasource']['update']), 'colspan' => 1),
+  );
+  $rows[] = array(
+    array('data' => t('Enabled'), 'header' => TRUE),
+    array('data' => t('Facet'), 'header' => TRUE),
+    array('data' => t('Weight'), 'header' => TRUE),
+    array('data' => t('Items to show'), 'header' => TRUE),
+  );
+  foreach (element_children($form['facets']) as $key) {
+    $row = array();
+    foreach (element_children($form['facets'][$key]) as $cell) {
+      if ($cell === 'weight') {
+        // $row[] = array('data' => drupal_render($form['facets'][$key][$cell]), 'class' => 'searchlight-environment-weight');
+        $form['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
+      }
+      $row[] = drupal_render($form['facets'][$key][$cell]);
+    }
+    $rows[] = array('data' => $row, 'class' => 'draggable');
+  }
+  $output .= theme('table', array(), $rows, array('id' => 'searchlight-environment'));
+  $output .= drupal_render($form);
+  return $output;
+}
