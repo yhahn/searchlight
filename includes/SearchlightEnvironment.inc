@@ -54,13 +54,17 @@ class SearchlightEnvironment {
         $id = searchlight_facet_manager()->getFacet($name);
         switch ($type) {
           case 'active':
-            if (isset($id)) {
-              $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
+            if (isset($id) || $name === 'search_query') {
+              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
+                $rendered[$name] = $render;
+              }
             }
             break;
           case 'facets':
-            if (!isset($id)) {
-              $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
+            if (!isset($id) && $name !== 'search_query') {
+              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
+                $rendered[$name] = $render;
+              }
             }
             break;
         }
@@ -87,14 +91,18 @@ class SearchlightEnvironment {
   }
 
   /**
-   * Get a facet handler plugin, checking for a field-specific pluginf irst and
+   * Get a facet handler plugin, checking for a field-specific plugin first and
    * using a fallback default handler if not found.
    */
   function getPlugin($name) {
     $this->activate();
-    if (!empty($this->query) && isset($this->query->datasource->fields[$name])) {
-      $field = $this->query->datasource->fields[$name];
-      $plugin = searchlight_get_plugin('facet', "{$field['table']}_{$field['field']}");
+    if (!empty($this->query)) {
+      if ($field = $this->query->datasource->fields[$name]) {
+        $plugin = searchlight_get_plugin('facet', "{$field['table']}_{$field['field']}");
+      }
+      else {
+        $plugin = searchlight_get_plugin('facet', $name);
+      }
       // Fallback to default plugin.
       return $plugin ? $plugin : searchlight_get_plugin('facet', 'default');
     }
@@ -110,7 +118,7 @@ class SearchlightEnvironment {
       $this->activate();
       if (!empty($this->query)) {
         foreach ($this->facets as $name => $facet) {
-          if (!empty($facet['enabled']) && isset($this->query->datasource->fields[$name])) {
+          if (!empty($facet['enabled']) && $this->isValidFacet($name)) {
             // Set set #weight so element_sort can be used.
             $facet['#weight'] = isset($facet['weight']) ? $facet['weight'] : 0;
             $this->enabled[$name] = $facet;
@@ -171,8 +179,10 @@ class SearchlightEnvironment {
     $datasource = searchlight_datasource_load($this->datasource);
     if ($datasource) {
       $form['facets'] = array('#tree' => TRUE);
-      foreach ($datasource->fields as $name => $field) {
-        if (in_array($field['usage'], array('attribute', 'multivalue'), TRUE)) {
+      $fields = $datasource->fields;
+      $fields['search_query'] = array('label' => t('Search query'));
+      foreach ($fields as $name => $field) {
+        if ($this->isValidFacet($name)) {
           $form['facets'][$name] = array(
             '#tree' => TRUE,
             '#weight' => isset($this->facets[$name]['weight']) ? $this->facets[$name]['weight'] : 0,
@@ -189,11 +199,19 @@ class SearchlightEnvironment {
             '#type' => 'weight',
             '#default_value' => isset($this->facets[$name]['weight']) ? $this->facets[$name]['weight'] : 0,
           );
-          $form['facets'][$name]['items'] = array(
-            '#type' => 'select',
-            '#default_value' => isset($this->facets[$name]['items']) ? $this->facets[$name]['items'] : 5,
-            '#options' => drupal_map_assoc(range(1, 20)),
-          );
+          if ($name === 'search_query') {
+            $form['facets'][$name]['items'] = array(
+              '#type' => 'value',
+              '#value' => 1,
+            );
+          }
+          else {
+            $form['facets'][$name]['items'] = array(
+              '#type' => 'select',
+              '#default_value' => isset($this->facets[$name]['items']) ? $this->facets[$name]['items'] : 5,
+              '#options' => drupal_map_assoc(range(1, 20)),
+            );
+          }
         }
       }
     }
@@ -211,6 +229,18 @@ class SearchlightEnvironment {
         $this->facets = $form_state['values']['facets'];
         $this->options = $form_state['values']['options'];
         break;
+    }
+  }
+
+  /**
+   * Determine whether a given facet is valid.
+   */
+  function isValidFacet($name) {
+    if ($name === 'search_query') {
+      return TRUE;
+    }
+    else if ($datasource = searchlight_datasource_load($this->datasource)) {
+      return (isset($datasource->fields[$name]) && in_array($datasource->fields[$name]['usage'], array('attribute', 'multivalue'), TRUE));
     }
   }
 }

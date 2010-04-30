@@ -343,6 +343,14 @@ function searchlight_searchlight_plugins() {
         'class' => 'SearchlightFacet',
       ),
     ),
+    'SearchlightFacetSearchQuery' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'SearchlightFacetSearchQuery.inc',
+        'class' => 'SearchlightFacetSearchQuery',
+        'parent' => 'SearchlightFacet',
+      ),
+    ),
   );
 }
 
@@ -363,8 +371,12 @@ function searchlight_searchlight_registry() {
     ),
     'facet' => array(
       'default' => array(
-        'title' => t('default'),
+        'title' => t('Default'),
         'plugin' => 'SearchlightFacet',
+      ),
+      'search_query' => array(
+        'title' => t('Search query'),
+        'plugin' => 'SearchlightFacetSearchQuery',
       ),
     ),
   );
@@ -511,6 +523,7 @@ function searchlight_datasource_save($datasource) {
   }
   searchlight_datasource_load(NULL, TRUE);
   searchlight_invalidate_cache();
+  searchlight_invalidate_index($datasource->base_table);
   return TRUE;
 }
 
@@ -688,4 +701,13 @@ function searchlight_get_views_by_display($base_table, $display_plugin = 'search
  */
 function searchlight_invalidate_cache() {
   cache_clear_all('searchlight', 'cache', TRUE);
+}
+
+/**
+ * Invalidate search index records.
+ */
+function searchlight_invalidate_index($base_table = 'node') {
+  db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = '%s'");
+  variable_del('searchlight_sphinx_last');
+  variable_del('searchlight_solr_last');
 }

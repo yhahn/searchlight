@@ -57,14 +57,15 @@ class SearchlightFacetManager {
   }
 
   /**
-   * Get the PURL modifier value for the current set of active facets, adjusted
-   * using one of the $op operations:
+   * Get the URL options for the current set of active facets, adjusted using
+   * one of the $op operations.
    *
    * 'add':    Add a facet value for the given key/value pair.
    * 'remove': Add a facet value for the given key/value pair.
-   * 'reset':  Drop all other active facets.
+   * 'active': Retain only active facets and drop any other query strings.
    */
-  function getModifier($op = 'add', $key, $value = NULL) {
+  function getURLOptions($op = 'add', $key = NULL, $value = NULL) {
+    $options = array();
     $modifier = array();
     switch ($op) {
       case 'add':
@@ -77,11 +78,39 @@ class SearchlightFacetManager {
           unset($modifier[$key]);
         }
         break;
-      case 'reset':
-        $modifier = array($key => $value);
+      case 'active':
+        $modifier = $this->active;
         break;
     }
-    return $this->pack($modifier);
+    $modifier = $this->pack($modifier);
+    if (!empty($modifier)) {
+      $options['purl'] = array('provider' => 'searchlight', 'id' => $modifier);
+    }
+    else {
+      $options['purl'] = array('remove' => array('searchlight'));
+    }
+
+    $exclude = array('q', 'page');
+    $method = variable_get('purl_method_searchlight', 'path');
+    $key = variable_get('purl_method_searchlight_key', FALSE);
+    if ($method === 'querystring') {
+      // If we've been asked to retain all facets, we need to exclude all
+      // query strings **except** the facet query string.
+      if ($op === 'active') {
+        $exclude = drupal_map_assoc(array_keys($_GET));
+        if (isset($exclude[$key])) {
+          unset($exclude[$key]);
+        }
+      }
+      // If there is no modifier we want to exclude the facet query string
+      // (forces query string to be dropped).
+      else if (empty($modifier)) {
+        $exclude[] = $key;
+      }
+    }
+    $options['query'] = drupal_query_string_encode($_GET, $exclude);
+
+    return $options;
   }
 
   /**

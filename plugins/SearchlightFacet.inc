@@ -23,8 +23,12 @@ class SearchlightFacet {
    */
   function render($query, $name, $limit) {
     $items = $this->build($query, $name, $limit);
-    $field = $query->datasource->fields[$name];
+    // Stopgap. Rewrite handling below to make this easier to do.
+    if (!$items) {
+      return FALSE;
+    }
 
+    $field = $query->datasource->fields[$name];
     if ($field['usage'] === 'multivalue') {
       $view = searchlight_build_view($field['view']);
     }
@@ -90,41 +94,15 @@ class SearchlightFacet {
       $rendered = array();
 
       $is_active = $facets->getFacet($field['name']);
-      $is_active = isset($is_active);
+      $op = isset($is_active) ? 'remove' : 'add';
 
-      // Active facet.
-      if ($is_active) {
-        foreach ($rows as $id => $row) {
-          // Generate a PURL modifier for this item.
-          $modifier = $facets->getModifier('remove', $field['name'], $id);
-          $item = $items[$id];
-          $item['title'] = strip_tags($handler->render($row));
-          if (!empty($modifier)) {
-            $item['link'] = l(t('remove'), $_GET['q'], array(
-              'purl' => array('provider' => 'searchlight', 'id' => $modifier))
-            );
-          }
-          else {
-            $item['link'] = l(t('remove'), $_GET['q'], array(
-              'purl' => array('remove' => array('searchlight')))
-            );
-          }
-          $rendered[$id] = theme('searchlight_facet_active', $field, $item);
-        }
-      }
-      // Inactive facet.
-      else {
-        foreach ($rows as $id => $row) {
-          // Generate a PURL modifier for this item.
-          $modifier = $facets->getModifier('add', $field['name'], $id);
-          $item = $items[$id];
-          $item['title'] = strip_tags($handler->render($row));
-          $item['link'] = l($item['title'], $_GET['q'], array(
-            'query' => drupal_query_string_encode($_GET, array('q')),
-            'purl' => array('provider' => 'searchlight', 'id' => $modifier))
-          );
-          $rendered[$id] = theme('searchlight_facet_link', $field, $item);
-        }
+      foreach ($rows as $id => $row) {
+        $item = $items[$id];
+        $item['title'] = strip_tags($handler->render($row));
+        $item['link'] = l($op === 'remove' ? t('remove') : $item['title'], $_GET['q'], $facets->getURLOptions($op, $field['name'], $id));
+        $rendered[$id] = $op === 'remove' ?
+          theme('searchlight_facet_active', $field, $item) :
+          theme('searchlight_facet_link', $field, $item);
       }
       return array('label' => $handler->label(), 'items' => $rendered);
     }
