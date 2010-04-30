@@ -279,6 +279,15 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->viewSetHandlers();
       $handler = $datasource->view->display_handler;
 
+      $view_fields = $handler->options['fields'];
+      foreach ($datasource->fields as $field) {
+        if ($field['datatype'] == 'timestamp') {
+          $view_fields[$field['name']]['date_format'] = 'custom';
+          $view_fields[$field['name']]['custom_date_format'] = 'Y-m-d\\TH:i:s\\Z';
+        }
+      }
+      $handler->override_option('fields', $view_fields);
+
       // Add sort
       $base_field = $this->SolrAddBaseField($datasource);
       $sorts[$base_field] = array(
@@ -418,6 +427,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
     module_load_include('php', 'searchlight', 'libraries/SolrPhpClient/Apache/Solr/Service');
   }
 
+  /**
+   * Make sure the base field is on the $datasource, and return it's name.
+   */
   function SolrAddBaseField(&$datasource) {
 
     $base_table = views_fetch_data($datasource->base_table);
