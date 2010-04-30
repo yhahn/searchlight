@@ -417,7 +417,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           'timestamp' => 'sql_attr_timestamp',
         );
         // Generate attribute entries.
-        foreach ($datasource->fields as $field) {
+        $fields = $datasource->fields;
+        $fields = array_merge($fields, $datasource->buildNodeaccess());
+        foreach ($fields as $field) {
           if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
             $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
           }

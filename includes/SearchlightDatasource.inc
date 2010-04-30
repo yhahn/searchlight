@@ -10,13 +10,17 @@ class SearchlightDatasource {
 
   var $view;
 
-  function __construct() {
-    $this->id = '';
-    $this->name = '';
-    $this->base_table = '';
-    $this->fields = array();
-    $this->filters = array();
-    $this->options = array();
+  function construct() {
+    $this->id = isset($this->id) ? $this->id : '';
+    $this->name = isset($this->name) ? $this->name : '';
+    $this->base_table = isset($this->base_table) ? $this->base_table : '';
+    $this->fields = !empty($this->fields) ? $this->fields : array();
+    $this->filters = !empty($this->filters) ? $this->filters : array();
+    $this->options = !empty($this->options) ? $this->options : array();
+
+    $this->options = $this->options + array(
+      'node_access' => TRUE,
+    );
   }
 
   function setId() {
@@ -154,6 +158,7 @@ class SearchlightDatasource {
    * Retrieve all possible multivalue fields for this base table.
    */
   function buildMultivalues() {
+    views_invalidate_cache();
     $multivalues = array();
     foreach (searchlight_get_views_by_display($this->base_table, 'searchlight_multivalue') as $view) {
       if ($view->name !== 'searchlight_node_access') {
@@ -177,7 +182,7 @@ class SearchlightDatasource {
   function buildNodeaccess() {
     views_invalidate_cache();
     $nodeaccess = array();
-    if ($view = views_get_view('searchlight_node_access')) {
+    if ($this->options['node_access'] && $this->base_table === 'node' && $view = views_get_view('searchlight_node_access')) {
       foreach ($view->display as $display) {
         if ($display->display_plugin === 'searchlight_multivalue') {
           $view = views_get_view($view->name);
@@ -374,7 +379,7 @@ class SearchlightDatasource {
         '#title' => t('Node access'),
         '#description' => t('Include node access information in datasource'),
         '#type' => 'checkbox',
-        '#default_value' => $this->options['node_access'] ? $this->options['node_access'] : TRUE,
+        '#default_value' => $this->options['node_access'],
       );
     }
     return $form;
