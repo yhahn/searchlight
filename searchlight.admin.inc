@@ -162,7 +162,7 @@ function searchlight_admin_datasource_validate_base_table($element, &$form_state
 function searchlight_admin_datasource_submit(&$form, &$form_state) {
   $datasource = searchlight_datasource_new($form_state['values']['name'], $form_state['values']['base_table']);
   if (searchlight_datasource_save($datasource)) {
-    drupal_set_message(t('Saved datasource %name.', array('%name' =>  $datasource->name)));
+    drupal_set_message(t('Created datasource %name.', array('%name' =>  $datasource->name)));
   }
   else {
     drupal_set_message(t('Could not save datasource %name.', array('%name' => $datasource->name)), 'error');
@@ -197,7 +197,7 @@ function searchlight_admin_datasource_edit_submit(&$form, $form_state) {
   if (!empty($form['#datasource'])) {
     $form['#datasource']->optionsSubmit($form, $form_state);
     searchlight_datasource_save($form['#datasource']);
-    drupal_set_message(t('Datasource @datasource saved.', array('@datasource' => $form['#datasource']->name)));
+    drupal_set_message(t('Datasource @datasource saved. The index for this datasource needs to be rebuilt.', array('@datasource' => $form['#datasource']->name)));
   }
 }
 
