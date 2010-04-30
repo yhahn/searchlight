@@ -397,7 +397,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $sql_query = drupal_clone($view->query);
         $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
         if ($delta) {
-          $this->sphinxDeltaQuery($query);
+          $this->queryFresh($query);
         }
         $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
         $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
@@ -406,7 +406,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $sql_query_info = drupal_clone($view->query);
         $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
         if ($delta) {
-          $this->sphinxDeltaQuery($query);
+          $this->queryFresh($query);
         }
         $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
         $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
@@ -444,7 +444,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
               unset($query->fields[$alias]);
             }
             if ($delta) {
-              $this->sphinxDeltaQuery($query);
+              $this->queryFresh($query);
             }
             $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
             $mva_query = str_replace("\n", " \\\n", trim($mva_query));
@@ -463,18 +463,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     }
 
     return $ret;
-  }
-
-  function sphinxDeltaQuery(&$sql_query) {
-      $join = new views_join();
-      $join->construct('searchlight_search', 'node', 'nid', 'id', "searchlight_search.type = 'node' AND searchlight_search.status = 0", 'INNER');
-      $sql_query->table_queue['searchlight_search'] = array(
-        'table' => 'searchlight_search',
-        'num' => 1,
-        'alias' => 'searchlight_search',
-        'join' => $join,
-        'relationship' => $sql_query->basetable,
-      );
   }
 
   /**

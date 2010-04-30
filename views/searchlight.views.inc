@@ -28,6 +28,18 @@ function searchlight_views_plugins() {
         'handler' => 'searchlight_plugin_display_multivalue',
         'admin' => t('Searchlight multivalue'),
       ),
+      'searchlight_solr' => array(
+        'path' => drupal_get_path('module', 'searchlight') . '/views',
+        'theme' => 'views_view',
+        'uses hook menu' => FALSE,
+        'use ajax' => FALSE,
+        'use pager' => FALSE,
+        'accept attachments' => FALSE,
+        'title' => t('Searchlight Solr'),
+        'help' => t('Expose a view as an multivalue attribute to be used with a Searchlight datasource.'),
+        'handler' => 'searchlight_plugin_display_solr',
+        'admin' => t('Searchlight Solr'),
+      ),
     ),
   );
 }

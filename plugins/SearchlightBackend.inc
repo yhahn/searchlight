@@ -153,4 +153,20 @@ class SearchlightBackend {
   function facetBuild(&$client, $datasource, $query, $field) {
     return array();
   }
+
+  /**
+   * Build a views join and add it to view query to ensure only un-indexed
+   * content is returned.
+   */
+  function queryFresh(&$sql_query) {
+      $join = new views_join();
+      $join->construct('searchlight_search', 'node', 'nid', 'id', "searchlight_search.type = 'node' AND searchlight_search.status = 0", 'INNER');
+      $sql_query->table_queue['searchlight_search'] = array(
+        'table' => 'searchlight_search',
+        'num' => 1,
+        'alias' => 'searchlight_search',
+        'join' => $join,
+        'relationship' => $sql_query->basetable,
+      );
+  }
 }

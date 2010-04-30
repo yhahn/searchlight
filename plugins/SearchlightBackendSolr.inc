@@ -282,12 +282,25 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $indexes = array();
     foreach (searchlight_datasource_load() as $datasource) {
       $datasource->init();
-      $id = $datasource->id;
-      list($view_name, $display_id) = explode(':', $view);
+      
+      $handler = $datasource->view->display_handler;
 
-      // Build and execute the view
-      $view = views_get_view($view_name);
-      // $o = $view->preview($display_id);
+      // Add sort
+      $base_field = $this->SolrBaseField($datasource);
+      $sorts[$base_field] = array(
+        'id' => $base_field,
+        'table' => $datasource->base_table,
+        'field' => $base_field,
+      );
+      $handler->override_option('sorts', $sorts);
+
+      // Build query object and add the "fresh" join.
+      $datasource->view->build();
+      $this->queryFresh($datasource->view->query);
+
+      var_dump($datasource->view->query->query());
+      die;
+
       // Push the contents to Solr.
       // $this->initClient();
       // TODO
@@ -299,6 +312,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
     }
   }
+
+  function SolrBaseField($datasource) {
+    $base_table = views_fetch_data($datasource->base_table);
+    return $base_table['table']['base']['field'];
+  } 
 
   function drushWriteConf() {
     $file_path = conf_path() .'/solr';
@@ -344,12 +362,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $conf = array('schema' => array(), 'conf' => array());
     $conf['conf']['id'] = $datasource->id;
 
+    $base_field = $this->SolrBaseField($datasource);
+
     // Determine the primary id field of the view & determine if it is present.
-    $base_table = views_fetch_data($datasource->base_table);
-    $base_schema = drupal_get_schema($datasource->base_table);
     foreach ($datasource->fields as $field) {
-      if ($field['table'] == $datasource->base_table && $field['name'] == $base_table['table']['base']['field']) {
-        $conf['conf']['unique_key'] = 'true';
+      if ($field['table'] == $datasource->base_table && $field['name'] == $base_field) {
+        $conf['conf']['unique_key'] = $datasource->base_table .'_'. $base_field;
         break;
       }
     }
@@ -357,19 +375,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
     // Add the primary field if it isn't present
     if (!isset($conf['conf']['unique_key'])) {
       $datasource->fields[] = array(
-        'name' => $datasource->base_table .'_'. $base_table['table']['base']['field'],
+        'name' => $datasource->base_table .'_'. $base_field,
         'datatype' => 'int',
-        // 'required' => true,
       );
-      $conf['conf']['unique_key'] = $datasource->base_table .'_'. $base_table['table']['base']['field'];
+      $conf['conf']['unique_key'] = $datasource->base_table .'_'. $base_field;
     }
 
     // Attributes: name, type, indexed, stored, required, multiValued, omitNorms
     foreach ($datasource->fields as $field) {
       $f = $field['name'];
-      $conf['schema'][$f] = array(
-        'name' => $f,
-      );
+      $conf['schema'][$f] = array('name' => $f);
       switch ($field['datatype']) {
         case 'int':
           $conf['schema'][$f]['type'] = 'integer';
