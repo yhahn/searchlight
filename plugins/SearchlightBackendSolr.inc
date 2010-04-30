@@ -315,7 +315,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           foreach ($datasource->fields as $field) {
             $document->{$field['name']} = $item[$field['name']];
           }
-          $ids[] = $item['nid'];
+          $ids[] = $item[$datasource->view->base_field];
           $documents[] = $document;
         }
 
