@@ -149,44 +149,36 @@ function searchlight_menu_alter(&$items) {
  */
 function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op === 'list') {
-    return array(
-      'active' => array('info' => t('Active search')),
-      'facets' => array('info' => t('Search facets')),
-    );
+    $list = array();
+    foreach (searchlight_environment_load() as $environment) {
+      $list['active_'. $environment->name] = array('info' => t('@name: Active search', array('@name' => $environment->name)));
+      $list['facets_'. $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
+    }
+    return $list;
   }
-  else if ($op === 'view') {
-    switch ($delta) {
-      case 'active':
-        $display = views_get_page_view();
-        if ($display && !empty($display->view->query->searchlight)) {
+  else if ($op === 'view' && strpos($delta, '_') !== FALSE) {
+    list($delta, $name) = explode('_', $delta, 2);
+    if (in_array($delta, array('active', 'facets'), TRUE) && $environment = searchlight_environment_load($name)) {
+      switch ($delta) {
+        case 'active':
           $output = '';
-          $query = drupal_clone($display->view->query);
-          // Render active facets
-          foreach (searchlight_facets()->activeFacets($query->datasource) as $name => $field) {
-            $id = searchlight_facets()->getFacet($name);
-            $items = array($id => array('id' => $id, 'count' => $display->view->total_rows));
-            if ($rendered = searchlight_facets()->render($query->datasource, $field, $items)) {
+          if ($active_facets = $environment->activate()->render('active')) {
+            foreach ($active_facets as $rendered) {
               $output .= theme('searchlight_facet', $rendered);
             }
+            return array('subject' => $environment->label('active'), 'content' => $output);
           }
-          return array('subject' => t('Active search (@count)', array('@count' => $display->view->total_rows)), 'content' => $output);
-        }
-        break;
-      case 'facets':
-        $display = views_get_page_view();
-        if ($display && !empty($display->view->query->searchlight)) {
+          break;
+        case 'facets':
           $output = '';
-          $query = drupal_clone($display->view->query);
-          // Get fields that are enabled as facets and are inactive
-          foreach (searchlight_facets()->inactiveFacets($query->datasource) as $name => $field) {
-            $items = $query->backend->facetBuild($query, $field);
-            if (!empty($items) && $rendered = searchlight_facets()->render($query->datasource, $field, $items)) {
+          if ($active_facets = $environment->activate()->render('inactive')) {
+            foreach ($active_facets as $rendered) {
               $output .= theme('searchlight_facet', $rendered);
             }
+            return array('subject' => $environment->label('inactive'), 'content' => $output);
           }
-          return array('subject' => t('Filter search'), 'content' => $output);
-        }
-        break;
+          break;
+      }
     }
   }
 }
@@ -342,6 +334,13 @@ function searchlight_searchlight_plugins() {
         'parent' => 'SearchlightBackend',
       ),
     ),
+    'SearchlightFacet' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'SearchlightFacet.inc',
+        'class' => 'SearchlightFacet',
+      ),
+    ),
   );
 }
 
@@ -358,6 +357,12 @@ function searchlight_searchlight_registry() {
       'solr' => array(
         'title' => t('Solr'),
         'plugin' => 'SearchlightBackendSolr',
+      ),
+    ),
+    'facet' => array(
+      'default' => array(
+        'title' => t('default'),
+        'plugin' => 'SearchlightFacet',
       ),
     ),
   );
@@ -385,7 +390,7 @@ function searchlight_searchlight_node_access_realms_alter(&$realms) {
 function searchlight_facets($reset = FALSE) {
   static $facets;
   if (!isset($facets) || $reset) {
-    module_load_include('inc', 'searchlight', 'searchlight.facets');
+    module_load_include('inc', 'searchlight', 'includes/SearchlightFacets');
     $facets = new SearchlightFacets();
   }
   return $facets;
@@ -427,27 +432,26 @@ function searchlight_registry($key = NULL, $reset = FALSE) {
  */
 function searchlight_default_backend() {
   $backend = variable_get('searchlight_backend', 'sphinx');
-  return searchlight_get_backend($backend);
+  return searchlight_get_plugin('backend', $backend);
 }
 
 /**
  * Retrieve an instance of a searchlight backend class.
  */
-function searchlight_get_backend($backend = NULL, $reset = FALSE) {
+function searchlight_get_plugin($type = 'backend', $id = NULL, $reset = FALSE) {
   static $loaded;
   ctools_include('plugins');
-
-  if (!isset($loaded[$backend]) || $reset) {
-    $loaded[$backend] = FALSE;
-    $backends = searchlight_registry('backend');
-    if (isset($backends[$backend]) && $info = $backends[$backend]) {
+  if (!isset($loaded[$type][$id]) || $reset) {
+    $loaded[$type][$id] = FALSE;
+    $registry = searchlight_registry($type);
+    if (isset($registry[$id]) && $info = $registry[$id]) {
       $plugins = ctools_get_plugins('searchlight', 'plugins');
       if (isset($plugins[$info['plugin']]) && $class = ctools_plugin_get_class($plugins[$info['plugin']], 'handler')) {
-        $loaded[$backend] = new $class($backend);
+        $loaded[$type][$id] = new $class($id);
       }
     }
   }
-  return $loaded[$backend];
+  return $loaded[$type][$id];
 }
 
 /**

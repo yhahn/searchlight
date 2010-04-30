@@ -3,14 +3,90 @@
 class SearchlightEnvironment {
   var $name;
   var $datasource;
+  var $enabled;
   var $facets;
   var $options;
+
+  var $query;
+  var $view;
 
   function __construct() {
     $this->name = '';
     $this->datasource = '';
     $this->facets = array();
     $this->options = array();
+
+    $this->query = NULL;
+    $this->view = NULL;
+  }
+
+  /**
+   * Activate this environment such that it can build/render facet displays.
+   * Detect the current page view (if any) and clone its query object.
+   */
+  function activate($reset = FALSE) {
+    if (!isset($this->query) || $reset) {
+      $display = views_get_page_view();
+      if ($display && !empty($display->view->query->searchlight)) {
+        $this->query = drupal_clone($display->view->query);
+        $this->view = $display->view;
+      }
+      else {
+        $this->query = NULL;
+        $this->view = NULL;
+      }
+    }
+    return $this;
+  }
+
+  function render($type = 'active') {
+    $rendered = array();
+    foreach ($this->getFacets() as $name => $facet) {
+      if ($plugin = $this->getPlugin($name)) {
+        switch ($type) {
+          case 'active':
+            if (searchlight_facets()->getFacet($name)) {
+              $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
+            }
+            break;
+          case 'inactive':
+            if (!searchlight_facets()->getFacet($name)) {
+              $rendered[$name] = $plugin->render($this->query, $name, $this->facets[$name]['items']);
+            }
+            break;
+        }
+      }
+    }
+    return $rendered;
+  }
+
+  function label($type = 'active') {
+  }
+
+  function getPlugin($name) {
+    $this->activate();
+    if (!empty($this->query) && isset($this->query->datasource->fields[$name])) {
+      $field = $this->query->datasource->fields[$name];
+      $plugin = searchlight_get_plugin('facet', "{$field['table']}_{$field['field']}");
+      // Fallback to default plugin.
+      return $plugin ? $plugin : searchlight_get_plugin('facet', 'default');
+    }
+    return FALSE;
+  }
+
+  function getFacets() {
+    if (!isset($this->enabled)) {
+      $this->enabled = array();
+      $this->activate();
+      if (!empty($this->query)) {
+        foreach ($this->facets as $name => $facet) {
+          if (!empty($facet['enabled']) && isset($this->query->datasource->fields[$name])) {
+            $this->enabled[$name] = $facet;
+          }
+        }
+      }
+    }
+    return $this->enabled;
   }
 
   function optionsForm(&$form, &$form_state) {
