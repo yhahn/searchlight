@@ -302,25 +302,27 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->view->built = false;
       $this->queryFresh($datasource->view->query);
 
-      // TODO make limit configurable, and do this right...
-      $datasource->view->query->limit = 100;
+      // TODO make limit configurable
+      $datasource->view->set_items_per_page(100);
 
-      //$datasource->view->pre_execute();
       $items = $datasource->view->render();
       if (!empty($items)) {
         $solr = $this->initClient($datasource->id);
         $documents = array();
+        $ids = array();
         foreach($items as $item) {
           $document = new Apache_Solr_Document();
           foreach ($datasource->fields as $field) {
             $document->{$field['name']} = $item[$field['name']];
           }
+          $ids[] = $item['nid'];
           $documents[] = $document;
         }
 
         $solr->addDocuments($documents);
         // TODO don't mark everything, limit what we send
-        //db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
+        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='node'
+                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $ids);
         return drush_log('Indexing complete.', 'success');
       }
 
