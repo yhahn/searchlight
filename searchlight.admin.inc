@@ -17,14 +17,10 @@ function searchlight_admin_environment($form_state) {
     '#element_validate' => array('searchlight_admin_environment_validate_name'),
   );
 
-  $options = array();
-  foreach (searchlight_datasource_load() as $datasource) {
-    $options[$datasource->name] = $datasource->name;
-  }
-  $form['new']['datasource'] = array(
-    '#title' => t('Datasource'),
+  $form['new']['view_display'] = array(
+    '#title' => t('View'),
     '#type' => 'select',
-    '#options' => $options,
+    '#options' => searchlight_admin_environment_view_displays(),
   );
 
   $form['new']['submit'] = array(
@@ -33,6 +29,31 @@ function searchlight_admin_environment($form_state) {
     '#submit' => array('searchlight_admin_environment_submit'),
   );
   return $form;
+}
+
+/**
+ * Retrieve an array of Views that can be used with searchlight environments.
+ */
+function searchlight_admin_environment_view_displays() {
+  // Gather all views that have the active facets filter.
+  $views = views_get_all_views();
+  $usable = array();
+  foreach ($views as $view) {
+    foreach ($view->display as $display) {
+      if ($display->display_plugin === 'page') {
+        $view->set_display($display->id);
+        $filters = $view->display_handler->get_option('filters');
+        if (!empty($filters)) {
+          foreach ($filters as $filter) {
+            if ($filter['table'] === 'searchlight' && $filter['field'] === 'facets') {
+              $usable[$view->base_table]["{$view->name}:{$display->id}"] = "{$view->name}: {$display->display_title}";
+            }
+          }
+        }
+      }
+    }
+  }
+  return $usable;
 }
 
 /**
@@ -53,7 +74,7 @@ function searchlight_admin_environment_validate_name($element, &$form_state) {
  * Searchlight datasource form submit handler.
  */
 function searchlight_admin_environment_submit(&$form, &$form_state) {
-  $environment = searchlight_environment_new($form_state['values']['name'], $form_state['values']['datasource']);
+  $environment = searchlight_environment_new($form_state['values']['name'], $form_state['values']['view_display']);
   if (searchlight_environment_save($environment)) {
     drupal_set_message(t('Saved environment %name.', array('%name' =>  $environment->name)));
   }

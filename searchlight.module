@@ -652,11 +652,11 @@ function searchlight_environment_get() {
 /**
  * Create a new environment object.
  */
-function searchlight_environment_new($name, $datasource) {
+function searchlight_environment_new($name, $view_display) {
   ctools_include('export');
   $environment = ctools_export_new_object('searchlight_environment');
   $environment->name = $name;
-  $environment->datasource = $datasource;
+  $environment->view_display = $view_display;
   $environment->construct();
   return $environment;
 }

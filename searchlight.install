@@ -74,8 +74,8 @@ function searchlight_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'datasource' => array(
-        'description' => 'The datasource for which this environment is used.',
+      'view_display' => array(
+        'description' => 'The view/display combination for which this environment is used.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,

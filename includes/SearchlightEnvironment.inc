@@ -3,11 +3,12 @@
 class SearchlightEnvironment {
   // Storage variables: saved to DB or code when an environment is saved.
   var $name;
-  var $datasource;
+  var $view_display;
   var $facets;
   var $options;
 
   // Working variables: populated at various init and other stages.
+  var $datasource;
   var $enabled;
   var $active_values;
 
@@ -18,7 +19,7 @@ class SearchlightEnvironment {
 
   function construct() {
     $this->name = isset($this->name) ? $this->name : '';
-    $this->datasource = isset($this->datasource) ? $this->datasource : '';
+    $this->view_display = isset($this->view_display) ? $this->view_display : '';
     $this->facets = !empty($this->facets) ? $this->facets : array();
     $this->options = !empty($this->options) ? $this->options : array();
     $this->options = $this->options + array(
@@ -48,45 +49,44 @@ class SearchlightEnvironment {
   }
 
   /**
-   * Initialize facet plugins for this environment. Requires the current page's
-   * view and query object to be passed.
+   * Initialize the environment view and all plugins.
    */
-  function initPlugins($view = NULL, $query = NULL, $reset = FALSE) {
-    if (empty($this->plugins) || $reset) {
+  function initView($view = NULL, $reset = FALSE) {
+    if (!isset($this->view) || $reset) {
       $this->view = NULL;
-      $this->query = NULL;
-      $this->plugins = array();
+      $this->datasource = NULL;
 
-      $datasource = searchlight_datasource_load($this->datasource);
-
-      // If no view, query passed, attempt to use current page view.
-      if (!isset($view, $query)) {
-        $display = views_get_page_view();
-        if ($display && !empty($display->view->query->searchlight)) {
-          $view = $display->view;
-          $query = $display->view->query;
-        }
+      // Build the view if none was explicitly provided.
+      if (!isset($view)) {
+        $view = searchlight_build_view($this->view_display);
       }
 
-      // Init plugins.
-      if ($view && $query && $datasource) {
+      // Check that the view matches the environment view and init.
+      if ($view && "{$view->name}:{$view->current_display}" === $this->view_display) {
         $this->view = $view;
-        $this->query = drupal_clone($query);
+        $this->query = drupal_clone($view->query);
+        $this->datasource = $view->query->datasource;
+        $this->plugins = array();
+
         foreach ($this->getFacets() as $name => $facet) {
-          $plugin = searchlight_get_facet($datasource, $name);
-          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), $this->facets[$name]);
+          $plugin = searchlight_get_facet($this->datasource, $name);
+          $plugin->construct($this, $this->datasource->fields[$name], $this->getValue($name), $this->facets[$name]);
           $this->plugins[$name] = $plugin;
         }
       }
     }
+    return !empty($this->view);
   }
 
   /**
    * Allow the environment to initialize plugins and allow them to modify the
    * Views query.
    */
-  function query($view, $query) {
-    $this->initPlugins($view, $query);
+  function query(&$query) {
+    // If any facets are active treat it as though the result set is not empty.
+    if ($this->getFacets(TRUE)) {
+      $query->search_options['hideEmpty'] = FALSE;
+    }
     foreach ($this->plugins as $name => $plugin) {
       $plugin->query($query);
     }
@@ -96,7 +96,6 @@ class SearchlightEnvironment {
    * Generate a set of renderable facet items.
    */
   function render($delta = 'active') {
-    $this->initPlugins();
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
       if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
@@ -121,17 +120,29 @@ class SearchlightEnvironment {
    * Build a block suitable for return by hook_block('view').
    */
   function getBlock($delta) {
-    $output = '';
-    foreach ($this->render($delta) as $rendered) {
-      $output .= theme('searchlight_facet', $rendered);
-    }
-    if (!empty($output)) {
-      return array(
-        'subject' => filter_xss_admin($this->options["{$delta}_label"]),
-        'content' => $output,
-      );
+    if ($this->initView()) {
+      $output = '';
+      foreach ($this->render($delta) as $rendered) {
+        $output .= theme('searchlight_facet', $rendered);
+      }
+      if (!empty($output)) {
+        return array(
+          'subject' => filter_xss_admin($this->options["{$delta}_label"]),
+          'content' => $output,
+        );
+      }
     }
     return array();
+  }
+
+  /**
+   * Get the datasource associated with this environment's view.
+   */
+  function getDatasource($reset = FALSE) {
+    if ($this->initView(NULL, $reset)) {
+      return $this->datasource;
+    }
+    return FALSE;
   }
 
   /**
@@ -180,24 +191,22 @@ class SearchlightEnvironment {
       '#default_value' => $this->options['facets_label'],
     );
 
-    $options = array();
-    foreach (searchlight_datasource_load() as $datasource) {
-      $options[$datasource->name] = $datasource->name;
-    }
-    $form['datasource']['#tree'] = TRUE;
-    $form['datasource']['datasource'] = array(
-      '#title' => t('datasource'),
+    // Include searchlight.admin.inc for views displays function.
+    module_load_include('inc', 'searchlight', 'searchlight.admin');
+    $form['view_display']['#tree'] = TRUE;
+    $form['view_display']['view_display'] = array(
+      '#title' => t('View'),
       '#type' => 'select',
-      '#default_value' => $this->datasource,
-      '#options' => $options,
+      '#default_value' => $this->view,
+      '#options' => searchlight_admin_environment_view_displays(),
     );
-    $form['datasource']['update'] = array(
-      '#value' => t('Update datasource'),
+    $form['view_display']['update'] = array(
+      '#value' => t('Update view'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_environment_edit_submit'),
     );
 
-    $datasource = searchlight_datasource_load($this->datasource);
+    $datasource = $this->getDatasource();
     if ($datasource) {
       $form['facets'] = array('#tree' => TRUE);
       $fields = $datasource->fields;
@@ -254,8 +263,8 @@ class SearchlightEnvironment {
    */
   function optionsSubmit(&$form, &$form_state) {
     switch ($form_state['clicked_button']['#id']) {
-      case 'edit-datasource-update':
-        $this->datasource = $form_state['values']['datasource']['datasource'];
+      case 'edit-view-display-update':
+        $this->view_display = $form_state['values']['view_display']['view_display'];
         break;
       case 'edit-save':
         $this->facets = $form_state['values']['facets'];
@@ -271,7 +280,7 @@ class SearchlightEnvironment {
     if ($name === 'search_query') {
       return TRUE;
     }
-    else if ($datasource = searchlight_datasource_load($this->datasource)) {
+    else if ($datasource = $this->getDatasource()) {
       return (isset($datasource->fields[$name]) && in_array($datasource->fields[$name]['usage'], array('attribute', 'multivalue'), TRUE));
     }
   }

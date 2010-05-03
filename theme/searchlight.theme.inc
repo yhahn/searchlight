@@ -99,10 +99,10 @@ function theme_searchlight_admin_list($form) {
       $extra_label = t('Base table');
     }
     else if ($object instanceof SearchlightEnvironment) {
-      $extra = $object->datasource;
+      $extra = $object->view_display;
       $path = 'environment';
       $name_label = t('Environment');
-      $extra_label = t('Datasource');
+      $extra_label = t('View');
     }
 
     $row = array();
@@ -203,8 +203,8 @@ function theme_searchlight_admin_environment($form) {
 
   $rows = array();
   $rows[] = array(
-    array('data' => drupal_render($form['datasource']['datasource']), 'colspan' => 3),
-    array('data' => drupal_render($form['datasource']['update']), 'colspan' => 2),
+    array('data' => drupal_render($form['view_display']['view_display']), 'colspan' => 3),
+    array('data' => drupal_render($form['view_display']['update']), 'colspan' => 2),
   );
   $rows[] = array(
     array('data' => t('Enabled'), 'header' => TRUE),
@@ -213,7 +213,9 @@ function theme_searchlight_admin_environment($form) {
     array('data' => t('Weight'), 'header' => TRUE),
     array('data' => t('Items to show'), 'header' => TRUE),
   );
-  uasort($form['facets'], 'element_sort');
+  if (!empty($form['facets'])) {
+    uasort($form['facets'], 'element_sort');
+  }
   foreach (element_children($form['facets']) as $key) {
     $row = array();
     foreach (element_children($form['facets'][$key]) as $cell) {
