@@ -61,7 +61,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     
     $response = $client->search($query, 0, 10, array());
     foreach ($response->response->docs as $doc) {
-      $ids[] = $doc->{$base_field}; // determine from base field
+      $ids[] = $doc->{$base_field};
     }
 
     if (!empty($ids)) {
@@ -256,15 +256,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->viewSetHandlers();
       $handler = $datasource->view->display_handler;
 
-      $view_fields = $handler->options['fields'];
-      foreach ($datasource->fields as $field) {
-        if ($field['datatype'] == 'timestamp') {
-          $view_fields[$field['name']]['date_format'] = 'custom';
-          $view_fields[$field['name']]['custom_date_format'] = 'Y-m-d\\TH:i:s\\Z';
-        }
-      }
-      $handler->override_option('fields', $view_fields);
-
       // Add sort
       $base_field = $this->solrAddBaseField($datasource);
       $sorts[$base_field] = array(
@@ -283,11 +274,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $datasource->view->set_items_per_page(100);
 
       $items = $datasource->view->render();
+      $raw_items = $datasource->view->result;
+
       if (!empty($items)) {
-        $solr = $this->initClient($datasource->id);
+        $solr = $this->initClient($datasource);
         $documents = array();
         $ids = array();
-        foreach($items as $item) {
+        foreach($items as $pos => $item) {
           $document = new Apache_Solr_Document();
           $content = array();
           foreach ($datasource->fields as $field) {
@@ -295,7 +288,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
               $content[] = $this->apachesolr_clean_text($item[$field['name']]);
             }
             else {
-              $document->{$field['name']} = $item[$field['name']];
+              if ($field['datatype'] == 'timestamp') {
+                $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $raw_items[$pos]->{$field['name']});
+              }
+              else {
+                $document->{$field['name']} = $raw_items[$pos]->{$field['name']};
+              }
             }
           }
           $ids[] = $item[$datasource->view->base_field];
@@ -307,8 +305,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
         // $solr->optimize(); //merges multiple segments into one
 
-        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='node'
-                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $ids);
+        $args = $ids;
+        array_unshift($args, $datasource->base_table);
+        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
+                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $args);
         return drush_log('Indexing complete.', 'success');
       }
 
