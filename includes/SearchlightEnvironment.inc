@@ -64,7 +64,7 @@ class SearchlightEnvironment {
       // Check that the view matches the environment view and init.
       if ($view && "{$view->name}:{$view->current_display}" === $this->view_display) {
         $this->view = $view;
-        $this->query = drupal_clone($view->query);
+        $this->query = $view->query;
         $this->datasource = $view->query->datasource;
         $this->plugins = array();
 

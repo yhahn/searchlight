@@ -5,6 +5,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
   var $client;
   var $datasource;
   var $datasource_id;
+  var $search_facets;
   var $search_filter;
   var $search_options;
   var $search_result;
@@ -25,6 +26,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->backend = $backend;
     $this->client = $backend->initClient($this->datasource);
 
+    $this->search_facets = array();
     $this->search_filter = array();
     $this->search_options = array();
     $this->search_result = array();
@@ -93,17 +95,24 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function build(&$view) {
-    // Fail the build entirely if the hideEmpty option is true and there is no
-    // search query available.
+    $this->abort = FALSE;
+
+    // Fail the rest of the build entirely if the hideEmpty option is true and
+    // there is no search query available. We don't exit right here in order
+    // to allow facet queries to run.
     if (!empty($this->search_options['hideEmpty']) && empty($this->search_query)) {
-      return;
+      $this->abort = TRUE;
     }
-    $this->init_pager($view);
-    if ($this->pager->use_pager()) {
-      $this->pager->set_current_page($view->current_page);
+
+    // Views pager initialization.
+    if (!$this->abort) {
+      $this->init_pager($view);
+      if ($this->pager->use_pager()) {
+        $this->pager->set_current_page($view->current_page);
+      }
+      // Let the pager modify the query to add limits.
+      $this->pager->query();
     }
-    // Let the pager modify the query to add limits.
-    $this->pager->query();
 
     // Views query token replacements.
     $replacements = module_invoke_all('views_query_substitutions', $view);
@@ -118,17 +127,22 @@ class searchlight_plugin_query extends views_plugin_query_default {
       }
     }
 
-    // Execute the search.
+    // Set backend client options.
     $this->backend->setOptions($this->client, $this->datasource, $this->search_options);
     $this->backend->setSort($this->client, $this->datasource, $this->search_sort);
     $this->backend->setFilter($this->client, $this->datasource, $this->search_filter);
     $this->backend->setPager($this->client, $this->offset, $this->limit);
-
     if ($this->base_table === 'node' && !user_access('administer nodes')) {
       $this->backend->setNodeAccess($this->client, node_access_grants('view'));
     }
 
-    if ($this->search_result = $this->backend->executeQuery($this->client, $this->datasource, $this->search_query)) {
+    // Main query execution.
+    $this->search_result = $this->backend->executeQuery($this->client, $this->datasource, $this->search_query);
+
+    // Build facets.
+    $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
+
+    if ($this->search_result) {
       // Clear out normal field, sort, where portions of the query that
       // have been taken care of by the backend.
       $this->orderby = array();
@@ -144,12 +158,20 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 
+  function add_search_facet($name, $limit = 5) {
+    $this->search_facets[] = array('field' => $name, 'limit' => $limit);
+  }
+
   function set_search_options($options) {
     $this->search_options = $options;
   }
 
   function set_search_query($query) {
     $this->search_query = $query;
+  }
+
+  function get_search_facet($facet) {
+    return isset($this->search_result_facets[$facet]) ? $this->search_result_facets[$facet] : FALSE;
   }
 
   protected function get_args($args, $offset = 2) {
@@ -161,21 +183,23 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function execute(&$view) {
-    // Store values prior to execute().
-    $offset = $this->offset;
-    $limit = $this->limit;
-    $current_page = $this->pager->current_page;
-    $this->offset = $this->limit = 0;
+    if (empty($this->abort)) {
+      // Store values prior to execute().
+      $offset = $this->offset;
+      $limit = $this->limit;
+      $current_page = $this->pager->current_page;
+      $this->offset = $this->limit = 0;
 
-    parent::execute($view);
-    if (!empty($this->search_result)) {
-      $view->total_rows = $this->pager->total_items = $this->search_result['total'];
-      $this->pager->set_current_page($current_page);
-      $this->pager->update_page_info();
+      parent::execute($view);
+      if (!empty($this->search_result)) {
+        $view->total_rows = $this->pager->total_items = $this->search_result['total'];
+        $this->pager->set_current_page($current_page);
+        $this->pager->update_page_info();
+      }
+
+      // Restore original values.
+      $this->offset = $offset;
+      $this->limit = $limit;
     }
-
-    // Restore original values.
-    $this->offset = $offset;
-    $this->limit = $limit;
   }
 }

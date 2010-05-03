@@ -78,17 +78,68 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
-    // Determine if we need to query a delta and main index.
-    $index = $datasource->id;
-    if ($this->settings['delta_ttl']) {
-      $index .= ";{$index}_delta";
-    }
-
-    $result = $client->Query($query, $datasource->id);
+    $result = $client->Query($query, $this->getIndex($datasource));
     if (!empty($result['matches'])) {
       return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
     return FALSE;
+  }
+
+  /**
+   * Override of facetBuild().
+   */
+  function facetBuild(&$client, $datasource, $query = '', $facets) {
+    $client = drupal_clone($client);
+    foreach ($facets as $facet) {
+      $field = $datasource->fields[$facet['field']];
+      $limit = $facet['limit'];
+
+      switch ($field['datatype']) {
+        case 'timestamp':
+          $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
+          $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
+          $client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
+          $client->SetArrayResult(FALSE);
+          break;
+        default:
+          $client->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
+          $client->SetArrayResult($field['usage'] === 'multivalue');
+          break;
+      }
+
+      // Set result limit.
+      $client->SetLimits(0, (int) $limit);
+      $client->AddQuery($query, $this->getIndex($datasource));
+    }
+
+    // Execute queries.
+    $results = $client->RunQueries();
+
+    // Build facet results.
+    $built = array();
+    foreach (array_values($facets) as $num => $facet) {
+      if (!empty($results[$num]['matches'])) {
+        $field = $datasource->fields[$facet['field']];
+        foreach (array_keys($results[$num]['matches']) as $id) {
+          $attr = $results[$num]['matches'][$id]['attrs'];
+          if (isset($attr['@groupby'], $attr['@count'])) {
+            switch ($field['datatype']) {
+              case 'text':
+                $id = $this->getOrdinal($datasource, $field['name'], $attr['@groupby']);
+                break;
+              case 'timestamp':
+                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
+                break;
+              default:
+                $id = $attr['@groupby'];
+                break;
+            }
+            $built[$facet['field']][$id] = array('id' => $id, 'count' => $attr['@count']);
+          }
+        }
+      }
+    }
+    return $built;
   }
 
   /**
@@ -230,52 +281,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $client->SetFilterRange('sphinx_node_access', 1, 1000);
       }
     }
-  }
-
-  /**
-   * Override of facetBuild().
-   */
-  function facetBuild($query, $field, $limit = 5) {
-    switch ($field['datatype']) {
-      case 'timestamp':
-        $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
-        $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-        $query->client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
-        break;
-      default:
-        $query->client->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $query->client->SetArrayResult($field['usage'] === 'multivalue');
-        break;
-    }
-
-    // Set result limit.
-    $query->client->SetLimits(0, (int) $limit);
-
-    $result = $this->executeQuery($query->client, $query->datasource, $query->search_query);
-    if ($result) {
-      $items = array();
-      foreach ($result['result'] as $id) {
-        if (isset($result['raw']['matches'][$id]['attrs'])) {
-          $attr = $result['raw']['matches'][$id]['attrs'];
-          if (isset($attr['@groupby'], $attr['@count'])) {
-            switch ($field['datatype']) {
-              case 'text':
-                $id = $this->getOrdinal($query->datasource, $field['name'], $attr['@groupby']);
-                break;
-              case 'timestamp':
-                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
-                break;
-              default:
-                $id = $attr['@groupby'];
-                break;
-            }
-            $items[$id] = array('id' => $id, 'count' => $attr['@count']);
-          }
-        }
-      }
-      return $items;
-    }
-    return FALSE;
   }
 
   function drushSearchd() {
@@ -591,5 +596,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       case 'year':
         return ($timezone * -1) + mktime(0, 0, 0, 1, 1, $datestring);
     }
+  }
+
+  /**
+   * Return the index to query.
+   */
+  function getIndex($datasource) {
+    // Determine if we need to query a delta and main index.
+    $index = $datasource->id;
+    if (!empty($this->settings['delta_ttl'])) {
+      $index .= ";{$index}_delta";
+    }
+    return $index;
   }
 }

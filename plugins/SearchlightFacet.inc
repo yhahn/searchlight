@@ -32,6 +32,7 @@ class SearchlightFacet {
    * undesirable joins on the SQL version of the query.
    */
   function query(&$query) {
+    // Filter the query if there is an active facet value.
     if (isset($this->value)) {
       $query->search_filter[] = array(
         'field' => $this->name,
@@ -39,14 +40,10 @@ class SearchlightFacet {
         'args' => array($this->value),
       );
     }
-  }
 
-  /**
-   * Build facet and counts using search backend.
-   */
-  function build($query) {
+    // Add this facet to be built by the backend.
     $limit = isset($this->options['items']) ? $this->options['items'] : 1;
-    return $query->backend->facetBuild($query, $this->field, $limit);
+    $query->add_search_facet($this->name, $limit);
   }
 
   /**
@@ -75,7 +72,7 @@ class SearchlightFacet {
         break;
       case 'facets':
         if (!isset($this->value)) {
-          $items = $this->build($query);
+          $items = $query->get_search_facet($this->name);
         }
         break;
     }

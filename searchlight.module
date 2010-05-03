@@ -627,26 +627,19 @@ function searchlight_environment_init($packed) {
   $values = searchlight_environment_unpack($packed);
   if (!empty($values['environment']) && $environment = searchlight_environment_load($values['environment'])) {
     $environment->initValues($values);
-    searchlight_environment_set($environment);
   }
 }
 
 /**
- * Static cache to store current search environment.
+ * Retrieve a searchlight environment for a given View/display combination.
  */
-function searchlight_environment_set($environment = NULL, $reset = FALSE) {
-  static $current_environment;
-  if (isset($environment) || $reset) {
-    $current_environment = $environment;
+function searchlight_environment_get($view, $display) {
+  foreach (searchlight_environment_load() as $environment) {
+    if ($environment->view_display === "{$view}:{$display}") {
+      return $environment;
+    }
   }
-  return $current_environment;
-}
-
-/**
- * Wrapper around searchlight_environment_set().
- */
-function searchlight_environment_get() {
-  return searchlight_environment_set();
+  return FALSE;
 }
 
 /**
