@@ -67,7 +67,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of initClient().
    */
-  function initClient() {
+  function initClient($datasource) {
     $this->includeSphinx();
     $client = new SphinxClient();
     $client->SetServer('localhost', (int) $this->settings['port']);

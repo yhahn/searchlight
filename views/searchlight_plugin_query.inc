@@ -18,12 +18,12 @@ class searchlight_plugin_query extends views_plugin_query_default {
   function init($base_table = 'node', $base_field = 'nid', $backend) {
     parent::init($base_table, $base_field);
 
-    $this->backend = $backend;
-    $this->client = $backend->initClient();
-
     $this->datasource = searchlight_get_datasource($base_table);
     $this->datasource->init();
     $this->datasource_id = $this->datasource->id;
+
+    $this->backend = $backend;
+    $this->client = $backend->initClient($this->datasource);
 
     $this->search_filter = array();
     $this->search_options = array();

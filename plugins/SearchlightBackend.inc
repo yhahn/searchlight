@@ -72,8 +72,10 @@ class SearchlightBackend {
 
   /**
    * Initialize a client for the search backend.
+   *
+   * @param $datasource
    */
-  function initClient() {
+  function initClient($datasource) {
   }
 
   /**
