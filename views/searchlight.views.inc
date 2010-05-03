@@ -53,6 +53,7 @@ function searchlight_views_handlers() {
     'handlers' => array(
       'searchlight_handler_argument_search' => array('parent' => 'views_handler_argument'),
       'searchlight_handler_filter_search' => array('parent' => 'views_handler_filter'),
+      'searchlight_handler_filter_facets' => array('parent' => 'views_handler_filter'),
       'searchlight_handler_sort_search' => array('parent' => 'views_handler_sort'),
       'searchlight_handler_field_node_access' => array('parent' => 'views_handler_field'),
     ),
@@ -74,6 +75,11 @@ function searchlight_views_data() {
     'argument' => array('handler' => 'searchlight_handler_argument_search'),
     'filter' => array('handler' => 'searchlight_handler_filter_search'),
     'sort' => array('handler' => 'searchlight_handler_sort_search'),
+  );
+  $data['searchlight']['facets'] = array(
+    'title' => t('Active facets'),
+    'help' => t('Filter results by active Searchlight facets.'),
+    'filter' => array('handler' => 'searchlight_handler_filter_facets'),
   );
   return $data;
 }
@@ -128,21 +134,6 @@ function searchlight_views_pre_build(&$view) {
     // Create and initialize the query object.
     $view->query = views_get_plugin('query', 'searchlight');
     $view->query->init($view->base_table, $view->base_field, $backend);
-  }
-}
-
-/**
- * Implementation of hook_views_query_alter().
- */
-function searchlight_views_query_alter(&$view) {
-  if (!empty($view->query->searchlight) && $environment = searchlight_environment_get()) {
-    // Retrieve active facets. We will consider the presence of any active
-    // facets to mean the search query is *not* empty.
-    $active_facets = $environment->getFacets(TRUE);
-    if (!empty($active_facets)) {
-      $view->query->search_options['hideEmpty'] = FALSE;
-      $environment->query($view, $view->query);
-    }
   }
 }
 

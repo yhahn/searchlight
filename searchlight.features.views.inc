@@ -25,14 +25,6 @@ function _searchlight_views_default_views() {
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['style_plugin'] = 'list';
   $handler->display->display_options['row_plugin'] = 'fields';
-  /* Empty text: Global: Text area */
-  $handler->display->display_options['empty']['text']['id'] = 'area';
-  $handler->display->display_options['empty']['text']['table'] = 'views';
-  $handler->display->display_options['empty']['text']['field'] = 'area';
-  $handler->display->display_options['empty']['text']['label'] = '';
-  $handler->display->display_options['empty']['text']['empty'] = FALSE;
-  $handler->display->display_options['empty']['text']['content'] = 'No search results found.';
-  $handler->display->display_options['empty']['text']['format'] = '11';
   /* Field: User: Picture */
   $handler->display->display_options['fields']['picture']['id'] = 'picture';
   $handler->display->display_options['fields']['picture']['table'] = 'users';
@@ -112,6 +104,10 @@ function _searchlight_views_default_views() {
   $handler->display->display_options['filters']['search']['expose']['identifier'] = 'search';
   $handler->display->display_options['filters']['search']['hideEmpty'] = 1;
   $handler->display->display_options['filters']['search']['matchMode'] = '0';
+  /* Filter: Search: Active facets */
+  $handler->display->display_options['filters']['facets']['id'] = 'facets';
+  $handler->display->display_options['filters']['facets']['table'] = 'searchlight';
+  $handler->display->display_options['filters']['facets']['field'] = 'facets';
   
 /* Display: Page: search */
   $handler = $view->new_display('page', 'Page: search', 'page_1');

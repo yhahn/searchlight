@@ -5,7 +5,6 @@ class searchlight_handler_filter_search extends views_handler_filter {
    * Override of query().
    */
   function query() {
-    $this->view->searchlight = isset($this->view->searchlight) ? $this->view->searchlight : array();
     $value = trim(current($this->value));
     $this->query->set_search_options($this->options);
     $this->query->set_search_query($value);
