@@ -27,14 +27,6 @@ function _searchlight_searchlight_default_datasources() {
       'name' => 'node_revisions_body',
       'usage' => 'content',
     ),
-    'node_revisions_format' => array(
-      'label' => 'Node: Body (format)',
-      'datatype' => 'int',
-      'table' => 'node_revisions',
-      'field' => 'format',
-      'name' => 'node_revisions_format',
-      'usage' => 'attribute',
-    ),
     'node_status' => array(
       'label' => 'Node: Published (status)',
       'datatype' => 'int',
@@ -57,7 +49,7 @@ function _searchlight_searchlight_default_datasources() {
       'table' => 'users',
       'field' => 'name',
       'name' => 'users_name',
-      'usage' => 'content',
+      'usage' => 'attribute',
     ),
     'users_uid' => array(
       'label' => 'User: Name (uid)',
@@ -68,7 +60,7 @@ function _searchlight_searchlight_default_datasources() {
       'usage' => 'attribute',
     ),
   );
-  $searchlight_datasource->filters = FALSE;
+  $searchlight_datasource->filters = array();
   $searchlight_datasource->options = array(
     'node_access' => 1,
   );
