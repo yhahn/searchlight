@@ -61,7 +61,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     
     $response = $client->search($query, 0, 10, array());
     foreach ($response->response->docs as $doc) {
-      $ids[] = $doc->{$base_field}; // determine from base field
+      $ids[] = $doc->{$base_field};
     }
 
     if (!empty($ids)) {
@@ -284,7 +284,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
       $items = $datasource->view->render();
       if (!empty($items)) {
-        $solr = $this->initClient($datasource->id);
+        $solr = $this->initClient($datasource);
         $documents = array();
         $ids = array();
         foreach($items as $item) {
@@ -307,8 +307,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
         // $solr->optimize(); //merges multiple segments into one
 
-        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='node'
-                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $ids);
+        $args = $ids;
+        array_unshift($args, $datasource->base_table);
+        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
+                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $args);
         return drush_log('Indexing complete.', 'success');
       }
 
