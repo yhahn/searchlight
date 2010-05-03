@@ -179,9 +179,20 @@ class SearchlightEnvironment {
             '#type' => 'checkbox',
             '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : TRUE,
           );
-          $form['facets'][$name]['label'] = array(
+          $form['facets'][$name]['ui_name'] = array(
             '#type' => 'markup',
             '#value' => $field['label'],
+          );
+          // @TODO:
+          // It's terribly confusing that
+          // - facet['label'] (Custom label for facet display)
+          // - field['label'] (The Views UI name for a field)
+          // are so very different.
+          // Resolve this situation by renaming one or the other.
+          $form['facets'][$name]['label'] = array(
+            '#type' => 'textfield',
+            '#size' => 20,
+            '#default_value' => isset($this->facets[$name]['label']) ? $this->facets[$name]['label'] : '',
           );
           $form['facets'][$name]['weight'] = array(
             '#type' => 'weight',
