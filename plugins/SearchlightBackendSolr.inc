@@ -299,6 +299,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
         }
 
         $solr->addDocuments($documents);
+        $solr->commit();
+        // $solr->optimize(); //merges multiple segments into one
+
         db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='node'
                   AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $ids);
         return drush_log('Indexing complete.', 'success');
@@ -366,7 +369,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       'schema' => array(
         '_body' => array(
           'name' => '_body',
-          'type' => 'string',
+          'type' => 'text',
         ),
       ),
     );

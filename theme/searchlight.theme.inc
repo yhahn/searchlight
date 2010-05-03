@@ -23,7 +23,7 @@ function template_preprocess_searchlight_sphinx_conf(&$vars) {
 function template_preprocess_searchlight_solr_schema(&$vars) {
   $defaults = array(
     'indexed' => 'true',
-    'stored' => 'false',
+    'stored' => 'true',
     'multiValued' => 'false'
   );
   foreach($vars['datasource']['schema'] as $id => $field) {

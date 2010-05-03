@@ -89,10 +89,8 @@
  </fields>
  <uniqueKey><?php print $datasource['conf']['unique_key']; ?></uniqueKey>
 
-<?php /*
  <!-- field for the QueryParser to use when an explicit fieldname is absent -->
- <defaultSearchField>body</defaultSearchField>
-*/ ?>
+ <defaultSearchField><?php print $datasource['conf']['default_search_field']; ?></defaultSearchField>
 
  <!-- SolrQueryParser configuration: defaultOperator="AND|OR" -->
  <solrQueryParser defaultOperator="AND"/>
