@@ -109,7 +109,7 @@ function searchlight_views_pre_build(&$view) {
   // The following is a copy of the $view->query_init() method, with the only
   // difference being that we use the searchlight backend plugin rather than
   // the default views query plugin and pass the backend to the query plugin.
-  if ($searchlight && $backend = searchlight_default_backend()) {
+  if ($searchlight && $backend = searchlight_get_backend()) {
     if (!empty($view->query)) {
       $class = get_class($view->query);
       if ($class && $class != 'stdClass') {
@@ -139,39 +139,14 @@ function searchlight_views_query_alter(&$view) {
     // Retrieve active facets. We will consider the presence of any active
     // facets to mean the search query is *not* empty.
     $active_facets = searchlight_facet_manager()->activeFacets($view->query->datasource);
-
     if (!empty($active_facets)) {
       $view->query->search_options['hideEmpty'] = FALSE;
 
-      // Set filters for active facets. Note that query->add_where() is **NOT**
-      // used as this may force undesirable joins on the SQL version of the
-      // query.
+      // Allow each facet to modify the query.
       foreach ($active_facets as $name => $field) {
-        $arg = searchlight_facet_manager()->getFacet($name);
-        switch ($field['datatype']) {
-          case 'timestamp':
-            $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-            $range = $view->query->backend->dateRange($arg, $granularity);
-
-            $view->query->search_filter[] = array(
-              'field' => $field['name'],
-              'operator' => '>',
-              'args' => array($range['from']),
-            );
-            $view->query->search_filter[] = array(
-              'field' => $field['name'],
-              'operator' => '<',
-              'args' => array($range['to']),
-            );
-            break;
-          default:
-            $view->query->search_filter[] = array(
-              'field' => $field['name'],
-              'operator' => '=',
-              'args' => array($arg),
-            );
-            break;
-        }
+        $plugin = searchlight_get_facet($view->query->datasource, $field['name']);
+        $plugin->construct($view->query, $field, array());
+        $plugin->query($view->query, searchlight_facet_manager()->getActive($name));
       }
     }
   }

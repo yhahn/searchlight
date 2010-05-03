@@ -2,32 +2,45 @@
 
 class SearchlightFacetSearchQuery extends SearchlightFacet {
   /**
+   * Override of query().
+   */
+  function query(&$query, $arg) { }
+
+  /**
    * Build facet and counts using search backend.
    */
-  function build($query, $name, $limit) {
-    $items = array();
-    $items = array(
-      $query->search_query => array(
-        'id' => $query->search_query,
-        'title' => $query->search_query,
+  function build() {
+    return array(
+      $this->query->search_query => array(
+        'id' => $this->query->search_query,
+        'title' => $this->query->search_query,
       ),
     );
     return $items;
   }
 
   /**
-   * Render all items of a facet.
+   * Generate a label for this facet.
    */
-  function render($query, $name, $limit) {
-    if (!empty($query->search_query)) {
-      $items = $this->build($query, $name, $limit);
-      $item = reset($items);
-      $item['link'] = l(t('remove'), $_GET['q'], searchlight_facet_manager()->getURLOptions('active'));
-      return array(
-        'label' => t('Search'),
-        'items' => array(theme('searchlight_facet_active', array(), $item)),
-      );
+  function label($delta, $id = NULL) {
+    if (!empty($this->options['label'])) {
+      return $this->options['label'];
     }
-    return fALSE;
+    return t('Search');
+  }
+
+  /**
+   * Override of render().
+   * The SearchQuery is only rendered active and when a search query is present
+   * on the current page query.
+   */
+  function render($delta, $id = NULL) {
+    $rendered = array();
+    if ($delta === 'active' && !empty($this->query->search_query)) {
+      $item = array_shift($this->build());
+      $item['link'] = l(t('remove'), $_GET['q'], searchlight_facet_manager()->getURLOptions('active'));
+      $rendered[] = theme('searchlight_facet_active', $this->field, $item);
+    }
+    return $rendered;
   }
 }

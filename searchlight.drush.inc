@@ -29,7 +29,7 @@ function searchlight_drush_command() {
  * Generate the configuration file for the current site.
  */
 function searchlight_drush_conf() {
-  $backend = searchlight_default_backend();
+  $backend = searchlight_get_backend();
   $backend->drushWriteConf();
 }
 
@@ -37,7 +37,7 @@ function searchlight_drush_conf() {
  * Generate new indexes for the current site.
  */
 function searchlight_drush_index() {
-  $backend = searchlight_default_backend();
+  $backend = searchlight_get_backend();
   $backend->drushIndex();
 }
 
@@ -45,6 +45,6 @@ function searchlight_drush_index() {
  * Start or stop the search daemon.
  */
 function searchlight_drush_searchd() {
-  $backend = searchlight_default_backend();
+  $backend = searchlight_get_backend();
   $backend->drushSearchd();
 }

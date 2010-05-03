@@ -47,26 +47,15 @@ class SearchlightEnvironment {
   /**
    * Generate a set of renderable facet items.
    */
-  function render($type = 'active') {
+  function render($delta = 'active') {
+    $this->activate();
     $rendered = array();
     foreach ($this->getFacets() as $name => $facet) {
-      if ($plugin = $this->getPlugin($name)) {
-        $id = searchlight_facet_manager()->getFacet($name);
-        switch ($type) {
-          case 'active':
-            if (isset($id) || $name === 'search_query') {
-              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
-                $rendered[$name] = $render;
-              }
-            }
-            break;
-          case 'facets':
-            if (!isset($id) && $name !== 'search_query') {
-              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
-                $rendered[$name] = $render;
-              }
-            }
-            break;
+      if ($plugin = searchlight_get_facet($this->query->datasource, $name)) {
+        $id = searchlight_facet_manager()->getActive($name);
+        $plugin->construct(drupal_clone($this->query), $this->query->datasource->fields[$name], $this->facets[$name]);
+        if ($render = $plugin->render($delta, $id)) {
+          $rendered[$name] = array('label' => $plugin->label($delta, $id), 'items' => $render);
         }
       }
     }
@@ -88,25 +77,6 @@ class SearchlightEnvironment {
       );
     }
     return array();
-  }
-
-  /**
-   * Get a facet handler plugin, checking for a field-specific plugin first and
-   * using a fallback default handler if not found.
-   */
-  function getPlugin($name) {
-    $this->activate();
-    if (!empty($this->query)) {
-      if ($field = $this->query->datasource->fields[$name]) {
-        $plugin = searchlight_get_plugin('facet', "{$field['table']}_{$field['field']}");
-      }
-      else {
-        $plugin = searchlight_get_plugin('facet', $name);
-      }
-      // Fallback to default plugin.
-      return $plugin ? $plugin : searchlight_get_plugin('facet', 'default');
-    }
-    return FALSE;
   }
 
   /**
@@ -191,9 +161,20 @@ class SearchlightEnvironment {
             '#type' => 'checkbox',
             '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : TRUE,
           );
-          $form['facets'][$name]['label'] = array(
+          $form['facets'][$name]['ui_name'] = array(
             '#type' => 'markup',
             '#value' => $field['label'],
+          );
+          // @TODO:
+          // It's terribly confusing that
+          // - facet['label'] (Custom label for facet display)
+          // - field['label'] (The Views UI name for a field)
+          // are so very different.
+          // Resolve this situation by renaming one or the other.
+          $form['facets'][$name]['label'] = array(
+            '#type' => 'textfield',
+            '#size' => 20,
+            '#default_value' => isset($this->facets[$name]['label']) ? $this->facets[$name]['label'] : '',
           );
           $form['facets'][$name]['weight'] = array(
             '#type' => 'weight',

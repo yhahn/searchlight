@@ -204,11 +204,12 @@ function theme_searchlight_admin_environment($form) {
   $rows = array();
   $rows[] = array(
     array('data' => drupal_render($form['datasource']['datasource']), 'colspan' => 3),
-    array('data' => drupal_render($form['datasource']['update']), 'colspan' => 1),
+    array('data' => drupal_render($form['datasource']['update']), 'colspan' => 2),
   );
   $rows[] = array(
     array('data' => t('Enabled'), 'header' => TRUE),
     array('data' => t('Facet'), 'header' => TRUE),
+    array('data' => t('Custom label'), 'header' => TRUE),
     array('data' => t('Weight'), 'header' => TRUE),
     array('data' => t('Items to show'), 'header' => TRUE),
   );
@@ -217,7 +218,6 @@ function theme_searchlight_admin_environment($form) {
     $row = array();
     foreach (element_children($form['facets'][$key]) as $cell) {
       if ($cell === 'weight') {
-        // $row[] = array('data' => drupal_render($form['facets'][$key][$cell]), 'class' => 'searchlight-environment-weight');
         $form['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
       }
       $row[] = drupal_render($form['facets'][$key][$cell]);
