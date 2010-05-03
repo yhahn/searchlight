@@ -135,19 +135,13 @@ function searchlight_views_pre_build(&$view) {
  * Implementation of hook_views_query_alter().
  */
 function searchlight_views_query_alter(&$view) {
-  if (!empty($view->query->searchlight)) {
+  if (!empty($view->query->searchlight) && $environment = searchlight_environment_get()) {
     // Retrieve active facets. We will consider the presence of any active
     // facets to mean the search query is *not* empty.
-    $active_facets = searchlight_facet_manager()->activeFacets($view->query->datasource);
+    $active_facets = $environment->getFacets(TRUE);
     if (!empty($active_facets)) {
       $view->query->search_options['hideEmpty'] = FALSE;
-
-      // Allow each facet to modify the query.
-      foreach ($active_facets as $name => $field) {
-        $plugin = searchlight_get_facet($view->query->datasource, $field['name']);
-        $plugin->construct($view->query, $field, array());
-        $plugin->query($view->query, searchlight_facet_manager()->getActive($name));
-      }
+      $environment->query($view, $view->query);
     }
   }
 }
