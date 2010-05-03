@@ -152,7 +152,7 @@ class SearchlightBackend {
    * 'id': The primary ID for this item.
    * 'count': The number of entries that belong to this facet item.
    */
-  function facetBuild(&$client, $datasource, $query, $field) {
+  function facetBuild(&$client, $datasource, $query = '', $facets) {
     return array();
   }
 
