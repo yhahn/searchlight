@@ -2,6 +2,11 @@
 
 class SearchlightFacetSearchQuery extends SearchlightFacet {
   /**
+   * Override of query().
+   */
+  function query(&$query, $arg) { }
+
+  /**
    * Build facet and counts using search backend.
    */
   function build() {

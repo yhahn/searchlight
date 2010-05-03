@@ -27,14 +27,14 @@ class SearchlightFacetManager {
   /**
    * Set a facet value to be active.
    */
-  function setFacet($key, $value) {
+  function setActive($key, $value) {
     $this->active[$key] = $value;
   }
 
   /**
    * Get a given active facet's value.
    */
-  function getFacet($key = NULL) {
+  function getActive($key = NULL) {
     if (isset($key)) {
       return isset($this->active[$key]) ? $this->active[$key] : NULL;
     }
@@ -44,7 +44,7 @@ class SearchlightFacetManager {
   /**
    * Remove a facet from the active facets array.
    */
-  function delFacet($key = NULL) {
+  function delActive($key = NULL) {
     if (isset($key)) {
       if (isset($this->active[$key])) {
         unset($this->active[$key]);

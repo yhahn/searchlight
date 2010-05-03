@@ -23,6 +23,20 @@ class SearchlightFacet {
   }
 
   /**
+   * Query method for altering a current page view if this current facet is
+   * active. Example: set a filter for this facet's value.
+   * Note that $query->add_where() is **NOT** used as this may force
+   * undesirable joins on the SQL version of the query.
+   */
+  function query(&$query, $arg) {
+    $query->search_filter[] = array(
+      'field' => $this->name,
+      'operator' => '=',
+      'args' => array($arg),
+    );
+  }
+
+  /**
    * Build facet and counts using search backend.
    */
   function build() {
@@ -89,10 +103,10 @@ class SearchlightFacet {
       }
     }
     else {
-      $this->view = $query->datasource->view->copy();
+      $this->view = $this->query->datasource->view->copy();
       $this->view->build();
-      foreach ($view->field as $field_handler) {
-        if ($field_handler->field_alias === $field['name']) {
+      foreach ($this->view->field as $field_handler) {
+        if ($field_handler->field_alias === $this->name) {
           $this->handler = $field_handler;
         }
       }

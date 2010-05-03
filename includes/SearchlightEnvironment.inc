@@ -48,10 +48,11 @@ class SearchlightEnvironment {
    * Generate a set of renderable facet items.
    */
   function render($delta = 'active') {
+    $this->activate();
     $rendered = array();
     foreach ($this->getFacets() as $name => $facet) {
-      if ($plugin = $this->getPlugin($name)) {
-        $id = searchlight_facet_manager()->getFacet($name);
+      if ($plugin = searchlight_get_facet($this->query->datasource, $name)) {
+        $id = searchlight_facet_manager()->getActive($name);
         $plugin->construct(drupal_clone($this->query), $this->query->datasource->fields[$name], $this->facets[$name]);
         if ($render = $plugin->render($delta, $id)) {
           $rendered[$name] = array('label' => $plugin->label($delta, $id), 'items' => $render);
@@ -76,25 +77,6 @@ class SearchlightEnvironment {
       );
     }
     return array();
-  }
-
-  /**
-   * Get a facet handler plugin, checking for a field-specific plugin first and
-   * using a fallback default handler if not found.
-   */
-  function getPlugin($name) {
-    $this->activate();
-    if (!empty($this->query)) {
-      if ($field = $this->query->datasource->fields[$name]) {
-        $plugin = searchlight_get_facet("{$field['table']}_{$field['field']}");
-      }
-      else {
-        $plugin = searchlight_get_facet($name);
-      }
-      // Fallback to default plugin.
-      return $plugin ? $plugin : searchlight_get_facet('default');
-    }
-    return FALSE;
   }
 
   /**
