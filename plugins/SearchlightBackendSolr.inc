@@ -284,10 +284,17 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $ids = array();
         foreach($items as $item) {
           $document = new Apache_Solr_Document();
+          $content = array();
           foreach ($datasource->fields as $field) {
-            $document->{$field['name']} = $item[$field['name']];
+            if ($field['usage'] == 'content') {
+              $content[] = $this->apachesolr_clean_text($item[$field['name']]);
+            }
+            else {
+              $document->{$field['name']} = $item[$field['name']];
+            }
           }
           $ids[] = $item[$datasource->view->base_field];
+          $document->_body = implode(' ', $content);
           $documents[] = $document;
         }
 
@@ -301,6 +308,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
       return drush_log('Nothing to Index.', 'success');
     }
     return drush_log("An error ocurred while indexing.", 'error');
+  }
+
+  // From the apachsolr module
+  function apachesolr_clean_text($text) {
+    // Add spaces before stripping tags to avoid running words together.
+    $text = filter_xss(str_replace(array('<', '>'), array(' <', '> '), $text), array());
+    // Decode entities and then make safe any < or > characters.
+    return htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
   }
 
   function drushWriteConf() {
@@ -344,27 +359,39 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function solrDatasourceConf($datasource) {
 
     // Configuration options.
-    $conf = array('schema' => array(), 'conf' => array());
+    $conf = array(
+      'conf' => array(
+        'default_search_field' => '_body',
+      ),
+      'schema' => array(
+        '_body' => array(
+          'name' => '_body',
+          'type' => 'string',
+        ),
+      ),
+    );
     $conf['conf']['id'] = $datasource->id;
     $conf['conf']['unique_key'] = $this->SolrAddBaseField($datasource);
 
     // Attributes: name, type, indexed, stored, required, multiValued, omitNorms
     foreach ($datasource->fields as $field) {
-      $f = $field['name'];
-      $conf['schema'][$f] = array('name' => $f);
-      switch ($field['datatype']) {
-        case 'int':
-          $conf['schema'][$f]['type'] = 'integer';
-          break;
-        case 'text':
-          $conf['schema'][$f]['type'] = 'string';
-          break;
-        case 'timestamp':
-          $conf['schema'][$f]['type'] = 'date';
-      }
+      if ($field['usage'] != 'content') {
+        $f = $field['name'];
+        $conf['schema'][$f] = array('name' => $f);
+        switch ($field['datatype']) {
+          case 'int':
+            $conf['schema'][$f]['type'] = 'integer';
+            break;
+          case 'text':
+            $conf['schema'][$f]['type'] = 'string';
+            break;
+          case 'timestamp':
+            $conf['schema'][$f]['type'] = 'date';
+        }
 
-      if ($field['usage'] == 'multivalue') {
-        $conf['schema'][$f]['multiValued'] = TRUE;
+        if ($field['usage'] == 'multivalue') {
+          $conf['schema'][$f]['multiValued'] = TRUE;
+        }
       }
     }
     return $conf;
