@@ -109,7 +109,7 @@ function searchlight_views_pre_build(&$view) {
   // The following is a copy of the $view->query_init() method, with the only
   // difference being that we use the searchlight backend plugin rather than
   // the default views query plugin and pass the backend to the query plugin.
-  if ($searchlight && $backend = searchlight_default_backend()) {
+  if ($searchlight && $backend = searchlight_get_backend()) {
     if (!empty($view->query)) {
       $class = get_class($view->query);
       if ($class && $class != 'stdClass') {

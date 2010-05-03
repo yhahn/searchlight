@@ -200,7 +200,7 @@ function searchlight_purl_provider() {
     'searchlight' => array(
       'name' => t('Searchlight facets'),
       'description' => t('Sets one or more active facets.'),
-      'callback' => 'searchlight_facet_manager_activate',
+      'callback' => 'searchlight_facet_manager',
     ),
   );
 }
@@ -208,22 +208,20 @@ function searchlight_purl_provider() {
 /**
  * Factory/singleton static cache for facet manager.
  */
-function searchlight_facet_manager($reset = FALSE) {
-  static $facets;
-  if (!isset($facets) || $reset) {
+function searchlight_facet_manager($packed = NULL, $reset = FALSE) {
+  static $facet_manager;
+  if (!isset($facet_manager) || $reset) {
     module_load_include('inc', 'searchlight', 'includes/SearchlightFacetManager');
-    $facets = new SearchlightFacetManager();
-  }
-  return $facets;
-}
+    $facet_manager = new SearchlightFacetManager();
 
-/**
- * PURL callback: parse and set active facets.
- */
-function searchlight_facet_manager_activate($packed) {
-  foreach (searchlight_facet_manager()->unpack($packed) as $field => $value) {
-    searchlight_facet_manager()->setFacet($field, $value);
+    // If a packed PURL modifier value was provided, unpack values.
+    if (isset($packed)) {
+      foreach ($facet_manager->unpack($packed) as $field => $value) {
+        $facet_manager->setFacet($field, $value);
+      }
+    }
   }
+  return $facet_manager;
 }
 
 /**
@@ -367,6 +365,14 @@ function searchlight_searchlight_plugins() {
         'parent' => 'SearchlightFacet',
       ),
     ),
+    'SearchlightFacetTerm' => array(
+      'handler' => array(
+        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'file' => 'SearchlightFacetTerm.inc',
+        'class' => 'SearchlightFacetTerm',
+        'parent' => 'SearchlightFacet',
+      ),
+    ),
   );
 }
 
@@ -393,6 +399,10 @@ function searchlight_searchlight_registry() {
       'search_query' => array(
         'title' => t('Search query'),
         'plugin' => 'SearchlightFacetSearchQuery',
+      ),
+      'term_data_tid' => array(
+        'title' => t('Taxonomy term'),
+        'plugin' => 'SearchlightFacetTerm',
       ),
     ),
   );
@@ -436,34 +446,49 @@ function searchlight_registry($key = NULL, $reset = FALSE) {
 }
 
 /**
- * Retrieve the current default backend.
+ * Retrieve an instance of a backend class. Note: this is a singleton.
+ * If no backend is specified by $id, the default backend is returned.
  */
-function searchlight_default_backend() {
-  $backend = variable_get('searchlight_backend', 'sphinx');
-  return searchlight_get_plugin('backend', $backend);
-}
-
-/**
- * Retrieve an instance of a searchlight backend class.
- */
-function searchlight_get_plugin($type = 'backend', $id = NULL, $reset = FALSE) {
+function searchlight_get_backend($id = NULL, $reset = FALSE) {
   static $loaded;
   ctools_include('plugins');
-  if (!isset($loaded[$type][$id]) || $reset) {
-    $loaded[$type][$id] = FALSE;
-    $registry = searchlight_registry($type);
+
+  // Use default backend if no backend was specified.
+  $id = isset($id) ? $id : variable_get('searchlight_backend', 'sphinx');
+
+  if (!isset($loaded[$id]) || $reset) {
+    $loaded[$id] = FALSE;
+    $registry = searchlight_registry('backend');
     if (isset($registry[$id]) && $info = $registry[$id]) {
       $plugins = ctools_get_plugins('searchlight', 'plugins');
       if (isset($plugins[$info['plugin']]) && $class = ctools_plugin_get_class($plugins[$info['plugin']], 'handler')) {
-        $loaded[$type][$id] = new $class($id);
+        $loaded[$id] = new $class($id);
       }
     }
   }
-  return $loaded[$type][$id];
+  return $loaded[$id];
+}
+
+/**
+ * Retrieve an instance of a facet class.
+ */
+function searchlight_get_facet($id = NULL) {
+  ctools_include('plugins');
+  $registry = searchlight_registry('facet');
+  if (isset($registry[$id]) && $info = $registry[$id]) {
+    $plugins = ctools_get_plugins('searchlight', 'plugins');
+    if (isset($plugins[$info['plugin']]) && $class = ctools_plugin_get_class($plugins[$info['plugin']], 'handler')) {
+      return new $class($id);
+    }
+  }
+  return FALSE;
 }
 
 /**
  * Parse and build a view from a "$view_name:$view_display" string.
+ * @TODO: Deprecate this function. It's primarily used atm for building a view
+ * associated with a multivalue field. Once the multivalue field is represented
+ * as a proper class object, it should handle this itself.
  */
 function searchlight_build_view($identifier) {
   $split = explode(':', $identifier);
@@ -673,43 +698,6 @@ function searchlight_get_datasource($base_table) {
     }
   }
   return FALSE;
-
-  static $datasources = array();
-  $reset = TRUE;
-  if (!isset($datasources[$base_table]) || $reset) {
-    $cid = "searchlight_datasource_{$base_table}";
-    if (!$reset && $cache = cache_get($cid)) {
-      $datasources[$base_table] = $cache->data;
-    }
-    else {
-      $datasources[$base_table] = array();
-      $views = variable_get('searchlight_views', array());
-      if (isset($views[$base_table]) && $view = searchlight_build_view($views[$base_table])) {
-        $datasource = $view->execute_display();
-        cache_set($cid, $datasource);
-        $datasources[$base_table] = $datasource;
-      }
-    }
-  }
-  return !empty($datasources[$base_table]) ? $datasources[$base_table] : FALSE;
-}
-
-/**
- * Retrieve all views on the given base table that have the specified display.
- */
-function searchlight_get_views_by_display($base_table, $display_plugin = 'searchlight_datasource') {
-  $views = views_get_all_views();
-  $usable = array();
-  foreach ($views as $view) {
-    if ($view->base_table === $base_table) {
-      foreach ($view->display as $display) {
-        if ($display->display_plugin === $display_plugin) {
-          $usable[$view->name] = $view;
-        }
-      }
-    }
-  }
-  return $usable;
 }
 
 /**

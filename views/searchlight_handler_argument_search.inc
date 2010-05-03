@@ -17,7 +17,7 @@ class searchlight_handler_argument_search extends views_handler_argument {
    */
   function option_definition() {
     $options = parent::option_definition();
-    if ($backend = searchlight_default_backend()) {
+    if ($backend = searchlight_get_backend()) {
       $options += $backend->viewsOptionDefinition($this);
     }
     return $options;
@@ -28,7 +28,7 @@ class searchlight_handler_argument_search extends views_handler_argument {
    */
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
-    if ($backend = searchlight_default_backend()) {
+    if ($backend = searchlight_get_backend()) {
       $backend->viewsOptionsForm($form, &$form_state, $this);
     }
   }

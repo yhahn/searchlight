@@ -47,26 +47,14 @@ class SearchlightEnvironment {
   /**
    * Generate a set of renderable facet items.
    */
-  function render($type = 'active') {
+  function render($delta = 'active') {
     $rendered = array();
     foreach ($this->getFacets() as $name => $facet) {
       if ($plugin = $this->getPlugin($name)) {
         $id = searchlight_facet_manager()->getFacet($name);
-        switch ($type) {
-          case 'active':
-            if (isset($id) || $name === 'search_query') {
-              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
-                $rendered[$name] = $render;
-              }
-            }
-            break;
-          case 'facets':
-            if (!isset($id) && $name !== 'search_query') {
-              if ($render = $plugin->render($this->query, $name, $this->facets[$name]['items'])) {
-                $rendered[$name] = $render;
-              }
-            }
-            break;
+        $plugin->construct(drupal_clone($this->query), $this->query->datasource->fields[$name], $this->facets[$name]);
+        if ($render = $plugin->render($delta, $id)) {
+          $rendered[$name] = array('label' => $plugin->label($delta, $id), 'items' => $render);
         }
       }
     }
@@ -98,13 +86,13 @@ class SearchlightEnvironment {
     $this->activate();
     if (!empty($this->query)) {
       if ($field = $this->query->datasource->fields[$name]) {
-        $plugin = searchlight_get_plugin('facet', "{$field['table']}_{$field['field']}");
+        $plugin = searchlight_get_facet("{$field['table']}_{$field['field']}");
       }
       else {
-        $plugin = searchlight_get_plugin('facet', $name);
+        $plugin = searchlight_get_facet($name);
       }
       // Fallback to default plugin.
-      return $plugin ? $plugin : searchlight_get_plugin('facet', 'default');
+      return $plugin ? $plugin : searchlight_get_facet('default');
     }
     return FALSE;
   }

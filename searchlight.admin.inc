@@ -322,7 +322,7 @@ function searchlight_admin_backend($form_state) {
   );
   foreach (searchlight_registry('backend') as $key => $info) {
     $form['backend']['searchlight_backend']['#options'][$key] = $info['title'];
-    $backend = searchlight_get_plugin('backend', $key);
+    $backend = searchlight_get_backend($key);
     $form["searchlight_backend_{$key}"] = $backend->settingsForm(variable_get("searchlight_backend_{$key}", array()));
     $form["searchlight_backend_{$key}"]['#tree'] = TRUE;
     $form["searchlight_backend_{$key}"]['#title'] = $info['title'];

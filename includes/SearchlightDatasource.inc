@@ -160,7 +160,21 @@ class SearchlightDatasource {
   function buildMultivalues() {
     views_invalidate_cache();
     $multivalues = array();
-    foreach (searchlight_get_views_by_display($this->base_table, 'searchlight_multivalue') as $view) {
+
+    // Gather all views that have the multivalue display plugin.
+    $views = views_get_all_views();
+    $usable = array();
+    foreach ($views as $view) {
+      if ($view->base_table === $this->base_table) {
+        foreach ($view->display as $display) {
+          if ($display->display_plugin === 'searchlight_multivalue') {
+            $usable[$view->name] = $view;
+          }
+        }
+      }
+    }
+
+    foreach ($usable as $view) {
       if ($view->name !== 'searchlight_node_access') {
         foreach ($view->display as $display) {
           if ($display->display_plugin === 'searchlight_multivalue') {
