@@ -1,12 +1,18 @@
 <?php
 
 class SearchlightEnvironment {
+  // Storage variables: saved to DB or code when an environment is saved.
   var $name;
   var $datasource;
-  var $enabled;
   var $facets;
   var $options;
 
+  // Working variables: populated at various init and other stages.
+  var $enabled;
+  var $active_values;
+
+  // Class objects.
+  var $plugins;
   var $query;
   var $view;
 
@@ -15,51 +21,100 @@ class SearchlightEnvironment {
     $this->datasource = isset($this->datasource) ? $this->datasource : '';
     $this->facets = !empty($this->facets) ? $this->facets : array();
     $this->options = !empty($this->options) ? $this->options : array();
-
-    $this->query = NULL;
-    $this->view = NULL;
-
     $this->options = $this->options + array(
       'active_label' => t('Active search'),
       'facets_label' => t('Search facets'),
     );
+
+    $this->enabled = array();
+    $this->active_values = array();
+
+    $this->plugins = array();
+    $this->query = NULL;
+    $this->view = NULL;
   }
 
   /**
-   * Activate this environment such that it can build/render facet displays.
-   * Detect the current page view (if any) and clone its query object.
+   * Activate this environment using the values found (and parsed) from a PURL
+   * modifier. See searchlight_environment_init().
    */
-  function activate($reset = FALSE) {
-    if (!isset($this->query) || $reset) {
-      $display = views_get_page_view();
-      if ($display && !empty($display->view->query->searchlight)) {
-        $this->query = drupal_clone($display->view->query);
-        $this->view = $display->view;
+  function initValues($values) {
+    $this->active_values = $values;
+
+    // Remove the environment key which is for internal use only.
+    if (isset($this->active_values['environment'])) {
+      unset($this->active_values['environment']);
+    }
+  }
+
+  /**
+   * Initialize facet plugins for this environment. Requires the current page's
+   * view and query object to be passed.
+   */
+  function initPlugins($view = NULL, $query = NULL, $reset = FALSE) {
+    if (empty($this->plugins) || $reset) {
+      $this->view = NULL;
+      $this->query = NULL;
+      $this->plugins = array();
+
+      $datasource = searchlight_datasource_load($this->datasource);
+
+      // If no view, query passed, attempt to use current page view.
+      if (!isset($view, $query)) {
+        $display = views_get_page_view();
+        if ($display && !empty($display->view->query->searchlight)) {
+          $view = $display->view;
+          $query = $display->view->query;
+        }
       }
-      else {
-        $this->query = NULL;
-        $this->view = NULL;
+
+      // Init plugins.
+      if ($view && $query && $datasource) {
+        $this->view = $view;
+        $this->query = drupal_clone($query);
+        foreach ($this->getFacets() as $name => $facet) {
+          $plugin = searchlight_get_facet($datasource, $name);
+          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), $this->facets[$name]);
+          $this->plugins[$name] = $plugin;
+        }
       }
     }
-    return $this;
+  }
+
+  /**
+   * Allow the environment to initialize plugins and allow them to modify the
+   * Views query.
+   */
+  function query($view, $query) {
+    $this->initPlugins($view, $query);
+    foreach ($this->plugins as $name => $plugin) {
+      $plugin->query($query);
+    }
   }
 
   /**
    * Generate a set of renderable facet items.
    */
   function render($delta = 'active') {
-    $this->activate();
+    $this->initPlugins();
     $rendered = array();
-    foreach ($this->getFacets() as $name => $facet) {
-      if ($plugin = searchlight_get_facet($this->query->datasource, $name)) {
-        $id = searchlight_facet_manager()->getActive($name);
-        $plugin->construct(drupal_clone($this->query), $this->query->datasource->fields[$name], $this->facets[$name]);
-        if ($render = $plugin->render($delta, $id)) {
-          $rendered[$name] = array('label' => $plugin->label($delta, $id), 'items' => $render);
-        }
+    foreach ($this->plugins as $name => $plugin) {
+      if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
+        $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $render);
       }
     }
     return $rendered;
+  }
+
+  /**
+   * Retrieve the active value for a given facet.
+   */
+  function getValue($key) {
+    $facets = $this->getFacets();
+    if (isset($this->active_values[$key]) && isset($facets[$key])) {
+      return $this->active_values[$key];
+    }
+    return NULL;
   }
 
   /**
@@ -82,22 +137,18 @@ class SearchlightEnvironment {
   /**
    * Retrieve enabled facets for this environment.
    */
-  function getFacets() {
-    if (!isset($this->enabled)) {
-      $this->enabled = array();
-      $this->activate();
-      if (!empty($this->query)) {
-        foreach ($this->facets as $name => $facet) {
-          if (!empty($facet['enabled']) && $this->isValidFacet($name)) {
-            // Set set #weight so element_sort can be used.
-            $facet['#weight'] = isset($facet['weight']) ? $facet['weight'] : 0;
-            $this->enabled[$name] = $facet;
-          }
+  function getFacets($active_only = FALSE) {
+    if (empty($this->enabled)) {
+      foreach ($this->facets as $name => $facet) {
+        if (!empty($facet['enabled']) && $this->isValidFacet($name)) {
+          // Set set #weight so element_sort can be used.
+          $facet['#weight'] = isset($facet['weight']) ? $facet['weight'] : 0;
+          $this->enabled[$name] = $facet;
         }
       }
       uasort($this->enabled, 'element_sort');
     }
-    return $this->enabled;
+    return $active_only ? array_intersect_key($this->enabled, $this->active_values) : $this->enabled;
   }
 
   /**
@@ -223,5 +274,62 @@ class SearchlightEnvironment {
     else if ($datasource = searchlight_datasource_load($this->datasource)) {
       return (isset($datasource->fields[$name]) && in_array($datasource->fields[$name]['usage'], array('attribute', 'multivalue'), TRUE));
     }
+  }
+
+  /**
+   * Get the URL options for the current set of active facets, adjusted using
+   * one of the $op operations.
+   *
+   * 'add':    Add a facet value for the given key/value pair.
+   * 'remove': Add a facet value for the given key/value pair.
+   * 'active': Retain only active facets and drop any other query strings.
+   */
+  function getURLOptions($op = 'add', $key = NULL, $value = NULL) {
+    $options = array();
+    $modifier = array('environment' => $this->name);
+    switch ($op) {
+      case 'add':
+        $modifier = $modifier + $this->active_values;
+        $modifier[$key] = $value;
+        break;
+      case 'remove':
+        $modifier = $modifier + $this->active_values;
+        if (isset($modifier[$key])) {
+          unset($modifier[$key]);
+        }
+        break;
+      case 'active':
+        $modifier = $modifier + $this->active_values;
+        break;
+    }
+    $modifier = searchlight_environment_pack($modifier);
+    if (!empty($modifier)) {
+      $options['purl'] = array('provider' => 'searchlight', 'id' => $modifier);
+    }
+    else {
+      $options['purl'] = array('remove' => array('searchlight'));
+    }
+
+    $exclude = array('q', 'page');
+    $method = variable_get('purl_method_searchlight', 'path');
+    $key = variable_get('purl_method_searchlight_key', FALSE);
+    if ($method === 'querystring') {
+      // If we've been asked to retain all facets, we need to exclude all
+      // query strings **except** the facet query string.
+      if ($op === 'active') {
+        $exclude = drupal_map_assoc(array_keys($_GET));
+        if (isset($exclude[$key])) {
+          unset($exclude[$key]);
+        }
+      }
+      // If there is no modifier we want to exclude the facet query string
+      // (forces query string to be dropped).
+      else if (empty($modifier)) {
+        $exclude[] = $key;
+      }
+    }
+    $options['query'] = drupal_query_string_encode($_GET, $exclude);
+
+    return $options;
   }
 }

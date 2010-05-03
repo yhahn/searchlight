@@ -1,9 +1,11 @@
 <?php
 
 class SearchlightFacet {
-  var $query;
+  var $name;
   var $field;
+  var $value;
   var $options;
+  var $environment;
 
   // Render infrastructure objects.
   var $view;
@@ -12,11 +14,12 @@ class SearchlightFacet {
   /**
    * Constructor.
    */
-  function construct($query, $field, $options) {
+  function construct($environment, $field, $value, $options) {
     $this->name = $field['name'];
-    $this->query = $query;
     $this->field = $field;
+    $this->value = $value;
     $this->options = $options;
+    $this->environment = $environment;
 
     $this->view = NULL;
     $this->handler = NULL;
@@ -28,26 +31,28 @@ class SearchlightFacet {
    * Note that $query->add_where() is **NOT** used as this may force
    * undesirable joins on the SQL version of the query.
    */
-  function query(&$query, $arg) {
-    $query->search_filter[] = array(
-      'field' => $this->name,
-      'operator' => '=',
-      'args' => array($arg),
-    );
+  function query(&$query) {
+    if (isset($this->value)) {
+      $query->search_filter[] = array(
+        'field' => $this->name,
+        'operator' => '=',
+        'args' => array($this->value),
+      );
+    }
   }
 
   /**
    * Build facet and counts using search backend.
    */
-  function build() {
+  function build($query) {
     $limit = isset($this->options['items']) ? $this->options['items'] : 1;
-    return $this->query->backend->facetBuild($this->query, $this->field, $limit);
+    return $query->backend->facetBuild($query, $this->field, $limit);
   }
 
   /**
    * Generate a label for this facet.
    */
-  function label($delta, $id = NULL) {
+  function label($delta) {
     if (!empty($this->options['label'])) {
       return $this->options['label'];
     }
@@ -60,25 +65,25 @@ class SearchlightFacet {
   /**
    * Render all items of a facet.
    */
-  function render($delta, $id = NULL) {
+  function render($query, $delta) {
     $rendered = array();
     switch ($delta) {
       case 'active':
-        if (isset($id)) {
-          $items = array($id => array('id' => $id));
+        if (isset($this->value)) {
+          $items = array($this->value => array('id' => $this->value));
         }
         break;
       case 'facets':
-        if (!isset($id)) {
-          $items = $this->build();
+        if (!isset($this->value)) {
+          $items = $this->build($query);
         }
         break;
     }
-    if (!empty($items) && $this->viewInit()) {
+    if (!empty($items) && $this->viewInit($query)) {
       $op = $delta === 'active' ? 'remove' : 'add';
       foreach ($this->viewRenderItems($items) as $id => $item) {
         $title = $op === 'remove' ? t('remove') : $item['title'];
-        $options = searchlight_facet_manager()->getURLOptions($op, $this->name, $id);
+        $options = $this->environment->getURLOptions($op, $this->name, $id);
         $item['link'] = l($title, $_GET['q'], $options);
         $rendered[$id] = $op === 'remove' ?
           theme('searchlight_facet_active', $this->field, $item) :
@@ -92,7 +97,7 @@ class SearchlightFacet {
    * Initialize and build the View & field handler which will be used for
    * rendering this facet.
    */
-  function viewInit() {
+  function viewInit($query) {
     if ($this->field['usage'] === 'multivalue') {
       $this->view = searchlight_build_view($this->field['view']);
       foreach ($this->view->field as $field_handler) {
@@ -103,7 +108,7 @@ class SearchlightFacet {
       }
     }
     else {
-      $this->view = $this->query->datasource->view->copy();
+      $this->view = $query->datasource->view->copy();
       $this->view->build();
       foreach ($this->view->field as $field_handler) {
         if ($field_handler->field_alias === $this->name) {
