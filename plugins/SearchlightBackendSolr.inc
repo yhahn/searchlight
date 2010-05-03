@@ -57,9 +57,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function executeQuery(&$client, $datasource, $query = '') {
     // Determine if we need to query a delta and main index.
-    $index = $datasource['id'];
-
-    $result = $client->Query($query, $datasource['id']);
+    $index = $datasource->id;
+    
+    var_dump($client); die;
+    if ($client->ping()) {
+      $response = $solr->search('content:blah', 0, 10, array('sort' => 'timestamp desc'));
+    }
     if (!empty($result['matches'])) {
       return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
@@ -149,40 +152,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   /**
-   * Override of setOptions().
-   */
-  function setOptions(&$client, $datasource, $options) {
-    if (isset($options['matchMode'])) {
-      $client->SetMatchMode($options['matchMode']);
-    }
-  }
-
-  /**
-   * Override of setSort().
-   */
-  function setSort(&$client, $datasource, $sorts) {
-    if (!empty($sorts)) {
-      $solr_sorts = array();
-      foreach ($sorts as $sort) {
-        if ($sort['field'] === 'searchlight_weight') {
-          $solr_sorts[] = "@weight {$sort['order']}";
-        }
-        else {
-          $solr_sorts[] = "{$sort['field']} {$sort['order']}";
-        }
-      }
-      $client->setSortMode(SPH_SORT_EXTENDED, implode(', ', $solr_sorts));
-    }
-  }
-
-  /**
    * Override of setPager().
    */
   function setPager(&$client, $offset, $limit) {
-    $limit = !empty($limit) ? $limit : 1000;
-    if (!empty($offset) || !empty($limit)) {
-      $client->SetLimits((int) $offset, (int) $limit);
-    }
   }
 
   /**
@@ -320,7 +292,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
         }
 
         $solr->addDocuments($documents);
-        // TODO don't mark everything, limit what we send
         db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='node'
                   AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $ids);
         return drush_log('Indexing complete.', 'success');
