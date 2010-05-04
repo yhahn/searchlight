@@ -1,3 +1,11 @@
+READ THIS
+---------
+- Searchlight is currently being built against Views 3.x-alpha3. There is a
+  small API change in Views 3.x-dev that **breaks** Searchlight. Once the next
+  3.x tag is out, we will update the Searchlight API to work with the new
+  release.
+
+
 Searchlight
 -----------
 Searchlight is a refactored version of the early experiment [sphinx_views][1],
