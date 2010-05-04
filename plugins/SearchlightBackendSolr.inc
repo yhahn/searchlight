@@ -55,8 +55,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
-    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
-
+    $query = $this->solrPrepareQuery($client, $datasource, $query);
+ 
     $base_field = $this->solrGetBaseField($datasource);
 
     try { 
@@ -77,6 +77,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
       );
     }
     return FALSE;
+  }
+
+  function solrPrepareQuery(&$client, $datasource, $query) {
+    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
+    if (isset($client->searchlightFilters)) {
+      $query .= ' '. implode(' ', $client->searchlightFilters);
+    }
+    return $query;
   }
 
   /**
@@ -146,7 +154,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of facetBuild().
    */
   function facetBuild(&$client, $datasource, $query = '', $facets) {
-    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
+    $query = $this->solrPrepareQuery($client, $datasource, $query);
+
     $options = array('facet' => 'true');
 
     $options['facet.field'] = array();
