@@ -551,7 +551,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $sphinx->SetGroupDistinct($name);
         $result = $sphinx->Query(NULL, $datasource->id);
 
-        if (count($result['matches']) < 1000) {
+        if (!empty($result['matches']) && count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
           $ids = implode(',', array_keys($result['matches']));
           $view = $datasource->view->copy();

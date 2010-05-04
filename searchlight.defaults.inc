@@ -59,6 +59,14 @@ function _searchlight_searchlight_default_datasources() {
       'name' => 'users_uid',
       'usage' => 'attribute',
     ),
+    'node_type' => array(
+      'label' => 'Node: Type (type)',
+      'datatype' => 'text',
+      'table' => 'node',
+      'field' => 'type',
+      'name' => 'node_type',
+      'usage' => 'attribute',
+    ),
   );
   $searchlight_datasource->filters = array();
   $searchlight_datasource->options = array(
