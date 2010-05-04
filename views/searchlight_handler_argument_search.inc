@@ -2,10 +2,22 @@
 
 class searchlight_handler_argument_search extends views_handler_argument {
   /**
+   * Override of pre_query().
+   */
+  function pre_query() {
+    searchlight_views_init_query($this->view);
+  }
+
+  /**
    * Override of query().
    */
   function query() {
-    $value = trim($this->argument);
+    if (views_api_version() == '2.0') {
+      $value = trim($this->value);
+    }
+    else {
+      $value = trim(current($this->value));
+    }
     if ($this->argument_validated && !empty($value)) {
       $this->query->set_search_options($this->options);
       $this->query->set_search_query($value);

@@ -1,6 +1,6 @@
 <?php
 
-class searchlight_plugin_query extends views_plugin_query_default {
+class searchlight_plugin_query extends views_query {
   var $backend;
   var $client;
   var $datasource;
@@ -13,11 +13,18 @@ class searchlight_plugin_query extends views_plugin_query_default {
   var $search_query;
   var $searchlight;
 
+  function construct() {}
+  function set_definition() {}
+
+  function init_pager($view) {
+    $this->pager = new searchlight_plugin_pager($view);
+  }
+
   /**
    * Override of init().
    */
   function init($base_table = 'node', $base_field = 'nid', $backend) {
-    parent::init($base_table, $base_field);
+    parent::views_query($base_table, $base_field);
 
     $this->datasource = searchlight_get_datasource($base_table);
     $this->datasource->init();
@@ -94,6 +101,30 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 
+  function add_search_facet($name, $limit = 5) {
+    $this->search_facets[] = array('field' => $name, 'limit' => $limit);
+  }
+
+  function set_search_options($options) {
+    $this->search_options = $options;
+  }
+
+  function set_search_query($query) {
+    $this->search_query = $query;
+  }
+
+  function get_search_facet($facet) {
+    return isset($this->search_result_facets[$facet]) ? $this->search_result_facets[$facet] : array();
+  }
+
+  protected function get_args($args, $offset = 2) {
+    $args = array_slice($args, $offset);
+    if (count($args) == 1 && is_array(reset($args))) {
+      return current($args);
+    }
+    return $args;
+  }
+
   function build(&$view) {
     $this->abort = FALSE;
 
@@ -158,30 +189,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 
-  function add_search_facet($name, $limit = 5) {
-    $this->search_facets[] = array('field' => $name, 'limit' => $limit);
-  }
-
-  function set_search_options($options) {
-    $this->search_options = $options;
-  }
-
-  function set_search_query($query) {
-    $this->search_query = $query;
-  }
-
-  function get_search_facet($facet) {
-    return isset($this->search_result_facets[$facet]) ? $this->search_result_facets[$facet] : array();
-  }
-
-  protected function get_args($args, $offset = 2) {
-    $args = array_slice($args, $offset);
-    if (count($args) == 1 && is_array(reset($args))) {
-      return current($args);
-    }
-    return $args;
-  }
-
   function execute(&$view) {
     if (empty($this->abort)) {
       // Store values prior to execute().
@@ -190,7 +197,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
       $current_page = $this->pager->current_page;
       $this->offset = $this->limit = 0;
 
-      parent::execute($view);
       if (!empty($this->search_result)) {
         $view->total_rows = $this->pager->total_items = $this->search_result['total'];
         $this->pager->set_current_page($current_page);
@@ -203,3 +209,89 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 }
+
+/**
+ * Reimplementation of the Views 3 pager class.
+ * Many of the methods here are taken from views_plugin_pager_full.
+ */
+class searchlight_plugin_pager {
+  var $view;
+  var $options;
+  var $current_page;
+
+  function __construct($view) {
+    $this->view = $view;
+    $this->options = $view->pager;
+    $this->options['id'] = $this->options['element'];
+  }
+
+  function use_pager() {
+    return !empty($this->options['items_per_page']);
+  }
+
+  function set_current_page($number = NULL) {
+    if (isset($number)) {
+      $this->current_page = $number;
+      return;
+    }
+
+    // If the current page number was not prespecified, default to pulling it from 'page'
+    // based upon
+    global $pager_page_array;
+    // Extract the ['page'] info.
+    $pager_page_array = isset($_GET['page']) ? explode(',', $_GET['page']) : array();
+
+    $this->current_page = 0;
+    if (!empty($pager_page_array[$this->options['id']])) {
+      $this->current_page = intval($pager_page_array[$this->options['id']]);
+    }
+  }
+
+  function get_items_per_page() {
+    return isset($this->options['items_per_page']) ? $this->options['items_per_page'] : 0;
+  }
+
+  function update_page_info() {
+    if (!empty($this->options['total_pages'])) {
+      if (($this->options['total_pages'] * $this->options['items_per_page']) < $this->total_items) {
+        $this->total_items = $this->options['total_pages'] * $this->options['items_per_page'];
+      }
+    }
+
+    // Don't set pager settings for items per page = 0.
+    $items_per_page = $this->get_items_per_page();
+    if (!empty($items_per_page)) {
+      // Dump information about what we already know into the globals.
+      global $pager_page_array, $pager_total, $pager_total_items;
+      // Set the item count for the pager.
+      $pager_total_items[$this->options['id']] = $this->total_items;
+      // Calculate and set the count of available pages.
+      $pager_total[$this->options['id']] = ceil($pager_total_items[$this->options['id']] / $this->get_items_per_page());
+
+      // See if the requested page was within range:
+      if ($this->current_page < 0) {
+        $this->current_page = 0;
+      }
+      else if ($this->current_page >= $pager_total[$this->options['id']]) {
+        // Pages are numbered from 0 so if there are 10 pages, the last page is 9.
+        $this->current_page = $pager_total[$this->options['id']] - 1;
+      }
+
+      // Put this number in to guarantee that we do not generate notices when the pager
+      // goes to look for it later.
+      $pager_page_array[$this->options['id']] = $this->current_page;
+    }
+
+    // This prevents our pager information from being overwritten by
+    // $view->execute() after our work is done.
+    $this->view->pager['items_per_page'] = NULL;
+  }
+
+  function query() {
+    $limit = $this->options['items_per_page'];
+    $offset = $this->current_page * $this->options['items_per_page'] + $this->options['offset'];
+    $this->view->query->limit = $limit;
+    $this->view->query->offset = $offset;
+  }
+}
+
