@@ -55,6 +55,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
+    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
+
     $base_field = $this->solrGetBaseField($datasource);
 
     try { 
@@ -78,6 +80,42 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   /**
+   * Set a filter parameter for the search backend.
+   */
+  function setFilter(&$client, $datasource, $filters) {
+    if (!empty($filters)) {
+      $client->searchlightFilters = array();
+      foreach ($filters as $params) {
+        $field    = $params['field'];
+        $operator = $params['operator'];
+        $args     = $params['args'];
+
+        switch($operator) {
+          case '=':
+            $client->searchlightFilters[] = "{$field}:$arg";
+            break;
+          case 'NOT IN':
+            foreach ($args as $arg) {
+              $client->searchlightFilters[] = "-{$field}:$arg";
+            }
+            break;
+          default:
+            //dsm($params);
+            break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Set a sort parameter for the search backend.
+   */
+  function setSort(&$client, $datasource, $sorts) {
+    //dsm($sorts);
+  }
+
+
+  /**
    * Override of setPager().
    */
   function setPager(&$client, $offset, $limit) {
@@ -85,11 +123,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
   /**
    * Override of setNodeAccess().
-   * For solr API usage of filter ORs, see:
-   * - http://www.solrsearch.com/faq.html#filter-or
-   * - http://www.solrsearch.com/forum/view.html?id=3440
    */
   function setNodeAccess(&$client, $grants) {
+    /*
     if (!empty($grants)) {
       $grants_sql = array();
       foreach ($grants as $realm => $gids) {
@@ -103,12 +139,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $client->SetFilterRange('solr_node_access', 1, 1000);
       }
     }
+    */
   }
 
   /**
    * Override of facetBuild().
    */
   function facetBuild(&$client, $datasource, $query = '', $facets) {
+    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
     $options = array('facet' => 'true');
 
     $options['facet.field'] = array();
@@ -127,16 +165,17 @@ class SearchlightBackendSolr extends SearchlightBackend {
     }
 
     $built = array();
-    foreach ($response->facet_counts->facet_fields as $k => $v) {
-      $built[$k] = array();
-      foreach ($v as $i => $j) {
-        $built[$k][] = array('id' => $i, 'count' => $j);
+    if (isset($response->facet_counts->facet_fields)) {
+      foreach ($response->facet_counts->facet_fields as $k => $v) {
+        $built[$k] = array();
+        foreach ($v as $i => $j) {
+          $built[$k][$i] = array('id' => $i, 'count' => $j);
+        }
       }
     }
  
     // TODO
     // foreach ($response->facet_counts->facet_dates) {}
-
     return $built;
   }
 
