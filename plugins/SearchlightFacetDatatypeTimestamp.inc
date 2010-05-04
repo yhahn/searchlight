@@ -20,5 +20,9 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
         'args' => array($range['to']),
       );
     }
+
+    // Add this facet to be built by the backend.
+    $limit = isset($this->options['items']) ? $this->options['items'] : 5;
+    $query->add_search_facet($this->name, $limit);
   }
 }
