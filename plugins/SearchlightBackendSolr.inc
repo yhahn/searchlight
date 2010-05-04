@@ -1,9 +1,8 @@
 <?php
 
-//define('SEARCHLIGHT_solr_FILTER_MAX', 100000000000);
-//define('SEARCHLIGHT_solr_FILTER_MIN', 0);
-
-
+/**
+ * Provides integration with Apache Solr.
+ */
 class SearchlightBackendSolr extends SearchlightBackend {
   /**
    * Override of settingsDefault().
@@ -56,12 +55,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
-    // TODO ping here?
     $base_field = $this->solrGetBaseField($datasource);
-    
-    $response = $client->search($query, 0, 10, array());
-    foreach ($response->response->docs as $doc) {
-      $ids[] = $doc->{$base_field};
+
+    try { 
+      $response = $client->search($query, 0, 10, array());
+      foreach ($response->response->docs as $doc) {
+        $ids[] = $doc->{$base_field};
+      }
+    }
+    catch (Exception $e) {
+      drupal_set_message('Caught exception: '.  $e->getMessage(), 'error');
     }
 
     if (!empty($ids)) {
@@ -72,88 +75,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
       );
     }
     return FALSE;
-  }
-
-  /**
-   * Override of setFilter().
-   */
-  function setFilter(&$client, $datasource, $filters) {
-    if (!empty($filters)) {
-      // Iterate through once to separate out range filters.
-      $range_filters = array();
-      foreach ($filters as $key => $params) {
-        $field    = $params['field'];
-        $operator = $params['operator'];
-        $args     = $params['args'];
-        if (in_array($operator, array('<', '>', '>=', '<='))) {
-          unset($filters[$key]);
-          switch ($operator) {
-            case '>':
-            case '>=':
-              $range_filters[$field]['field'] = $field;
-              $range_filters[$field]['max'] = isset($range_filters[$field]['max']) ? $range_filters[$field]['max'] : SEARCHLIGHT_solr_FILTER_MAX;
-              $range_filters[$field]['min'] = eval("return {$args[0]};");
-              $range_filters[$field]['exclude'] = $operator === '>' ? TRUE : FALSE;
-              break;
-            case '<':
-            case '<=':
-              $range_filters[$field]['field'] = $field;
-              $range_filters[$field]['max'] = eval("return {$args[0]};");
-              $range_filters[$field]['min'] = isset($range_filters[$field]['min']) ? $range_filters[$field]['min'] : SEARCHLIGHT_solr_FILTER_MIN;
-              $range_filters[$field]['exclude'] = $operator === '<' ? TRUE : FALSE;
-              break;
-            default:
-              break;
-          }
-        }
-      }
-      // Now set range filters.
-      foreach ($range_filters as $filter) {
-        // The exclude option on range filters appears to be broken in
-        // solr 0.9.9. Update this code to support either operator once the
-        // problem is fixed upstream.
-        // $client->SetFilterRange($filter['field'], $filter['min'], $filter['max'], $filter['exclude']);
-        $client->SetFilterRange($filter['field'], $filter['min'], $filter['max'], FALSE);
-      }
-      // Equality & set filters filters.
-      foreach ($filters as $params) {
-        $field    = $params['field'];
-        $operator = $params['operator'];
-        $args     = $params['args'];
-        switch ($operator) {
-          case '=':
-            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
-            break;
-          case 'IN':
-            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
-            break;
-          case 'NOT IN':
-            $this->_SetFilter($client, $datasource, $field, $args, TRUE);
-            break;
-        }
-      }
-    }
-  }
-
-  /**
-   * Wrapper of $solr->SetFilter().
-   * Convert any string values to ordinals before passing through.
-   */
-  function _SetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
-    $ordinals = array();
-    foreach ($values as $arg) {
-      $arg = trim($arg);
-      if (is_numeric($arg)) {
-        $ordinals[] = $arg;
-      }
-      else {
-        $ordinal = $this->getOrdinal($datasource, $attribute, $arg);
-        if (is_numeric($ordinal)) {
-          $ordinals[] = $ordinal;
-        }
-      }
-    }
-    return $client->SetFilter($attribute, $ordinals, $exclude);
   }
 
   /**
@@ -187,47 +108,36 @@ class SearchlightBackendSolr extends SearchlightBackend {
   /**
    * Override of facetBuild().
    */
-  function facetBuild($query, $field, $limit = 5) {
-    switch ($field['datatype']) {
-      case 'timestamp':
-        $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
-        $granularity = !empty($field['granularity']) ? $field['granularity'] : 'month';
-        $query->client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
-        break;
-      default:
-        $query->client->SetGroupBy($field['name'], SPH_GROUPBY_ATTR, '@count desc');
-        $query->client->SetArrayResult($field['usage'] === 'multivalue');
-        break;
+  function facetBuild(&$client, $datasource, $query = '', $facets) {
+    $options = array('facet' => 'true');
+
+    $options['facet.field'] = array();
+    foreach ($facets as $facet) {
+      $options['facet.field'][] = $facet['field'];
+      $options["f.{$facet['field']}.facet.limit"] = $facet['limit'];
     }
 
-    // Set result limit.
-    $query->client->SetLimits(0, (int) $limit);
+    try {
+      // TODO optimize the length of this request.
+      $response = $client->search($query, 0, 10, $options);
+    }
+    catch (Exception $e) {
+      drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+      return;
+    }
 
-    $result = $this->executeQuery($query->client, $query->datasource, $query->search_query);
-    if ($result) {
-      $items = array();
-      foreach ($result['result'] as $id) {
-        if (isset($result['raw']['matches'][$id]['attrs'])) {
-          $attr = $result['raw']['matches'][$id]['attrs'];
-          if (isset($attr['@groupby'], $attr['@count'])) {
-            switch ($field['datatype']) {
-              case 'text':
-                $id = $this->getOrdinal($query->datasource, $field['name'], $attr['@groupby']);
-                break;
-              case 'timestamp':
-                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
-                break;
-              default:
-                $id = $attr['@groupby'];
-                break;
-            }
-            $items[$id] = array('id' => $id, 'count' => $attr['@count']);
-          }
-        }
+    $built = array();
+    foreach ($response->facet_counts->facet_fields as $k => $v) {
+      $built[$k] = array();
+      foreach ($v as $i => $j) {
+        $built[$k][] = array('id' => $i, 'count' => $j);
       }
-      return $items;
     }
-    return FALSE;
+ 
+    // TODO
+    // foreach ($response->facet_counts->facet_dates) {}
+
+    return $built;
   }
 
   function drushSearchd() {
@@ -464,109 +374,4 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $base_table = views_fetch_data($datasource->base_table);
     return $base_table['table']['base']['field']; 
   }
-
-  /**
-   * Get the ordinal integer for a given string, or vice versa.
-   */
-  function getOrdinal($datasource, $attribute_name, $value, $reset = FALSE) {
-    $datasource_id = $datasource->id;
-
-    if (!isset($this->ordinals[$datasource_id]) || $reset) {
-      $cid = "searchlight_solr_ordinals_{$datasource_id}";
-      if (!$reset && $cache = cache_get($cid)) {
-        $this->ordinals[$datasource_id] = $cache->data;
-      }
-      if ($reset || !isset($this->ordinals[$datasource_id])) {
-        $mapping = $this->getOrdinals($datasource);
-        if (!empty($mapping)) {
-          cache_set($cid, $mapping);
-        }
-        $this->ordinals[$datasource_id] = $mapping;
-      }
-    }
-    if (is_numeric($value)) {
-      return array_search($value, $this->ordinals[$datasource_id][$attribute_name]);
-    }
-    else {
-      return isset($this->ordinals[$datasource_id][$attribute_name][$value]) ? $this->ordinals[$datasource_id][$attribute_name][$value] : FALSE;
-    }
-  }
-
-  /**
-   * Get an ordinal mapping for this datasource.
-   * As this is a very expensive operation, its results are cached and
-   * used in the ->getOrdinal() method. You should only call this method
-   * if you know what you are doing.
-   */
-  function getOrdinals($datasource) {
-    // Retrieve all ordinal attributes.
-    $attributes = array();
-    if (!empty($datasource['fields'])) {
-      foreach ($datasource['fields'] as $name => $field) {
-        if ($field['datatype'] === 'text' && $field['usage'] === 'attribute') {
-          $attributes[$name] = $field;
-        }
-      }
-    }
-
-    // If there are attributes with ordinals, generate a mapping.
-    // We only handle string ordinals for sets of less than 1000 (for now).
-    $ordinals = array();
-    if (!empty($attributes)) {
-      $this->includeSolr();
-      $solr = new solrClient();
-      $solr->SetLimits(0, 1000);
-
-      foreach ($attributes as $name => $field) {
-        // Dispatch a solr query to retrieve the ordinal.
-        $solr->SetGroupBy($name, SPH_GROUPBY_ATTR, '@count desc');
-        $solr->SetGroupDistinct($name);
-        $result = $solr->Query(NULL, $datasource['id']);
-
-        if (count($result['matches']) < 1000) {
-          // Dispatch a Views query to retrieve the corresponding string.
-          $ids = implode(',', array_keys($result['matches']));
-          $view = searchlight_build_view($datasource['view']);
-          $view->set_items_per_page(0);
-          $view->query->where = array();
-          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
-          $view->build_info['query'] = $view->query->query();
-          $view->build_info['query_args'] = $view->query->get_where_args();
-          $view->execute();
-          foreach ($view->result as $row) {
-            $id = $row->{$view->base_field};
-            if (isset($result['matches'][$id], $row->{$name})) {
-              $ordinals[$name][$row->{$name}] = $result['matches'][$id]['attrs'][$name];
-            }
-          }
-        }
-      }
-    }
-    return $ordinals;
-  }
-
-  /**
-   * Convert a solr datestring into a timestamp. Requires a datestring
-   * (e.g. 201010) and a target granularity: day, month, year. We reverse-apply
-   * Drupal's timezone offset so that this date can be used with format_date(),
-   * etc. cleanly.
-   */
-  function getTimestamp($datestring, $granularity) {
-    global $user;
-    if (variable_get('configurable_timezones', 1) && $user->uid && strlen($user->timezone)) {
-      $timezone = $user->timezone;
-    }
-    else {
-      $timezone = variable_get('date_default_timezone', 0);
-    }
-    switch ($granularity) {
-      case 'day':
-        return ($timezone * -1) + mktime(0, 0, 0, substr($datestring, 4, 2), substr($datestring, 6, 2), substr($datestring, 0, 4));
-      case 'month':
-        return ($timezone * -1) + mktime(0, 0, 0, substr($datestring, 4, 2), 1, substr($datestring, 0, 4));
-      case 'year':
-        return ($timezone * -1) + mktime(0, 0, 0, 1, 1, $datestring);
-    }
-  }
 }
-
