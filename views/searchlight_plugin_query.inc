@@ -171,7 +171,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function get_search_facet($facet) {
-    return isset($this->search_result_facets[$facet]) ? $this->search_result_facets[$facet] : FALSE;
+    return isset($this->search_result_facets[$facet]) ? $this->search_result_facets[$facet] : array();
   }
 
   protected function get_args($args, $offset = 2) {
