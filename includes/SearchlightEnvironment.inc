@@ -139,8 +139,11 @@ class SearchlightEnvironment {
    * Get the datasource associated with this environment's view.
    */
   function getDatasource($reset = FALSE) {
-    if ($this->initView(NULL, $reset)) {
-      return $this->datasource;
+    // Adapted from searchlight_build_view. It should be possible to
+    // retrieve a data source from a view without running it, untill then...
+    $split = explode(':', $this->view_display);
+    if (count($split) === 2 && $view = views_get_view($split[0])) {
+      return searchlight_get_datasource($view->base_table);
     }
     return FALSE;
   }
