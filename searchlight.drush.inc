@@ -7,20 +7,22 @@
 function searchlight_drush_command() {
   $items = array();
   $items['searchlight-conf'] = array(
-    'callback' => 'searchlight_drush_conf',
+    'callback' => 'drush_searchlight_conf',
     'description' => 'Set the Searchlight configuration for the current site.',
     'drupal dependencies' => array('searchlight'),
   );
   $items['searchlight-index'] = array(
-    'callback' => 'searchlight_drush_index',
+    'callback' => 'drush_searchlight_index',
     'description' => 'Re-generate the Searchlight index for the current site.',
     'drupal dependencies' => array('searchlight'),
   );
-  // @TODO
   $items['searchlight-searchd'] = array(
-    'callback' => 'searchlight_drush_searchd',
-    'description' => 'Start a Sphinx searchd daemon for the current site.',
+    'callback' => 'drush_searchlight_searchd',
+    'description' => 'Start the backend search daemon for the current site.',
     'drupal dependencies' => array('searchlight'),
+    'options' => array(
+      '--jar-path=path' => 'Solr: Full path to the Apache Solr application to be used.',
+    ),
   );
   return $items;
 }
@@ -28,7 +30,7 @@ function searchlight_drush_command() {
 /**
  * Generate the configuration file for the current site.
  */
-function searchlight_drush_conf() {
+function drush_searchlight_conf() {
   $backend = searchlight_get_backend();
   $backend->drushWriteConf();
 }
@@ -36,7 +38,7 @@ function searchlight_drush_conf() {
 /**
  * Generate new indexes for the current site.
  */
-function searchlight_drush_index() {
+function drush_searchlight_index() {
   $backend = searchlight_get_backend();
   $backend->drushIndex();
 }
@@ -44,7 +46,7 @@ function searchlight_drush_index() {
 /**
  * Start or stop the search daemon.
  */
-function searchlight_drush_searchd() {
+function drush_searchlight_searchd() {
   $backend = searchlight_get_backend();
   $backend->drushSearchd();
 }

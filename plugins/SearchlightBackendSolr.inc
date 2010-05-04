@@ -141,7 +141,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   function drushSearchd() {
-    $jar_path = '/usr/local/apache-solr-1.4.0/example'; // TODO move to option.
+    $jar_path = drush_get_option('jar-path');
+    $jar_path = isset($jar_path) ? $jar_path : '/usr/local/apache-solr-1.4.0/example';
 
     $file_path = conf_path() .'/solr';
     $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
