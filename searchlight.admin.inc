@@ -390,7 +390,18 @@ function searchlight_admin_backend($form_state) {
       'class' => "searchlight-backend-settings searchlight-backend-{$key}",
     );
   }
-
   $form = system_settings_form($form);
+  array_unshift($form['#submit'], 'searchlight_admin_backend_submit');
   return $form;
+}
+
+/**
+ * Submit handler that runs prior to system_settings_form_submit().
+ */
+function searchlight_admin_backend_submit(&$form, &$form_state) {
+  $current = variable_get('searchlight_backend', 'sphinx');
+  if ($current != $form_state['values']['searchlight_backend']) {
+    searchlight_invalidate_index();
+    drupal_set_message(t('Searchlight backend settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
+  }
 }

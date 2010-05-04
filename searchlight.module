@@ -764,8 +764,14 @@ function searchlight_invalidate_cache() {
 /**
  * Invalidate search index records.
  */
-function searchlight_invalidate_index($base_table = 'node') {
-  db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = '%s'");
-  variable_del('searchlight_sphinx_last');
-  variable_del('searchlight_solr_last');
+function searchlight_invalidate_index($base_table = NULL) {
+  if (!empty($base_table)) {
+    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = '%s'", $base_table);
+  }
+  else {
+    db_query("UPDATE {searchlight_search} SET status = 0");
+  }
+  foreach (searchlight_registry('backend') as $backend => $info) {
+    variable_del("searchlight_{$backend}_last");
+  }
 }
