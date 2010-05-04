@@ -90,45 +90,63 @@ function theme_searchlight_facet_active($field, $item) {
 function theme_searchlight_admin_list($form) {
   drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.css");
 
-  // Generate listing of existing datasources
-  foreach ($form['#objects'] as $object) {
-    if ($object instanceof SearchlightDatasource) {
-      $extra = $object->base_table;
-      $path = 'datasource';
-      $name_label = t('Datasource');
-      $extra_label = t('Base table');
-    }
-    else if ($object instanceof SearchlightEnvironment) {
-      $extra = $object->view_display;
-      $path = 'environment';
-      $name_label = t('Environment');
-      $extra_label = t('View');
-    }
+  $rows = array();
 
-    $row = array();
-
-    // Info
-    $storage = t('Default');
-    if ($object->export_type & EXPORT_IN_DATABASE) {
-      $storage = $object->export_type & EXPORT_IN_CODE ? t('Overridden') : t('Normal');
+  // Generate listing of existing objects
+  foreach ($form['#objects'] as $group => $objects) {
+    if (!empty($group)) {
+      $rows[] = array(array('data' => check_plain($group), 'colspan' => 4, 'header' => TRUE));
     }
-    $row[] = array('data' => $object->name, 'class' => 'object-name');
-    $row[] = array('data' => $extra, 'class' => 'object-extra');
-    $row[] = array('data' => $storage, 'class' => 'object-storage');
-
-    // Actions
-    $links = array(
-      'edit'    => l(t('Edit'), "admin/settings/search/{$path}/list/{$object->name}"),
-      'delete'  => l(t('Delete'), "admin/settings/search/{$path}/list/{$object->name}/delete"),
-      'revert'  => l(t('Revert'), "admin/settings/search/{$path}/list/{$object->name}/revert"),
-    );
-    foreach (array_keys($links) as $key) {
-      if (!searchlight_task_access($object, $key)) {
-        unset($links[$key]);
+    foreach ($objects as $object) {
+      if ($object instanceof SearchlightDatasource) {
+        $extra = $object->base_table;
+        $type = 'datasource';
+        $path = 'datasource';
+        $name_label = t('Active datasource');
+        $extra_label = t('Base table');
       }
+      else if ($object instanceof SearchlightEnvironment) {
+        $extra = $object->view_display;
+        $type = 'environment';
+        $path = 'environment';
+        $name_label = t('Environment');
+        $extra_label = t('View');
+      }
+
+      $row = array();
+
+      // Info
+      $storage = t('Default');
+      if ($object->export_type & EXPORT_IN_DATABASE) {
+        $storage = $object->export_type & EXPORT_IN_CODE ? t('Overridden') : t('Normal');
+      }
+
+      if ($type === 'datasource') {
+        $row[] = array(
+          'data' => drupal_render($form['active'][$object->base_table][$object->name]),
+          'class' => 'object-name',
+        );
+      }
+      else {
+        $row[] = array('data' => $object->name, 'class' => 'object-name');
+      }
+      $row[] = array('data' => $extra, 'class' => 'object-extra');
+      $row[] = array('data' => $storage, 'class' => 'object-storage');
+
+      // Actions
+      $links = array(
+        'edit'    => l(t('Edit'), "admin/settings/search/{$path}/list/{$object->name}"),
+        'delete'  => l(t('Delete'), "admin/settings/search/{$path}/list/{$object->name}/delete"),
+        'revert'  => l(t('Revert'), "admin/settings/search/{$path}/list/{$object->name}/revert"),
+      );
+      foreach (array_keys($links) as $key) {
+        if (!searchlight_task_access($object, $key)) {
+          unset($links[$key]);
+        }
+      }
+      $row[] = array('data' => implode(' | ', $links), 'class' => 'object-links');
+      $rows[] = $row;
     }
-    $row[] = array('data' => implode(' | ', $links), 'class' => 'object-links');
-    $rows[] = $row;
   }
   $row = array();
   foreach (element_children($form['new']) as $key) {

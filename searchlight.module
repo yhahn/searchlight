@@ -747,11 +747,9 @@ function searchlight_task_access($object, $op) {
  * Retrieve full datasource information for a given base table.
  */
 function searchlight_get_datasource($base_table) {
-  $datasources = searchlight_datasource_load();
-  foreach ($datasources as $datasource) {
-    if ($datasource->base_table === $base_table) {
-      return $datasource;
-    }
+  $datasource = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+  if (!empty($datasource)) {
+    return searchlight_datasource_load($datasource);
   }
   return FALSE;
 }
