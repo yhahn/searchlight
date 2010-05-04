@@ -56,7 +56,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function executeQuery(&$client, $datasource, $query = '') {
     $query = $this->solrPrepareQuery($client, $datasource, $query);
- 
+
     $base_field = $this->solrGetBaseField($datasource);
 
     try { 
@@ -79,8 +79,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
     return FALSE;
   }
 
+  /**
+   * Assemble the query string.
+   */
   function solrPrepareQuery(&$client, $datasource, $query) {
-    $query = empty($query) ? '[* TO *]' : $query; // mama, I'm sorry.
+    $query = empty($query) ? '[* TO *]' : '"'. $query .'"'; //  Is this really right?
     if (isset($client->searchlightFilters)) {
       $query .= ' '. implode(' ', $client->searchlightFilters);
     }
@@ -100,7 +103,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
         switch($operator) {
           case '=':
-            $client->searchlightFilters[] = "{$field}:$arg";
+            $client->searchlightFilters[] = $field .':"'. $args[0] .'"';
             break;
           case 'NOT IN':
             foreach ($args as $arg) {
