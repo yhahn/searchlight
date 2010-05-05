@@ -40,7 +40,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of viewsOptionDefinition().
    */
   function viewsOptionDefinition(&$handler) {
-    $this->includeSphinx();
+    $this->sphinxIncludeClient();
     $options = parent::viewsOptionDefinition($handler);
     $options['matchMode'] = array('default' => SPH_MATCH_ALL);
     return $options;
@@ -50,7 +50,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of viewsOptionsForm().
    */
   function viewsOptionsForm(&$form, &$form_state, &$handler) {
-    $this->includeSphinx();
+    $this->sphinxIncludeClient();
     parent::viewsOptionsForm($form, $form_state, $handler);
     $form['matchMode'] = array(
       '#title' => t('Search mode'),
@@ -68,7 +68,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of initClient().
    */
   function initClient($datasource) {
-    $this->includeSphinx();
+    $this->sphinxIncludeClient();
     $client = new SphinxClient();
     $client->SetServer('localhost', (int) $this->settings['port']);
     return $client;
@@ -78,7 +78,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of executeQuery().
    */
   function executeQuery(&$client, $datasource, $query = '') {
-    $result = $client->Query($query, $this->getIndex($datasource));
+    $result = $client->Query($query, $this->sphinxGetIndex($datasource));
     if (!empty($result['matches'])) {
       return array('result' => array_keys($result['matches']), 'total' => $result['total'], 'raw' => $result);
     }
@@ -109,7 +109,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Set result limit.
       $client->SetLimits(0, (int) $limit);
-      $client->AddQuery($query, $this->getIndex($datasource));
+      $client->AddQuery($query, $this->sphinxGetIndex($datasource));
     }
 
     // Execute queries.
@@ -125,10 +125,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           if (isset($attr['@groupby'], $attr['@count'])) {
             switch ($field['datatype']) {
               case 'text':
-                $id = $this->getOrdinal($datasource, $field['name'], $attr['@groupby']);
+                $id = $this->sphinxGetOrdinal($datasource, $field['name'], $attr['@groupby']);
                 break;
               case 'timestamp':
-                $id = $this->getTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
+                $id = $this->sphinxGetTimestamp($attr['@groupby'], !empty($field['granularity']) ? $field['granularity'] : 'month');
                 break;
               default:
                 $id = $attr['@groupby'];
@@ -218,38 +218,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $args     = $params['args'];
         switch ($operator) {
           case '=':
-            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
             break;
           case 'IN':
-            $this->_SetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
             break;
           case 'NOT IN':
-            $this->_SetFilter($client, $datasource, $field, $args, TRUE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, TRUE);
             break;
         }
       }
     }
-  }
-
-  /**
-   * Wrapper of $sphinx->SetFilter().
-   * Convert any string values to ordinals before passing through.
-   */
-  function _SetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
-    $ordinals = array();
-    foreach ($values as $arg) {
-      $arg = trim($arg);
-      if (is_numeric($arg)) {
-        $ordinals[] = $arg;
-      }
-      else {
-        $ordinal = $this->getOrdinal($datasource, $attribute, $arg);
-        if (is_numeric($ordinal)) {
-          $ordinals[] = $ordinal;
-        }
-      }
-    }
-    return $client->SetFilter($attribute, $ordinals, $exclude);
   }
 
   /**
@@ -410,6 +389,31 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
+   * Methods specific to the Sphinx backend ===================================
+   */
+
+  /**
+   * Wrapper of $client->SetFilter().
+   * Convert any string values to ordinals before passing through.
+   */
+  function sphinxSetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
+    $ordinals = array();
+    foreach ($values as $arg) {
+      $arg = trim($arg);
+      if (is_numeric($arg)) {
+        $ordinals[] = $arg;
+      }
+      else {
+        $ordinal = $this->sphinxGetOrdinal($datasource, $attribute, $arg);
+        if (is_numeric($ordinal)) {
+          $ordinals[] = $ordinal;
+        }
+      }
+    }
+    return $client->SetFilter($attribute, $ordinals, $exclude);
+  }
+
+  /**
    * Generate an array representing the conf and index settings for a datasource.
    */
   function sphinxDatasourceConf($datasource, $delta = FALSE) {
@@ -451,7 +455,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($delta) {
         $this->queryFresh($sql_query);
       }
-      $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
+      $conf['conf']['sql_query'] = $this->sphinxWriteSQL($sql_query->query(), $sql_query->get_where_args());
       $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
       // Build the info query.
@@ -461,7 +465,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($delta) {
         $this->queryFresh($sql_query_info);
       }
-      $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
+      $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query_info->query(), $sql_query_info->get_where_args());
       $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
       // Assume serial ids on the base table and step by 1000.
@@ -505,7 +509,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           if ($delta) {
             $this->queryFresh($query);
           }
-          $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
+          $mva_query = $this->sphinxWriteSQL($query->query(), $query->get_where_args());
           $mva_query = str_replace("\n", " \\\n", trim($mva_query));
           $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
         }
@@ -532,14 +536,14 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Include the Sphinx PHP API library.
    */
-  function includeSphinx() {
+  function sphinxIncludeClient() {
     module_load_include('php', 'searchlight', 'libraries/sphinxapi');
   }
 
   /**
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
-  function writeQuery($query, $args) {
+  function sphinxWriteSQL($query, $args) {
     _db_query_callback($args, TRUE);
     $query = db_prefix_tables($query);
     $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
@@ -549,7 +553,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Get the ordinal integer for a given string, or vice versa.
    */
-  function getOrdinal($datasource, $attribute_name, $value, $reset = FALSE) {
+  function sphinxGetOrdinal($datasource, $attribute_name, $value, $reset = FALSE) {
     $datasource_id = $datasource->id;
 
     if (!isset($this->ordinals[$datasource_id]) || $reset) {
@@ -558,7 +562,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $this->ordinals[$datasource_id] = $cache->data;
       }
       if ($reset || !isset($this->ordinals[$datasource_id])) {
-        $mapping = $this->getOrdinals($datasource);
+        $mapping = $this->sphinxGetOrdinals($datasource);
         if (!empty($mapping)) {
           cache_set($cid, $mapping);
         }
@@ -576,10 +580,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Get an ordinal mapping for this datasource.
    * As this is a very expensive operation, its results are cached and
-   * used in the ->getOrdinal() method. You should only call this method
+   * used in the ->sphinxGetOrdinal() method. You should only call this method
    * if you know what you are doing.
    */
-  function getOrdinals($datasource) {
+  function sphinxGetOrdinals($datasource) {
     $datasource->init();
 
     // Retrieve all ordinal attributes.
@@ -596,7 +600,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // We only handle string ordinals for sets of less than 1000 (for now).
     $ordinals = array();
     if (!empty($attributes)) {
-      $this->includeSphinx();
+      $this->sphinxIncludeClient();
       $sphinx = new SphinxClient();
       $sphinx->SetLimits(0, 1000);
 
@@ -604,7 +608,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         // Dispatch a Sphinx query to retrieve the ordinal.
         $sphinx->SetGroupBy($name, SPH_GROUPBY_ATTR, '@count desc');
         $sphinx->SetGroupDistinct($name);
-        $result = $sphinx->Query(NULL, $this->getIndex($datasource));
+        $result = $sphinx->Query(NULL, $this->sphinxGetIndex($datasource));
 
         if (!empty($result['matches']) && count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
@@ -635,7 +639,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Drupal's timezone offset so that this date can be used with format_date(),
    * etc. cleanly.
    */
-  function getTimestamp($datestring, $granularity) {
+  function sphinxGetTimestamp($datestring, $granularity) {
     global $user;
     if (variable_get('configurable_timezones', 1) && $user->uid && strlen($user->timezone)) {
       $timezone = $user->timezone;
@@ -656,7 +660,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Return the index to query.
    */
-  function getIndex($datasource) {
+  function sphinxGetIndex($datasource) {
     $index = $datasource->id;
     // Determine if we need to query a delta and main index.
     if (!empty($this->settings['delta_ttl'])) {
