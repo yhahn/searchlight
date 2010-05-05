@@ -159,7 +159,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function facetBuild(&$client, $datasource, $query = '', $facets) {
     $query = $this->solrPrepareQuery($client, $datasource, $query);
 
-    $options = array('facet' => 'true');
+    $options = array(
+      'facet' => 'true',
+      'facet.mincount' => '1',
+    );
 
     $options['facet.field'] = array();
     foreach ($facets as $facet) {
