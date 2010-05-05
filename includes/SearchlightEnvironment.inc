@@ -314,7 +314,8 @@ class SearchlightEnvironment {
         $modifier = $modifier + $this->active_values;
         break;
     }
-    $modifier = searchlight_environment_pack($modifier);
+
+    $modifier = urlencode(searchlight_environment_pack($modifier));
     if (!empty($modifier)) {
       $options['purl'] = array('provider' => 'searchlight', 'id' => $modifier);
     }
