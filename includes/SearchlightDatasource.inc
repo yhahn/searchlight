@@ -28,7 +28,7 @@ class SearchlightDatasource {
     global $db_url;
     $url = is_array($db_url) ? $db_url['default'] : $db_url;
     $url = parse_url($url);
-    $this->id = trim(urldecode($url['path']), '/') .'_'. $this->base_table;
+    $this->id = trim(urldecode($url['path']), '/') .'_'. $this->name;
     return $this;
   }
 
