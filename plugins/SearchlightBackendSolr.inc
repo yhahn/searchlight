@@ -236,7 +236,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     // build list of this site's indexes
     $indexes = array();
     foreach (searchlight_get_datasource() as $datasource) {
-      $datasource->setId()->viewInit();
+      $datasource->viewInit();
       $datasource->view->new_display('searchlight_solr', 'Searchlight Solr', 'searchlight_solr');
       $datasource->view->set_display('searchlight_solr');
       $datasource->viewSetHandlers();

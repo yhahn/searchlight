@@ -11,7 +11,6 @@ class SearchlightDatasource {
   var $view;
 
   function construct() {
-    $this->id = isset($this->id) ? $this->id : '';
     $this->name = isset($this->name) ? $this->name : '';
     $this->base_table = isset($this->base_table) ? $this->base_table : '';
     $this->fields = !empty($this->fields) ? $this->fields : array();
@@ -21,6 +20,8 @@ class SearchlightDatasource {
     $this->options = $this->options + array(
       'node_access' => TRUE,
     );
+
+    $this->setId();
   }
 
   function setId() {
@@ -32,7 +33,7 @@ class SearchlightDatasource {
   }
 
   function init() {
-    return empty($this->id) ? $this->setId()->viewInit()->viewSetHandlers() : $this;
+    return empty($this->view) ? $this->viewInit()->viewSetHandlers() : $this;
   }
 
   function viewInit() {

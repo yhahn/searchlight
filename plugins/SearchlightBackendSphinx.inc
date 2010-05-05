@@ -657,8 +657,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Return the index to query.
    */
   function getIndex($datasource) {
-    // Determine if we need to query a delta and main index.
     $index = $datasource->id;
+    // Determine if we need to query a delta and main index.
     if (!empty($this->settings['delta_ttl'])) {
       $index .= ";{$index}_delta";
     }
