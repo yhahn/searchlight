@@ -99,14 +99,32 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function setFilter(&$client, $datasource, $filters) {
     if (!empty($filters)) {
       $client->searchlightFilters = array();
+      $range_filters = array();
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
         $args     = $params['args'];
 
         switch($operator) {
+          case '<':
+          case '<=':
+            $range_filters[$field]['max'] = $args[0];
+            break;
+          case '>':
+          case '>=':
+            $range_filters[$field]['min'] = $args[0];
+            break;
           case '=':
             $client->searchlightFilters[] = $field .':"'. $args[0] .'"';
+            break;
+          case '!=':
+          case '<>':
+            $client->searchlightFilters[] = '-'. $field .':"'. $args[0] .'"';
+            break;
+          case 'IN':
+            foreach ($args as $arg) {
+              $client->searchlightFilters[] = "{$field}:$arg";
+            }
             break;
           case 'NOT IN':
             foreach ($args as $arg) {
@@ -118,7 +136,24 @@ class SearchlightBackendSolr extends SearchlightBackend {
             break;
         }
       }
+      foreach ($range_filters as $field => $range) {
+        $min = isset($range['min']) ? $range['min'] : '*';
+        $max = isset($range['max']) ? $range['max'] : '*';
+        $client->searchlightFilters[] = "{$field}:[ $min TO $max ]";
+      }
     }
+  }
+
+  /**
+   * Override of dataRange
+   */
+  function dateRange($timestamp, $granularity = 'month') {
+    $unixtime = strtotime($timestamp);
+    $range = parent::dateRange($unixtime, $granularity);
+    return array(
+      'from' => $timestamp,
+      'to' => gmdate('Y-m-d\\TH:i:s\\Z', $range['to']),
+    );
   }
 
   /**
@@ -167,12 +202,31 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $options = array(
       'facet' => 'true',
       'facet.mincount' => '1',
+      'facet.field' => array(),
+      'facet.date' => array(),
     );
 
-    $options['facet.field'] = array();
     foreach ($facets as $facet) {
-      $options['facet.field'][] = $facet['field'];
       $options["f.{$facet['field']}.facet.limit"] = $facet['limit'];
+
+      $field = $datasource->fields[$facet['field']];
+      switch ($field['datatype']) {
+        case 'timestamp':
+          $options['facet.date'][] = $facet['field'];
+          // TODO several issues here
+          //      - gap needs to check a setting on the $facet
+          //      - start and end times are going to need to detected
+          //      - start/end will need to be adjusted to match an even started
+          //        point for the gap so that dates all fit within the declared 
+          //        gap, and we avoid "midnight" problems.
+          $options["f.{$facet['field']}.facet.date.start"] = '2005-08-11T00:00:00.000Z';
+          $options["f.{$facet['field']}.facet.date.end"] = '2010-08-11T00:00:00.000Z';
+          $options["f.{$facet['field']}.facet.date.gap"] = '+1MONTH';
+          break;
+        default:
+          $options['facet.field'][] = $facet['field'];
+          break;
+      }
     }
 
     try {
@@ -192,9 +246,17 @@ class SearchlightBackendSolr extends SearchlightBackend {
         }
       }
     }
- 
-    // TODO
-    // foreach ($response->facet_counts->facet_dates) {}
+
+    foreach ($response->facet_counts->facet_dates as $k => $v) {
+      foreach ($v as $i => $j) {
+        // Filter out empty ranges.
+        if (!empty($j) && !in_array($i, array('gap', 'end'))) {
+          // $time = gmmktime($i);
+          // $build[$k][$i]format_date($time);
+          $built[$k][$i] = array('id' => $i, 'count' => $j);
+        }
+      }
+    }
     return $built;
   }
 
