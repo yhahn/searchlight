@@ -13,6 +13,16 @@ class SearchlightBackend {
   function __construct($id) {
     $this->id = $id;
     $this->settings = variable_get("searchlight_backend_{$this->id}", array()) + $this->settingsDefault();
+
+    // Allow drush to override any backend settings.
+    if (function_exists('drush_get_option')) {
+      foreach ($this->settings as $k => $v) {
+        $drush_option = drush_get_option('sl-' . str_replace('_', '-', $k));
+        if (isset($drush_option)) {
+          $this->settings[$k] = $drush_option;
+        }
+      }
+    }
   }
 
   /**
