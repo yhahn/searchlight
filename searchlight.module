@@ -261,12 +261,19 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_admin_datasource' => array(
+      'template' => 'searchlight-admin-datasource',
+      'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
     'searchlight_admin_datasource_fields' => array(
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_environment' => array(
+      'template' => 'searchlight-admin-environment',
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
