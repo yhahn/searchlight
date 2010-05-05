@@ -218,7 +218,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function drushIndex() {
     // build list of this site's indexes
     $indexes = array();
-    foreach (searchlight_datasource_load() as $datasource) {
+    foreach (searchlight_get_datasource() as $datasource) {
       $datasource->setId()->viewInit();
       $datasource->view->new_display('searchlight_solr', 'Searchlight Solr', 'searchlight_solr');
       $datasource->view->set_display('searchlight_solr');
@@ -300,7 +300,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $cores = array();
-      foreach (searchlight_datasource_load() as $datasource) {
+      foreach (searchlight_get_datasource() as $datasource) {
         $datasource->init();
         $cores[] = $datasource->id;
         $core_path = $file_path .'/'. $datasource->id;
