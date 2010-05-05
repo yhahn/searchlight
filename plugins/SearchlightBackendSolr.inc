@@ -160,7 +160,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Set a sort parameter for the search backend.
    */
   function setSort(&$client, $datasource, $sorts) {
-    //dsm($sorts);
+    // TODO
   }
 
 
@@ -214,14 +214,25 @@ class SearchlightBackendSolr extends SearchlightBackend {
         case 'timestamp':
           $options['facet.date'][] = $facet['field'];
           // TODO several issues here
-          //      - gap needs to check a setting on the $facet
           //      - start and end times are going to need to detected
           //      - start/end will need to be adjusted to match an even started
           //        point for the gap so that dates all fit within the declared 
           //        gap, and we avoid "midnight" problems.
           $options["f.{$facet['field']}.facet.date.start"] = '2005-08-11T00:00:00.000Z';
           $options["f.{$facet['field']}.facet.date.end"] = '2010-08-11T00:00:00.000Z';
-          $options["f.{$facet['field']}.facet.date.gap"] = '+1MONTH';
+
+          switch ($field['granularity']) {
+            case 'day':
+              $gap = '+1DAY';
+            case 'year':
+              $gap = '+1YEAR';
+            case 'week':
+              $gap = '+1WEEK';
+            case 'month':
+            default:
+              $gap = '+1MONTH';
+          }
+          $options["f.{$facet['field']}.facet.date.gap"] = $gap;
           break;
         default:
           $options['facet.field'][] = $facet['field'];
