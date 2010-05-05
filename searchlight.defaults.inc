@@ -8,7 +8,7 @@ function _searchlight_searchlight_default_datasources() {
   $searchlight_datasource = new SearchlightDatasource;
   $searchlight_datasource->disabled = FALSE; /* Edit this to true to make a default searchlight_datasource disabled initially */
   $searchlight_datasource->api_version = 1;
-  $searchlight_datasource->name = 'node';
+  $searchlight_datasource->name = 'searchlight_node';
   $searchlight_datasource->base_table = 'node';
   $searchlight_datasource->fields = array(
     'node_title' => array(
