@@ -21,7 +21,7 @@ function searchlight_drush_command() {
     'description' => 'Start the backend search daemon for the current site.',
     'drupal dependencies' => array('searchlight'),
     'options' => array(
-      '--jar-path=path' => 'Solr: Full path to the Apache Solr application to be used.',
+      '--sl-jar-path=path' => 'Solr: Full path to the Apache Solr application to be used.',
     ),
   );
   return $items;
