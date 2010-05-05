@@ -56,17 +56,20 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function executeQuery(&$client, $datasource, $query = '') {
     $query = $this->solrPrepareQuery($client, $datasource, $query);
-
-    $base_field = $this->solrGetBaseField($datasource);
+    $offset = $client->searchlightOffset;
+    $limit = $client->searchlightLimit;
 
     try { 
-      $response = $client->search($query, 0, 10, array());
-      foreach ($response->response->docs as $doc) {
-        $ids[] = $doc->{$base_field};
-      }
+      $response = $client->search($query, $offset, $limit, array());
     }
     catch (Exception $e) {
       drupal_set_message('Caught exception: '.  $e->getMessage(), 'error');
+      return FALSE;
+    }
+
+    $base_field = $this->solrGetBaseField($datasource);
+    foreach ($response->response->docs as $doc) {
+      $ids[] = $doc->{$base_field};
     }
 
     if (!empty($ids)) {
@@ -130,6 +133,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of setPager().
    */
   function setPager(&$client, $offset, $limit) {
+    $client->searchlightOffset = (int) $offset;
+    $client->searchlightLimit = (int) $limit;
   }
 
   /**
@@ -171,8 +176,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     }
 
     try {
-      // TODO optimize the length of this request.
-      $response = $client->search($query, 0, 10, $options);
+      $response = $client->search($query, 0, 1, $options);
     }
     catch (Exception $e) {
       drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
