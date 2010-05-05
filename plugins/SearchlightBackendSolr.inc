@@ -12,6 +12,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
       'host' => 'localhost',
       'port' => 8983,
       'path' => '/solr',
+      'jar_path' => '/usr/local/apache-solr-1.4.0/example',
+      'item_limit' => 100,
     );
   }
 
@@ -37,6 +39,19 @@ class SearchlightBackendSolr extends SearchlightBackend {
       '#type' => 'textfield',
       '#default_value' => $this->settings['path'],
       '#size' => 60,
+    );
+    $form['item_limit'] = array(
+      '#title' => t('Items to index per job'),
+      '#type' => 'select',
+      '#default_value' => $this->settings['item_limit'],
+      '#options' => array(
+        0 => t('Unlimited'),
+        100 => 100,
+        250 => 250,
+        500 => 500,
+        750 => 750,
+        1000 => 1000,
+      ),
     );
     return $form;
   }
@@ -278,17 +293,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   function drushSearchd() {
-    $jar_path = drush_get_option('jar-path');
-    $jar_path = isset($jar_path) ? $jar_path : '/usr/local/apache-solr-1.4.0/example';
-
     $file_path = conf_path() .'/solr';
     $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
     $log_dir = $solr_home .'/log';
     if (file_check_directory($log_dir, TRUE)) {
       $opts .= '-Dsolr.solr.home='. $solr_home .' ';
       $opts .= '-Djetty.logs='. $log_dir.' ';
-      $opts .= '-Djetty.home='. $jar_path.' ';
-      $opts .= '-jar '. $jar_path .'/start.jar';
+      $opts .= '-Djetty.home='. $this->settings['jar_path'] .' ';
+      $opts .= '-jar '. $this->settings['jar_path'] .'/start.jar';
       drush_op('drush_shell_exec', 'java '. $opts);
     }
     return drush_log("An error ocurred while starting the search daemon.", 'error');
@@ -314,12 +326,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $handler->override_option('sorts', $sorts);
 
       $datasource->view->build();
+
       // Build query object and add the "fresh" join.
       $datasource->view->built = false;
       $this->queryFresh($datasource->view->query);
 
-      // TODO make limit configurable
-      $datasource->view->set_items_per_page(100);
+      // Set limit for number of items to index at once.
+      $datasource->view->set_items_per_page($this->settings['item_limit']);
 
       $items = $datasource->view->render();
       $raw_items = $datasource->view->result;
