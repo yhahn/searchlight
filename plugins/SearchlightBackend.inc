@@ -115,6 +115,28 @@ class SearchlightBackend {
   }
 
   /**
+   * Drush methods ============================================================
+   */
+
+  /**
+   * Start a search backend daemon process through drush.
+   */
+  function drushSearchd() {
+  }
+
+  /**
+   * Start a search backend indexing process through drush.
+   */
+  function drushIndex() {
+  }
+
+  /**
+   * Write search backend configuration files through drush.
+   */
+  function drushWriteConf() {
+  }
+
+  /**
    * Utility date methods =====================================================
    */
 
