@@ -193,4 +193,10 @@ class SearchlightBackend {
       'relationship' => $sql_query->base_table,
     );
   }
+
+  /**
+   * Invalidate the search index associated with this datasource.
+   */
+  function invalidateIndex($datasource) {
+  }
 }

@@ -143,6 +143,27 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
+   * Override of invalidateIndex().
+   * Since Sphinx indexes can't be fully deleted from within Drupal, we mark
+   * all items as deleted instead.
+   */
+  function invalidateIndex($datasource) {
+    variable_del('searchlight_sphinx_last');
+    $views_data = views_fetch_data($datasource->base_table);
+    $base_field = $views_data['table']['base']['field'];
+
+    $delete = array();
+    $result = db_query("SELECT " . $base_field . " FROM {" . $datasource->base_table . "}");
+    while ($row = db_fetch_object($result)) {
+      $delete[$row->{$base_field}] = array(1);
+    }
+
+    $client = $this->initClient($datasource);
+    $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
+    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
+  }
+
+  /**
    * Override of setFilter().
    */
   function setFilter(&$client, $datasource, $filters) {

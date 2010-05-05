@@ -198,6 +198,23 @@ class SearchlightBackendSolr extends SearchlightBackend {
     return $built;
   }
 
+  /**
+   * Override of invalidateIndex().
+   */
+  function invalidateIndex($datasource) {
+    variable_del('searchlight_solr_last');
+
+    $solr = $this->initClient($datasource);
+    try {
+      $solr->deleteByQuery('[* TO *]');
+      $solr->commit();
+    }
+    catch (Exception $e) {
+      drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+      return;
+    }
+  }
+
   function drushSearchd() {
     $jar_path = drush_get_option('jar-path');
     $jar_path = isset($jar_path) ? $jar_path : '/usr/local/apache-solr-1.4.0/example';
@@ -278,13 +295,33 @@ class SearchlightBackendSolr extends SearchlightBackend {
         array_unshift($args, $datasource->base_table);
         db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
                   AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $args);
-        return drush_log('Indexing complete.', 'success');
+
+        drush_log(dt('@datasource: Indexing completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($ids))), 'success');
+      }
+      else {
+        drush_log(dt('@datasource: Nothing to index.', array('@datasource' => $datasource->name)), 'success');
       }
 
+      // Deletion.
+      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+      $delete = array();
+      while ($row = db_fetch_object($result)) {
+        $delete[] = $row->id;
+      }
+      if (!empty($delete)) {
+        $solr = $this->initClient($datasource);
+        foreach ($delete as $id) {
+          $solr->deleteById($id);
+        }
+        $solr->commit();
+
+        // Once updates are complete, remove the Drupal-side records.
+        db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+
+        drush_log(dt('@datasource: Deletion completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($delete))), 'success');
+      }
       variable_set('searchlight_solr_last', time());
-      return drush_log('Nothing to Index.', 'success');
     }
-    return drush_log("An error ocurred while indexing.", 'error');
   }
 
   // From the apachsolr module

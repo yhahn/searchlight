@@ -401,6 +401,8 @@ function searchlight_admin_backend($form_state) {
 function searchlight_admin_backend_submit(&$form, &$form_state) {
   $current = variable_get('searchlight_backend', 'sphinx');
   if ($current != $form_state['values']['searchlight_backend']) {
+    // Switch backends. This must occur *before* we invalidate the index.
+    variable_set('searchlight_backend', $form_state['values']['searchlight_backend']);
     searchlight_invalidate_index();
     drupal_set_message(t('Searchlight backend settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
   }
