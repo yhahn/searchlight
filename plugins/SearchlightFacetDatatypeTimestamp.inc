@@ -30,6 +30,9 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
    * Render all items of a facet.
    */
   function render($query, $delta) {
+    // We init the view solely for the generation of labels via the field handler.
+    $this->viewInit($query);
+
     $rendered = array();
     switch ($delta) {
       case 'active':
@@ -60,7 +63,8 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
             $format = 'F j, Y';
             break;
         }
-        $item['title'] = format_date(strtotime($item['id']), 'custom', $format, 0);
+        $timestamp = is_numeric($item['id']) ? $item['id'] : strtotime($item['id']);
+        $item['title'] = format_date($timestamp, 'custom', $format, 0);
         $title = $op === 'remove' ? t('remove') : $item['title'];
         $options = $this->environment->getURLOptions($op, $this->name, $id);
         $item['link'] = l($title, $_GET['q'], $options);
