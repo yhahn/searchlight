@@ -88,7 +88,7 @@ function theme_searchlight_facet_active($field, $item) {
  * Generates the main datasource admin page.
  */
 function theme_searchlight_admin_list($form) {
-  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.css");
+  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
 
   $rows = array();
 
@@ -212,17 +212,20 @@ function theme_searchlight_admin_datasource_fields($form) {
 }
 
 /**
- * Theme function for searchlight environment form.
+ * Preprocessor for theme('searchlight_admin_environment').
  */
-function theme_searchlight_admin_environment($form) {
+function template_preprocess_searchlight_admin_environment($vars) {
+  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
   drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
-  $output = '';
-  $output .= drupal_render($form['name']);
 
+  $environment = $vars['form']['#environment'];
+  $vars['name'] = check_plain($environment->name);
+
+  $facets = '';
   $rows = array();
   $rows[] = array(
-    array('data' => drupal_render($form['view_display']['view_display']), 'colspan' => 3),
-    array('data' => drupal_render($form['view_display']['update']), 'colspan' => 2),
+    array('data' => drupal_render($vars['form']['view_display']['view_display']), 'colspan' => 3),
+    array('data' => drupal_render($vars['form']['view_display']['update']), 'colspan' => 2),
   );
   $rows[] = array(
     array('data' => t('Enabled'), 'header' => TRUE),
@@ -231,20 +234,32 @@ function theme_searchlight_admin_environment($form) {
     array('data' => t('Weight'), 'header' => TRUE),
     array('data' => t('Items to show'), 'header' => TRUE),
   );
-  if (!empty($form['facets'])) {
-    uasort($form['facets'], 'element_sort');
+  if (!empty($vars['form']['facets'])) {
+    uasort($vars['form']['facets'], 'element_sort');
   }
-  foreach (element_children($form['facets']) as $key) {
+  foreach (element_children($vars['form']['facets']) as $key) {
     $row = array();
-    foreach (element_children($form['facets'][$key]) as $cell) {
+    foreach (element_children($vars['form']['facets'][$key]) as $cell) {
       if ($cell === 'weight') {
-        $form['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
+        $vars['form']['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
       }
-      $row[] = drupal_render($form['facets'][$key][$cell]);
+      $row[] = drupal_render($vars['form']['facets'][$key][$cell]);
     }
     $rows[] = array('data' => $row, 'class' => 'draggable');
   }
-  $output .= theme('table', array(), $rows, array('id' => 'searchlight-environment'));
-  $output .= drupal_render($form);
-  return $output;
+  $facets .= theme('table', array(), $rows, array('id' => 'searchlight-environment'));
+  $vars['facets'] = $facets;
+}
+
+/**
+ * Preprocessor for theme('searchlight_admin_datasource').
+ */
+function template_preprocess_searchlight_admin_datasource($vars) {
+  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
+
+  $datasource = $vars['form']['#datasource'];
+  $base_tables = views_fetch_base_tables();
+
+  $vars['name'] = check_plain($datasource->name);
+  $vars['base_table'] = isset($base_tables[$datasource->base_table]['title']) ? check_plain($base_tables[$datasource->base_table]['title']) : check_plain($datasource->base_table);
 }

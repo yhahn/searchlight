@@ -1,0 +1,23 @@
+.searchlight-admin-info {
+  float:left;
+  margin-bottom:10px;
+  }
+
+.searchlight-admin-info label { display:block; }
+
+.searchlight-admin-name {
+  font-size:28px;
+  line-height:40px;
+  }
+
+.datasource-index {
+  float:right;
+  margin-bottom:10px;
+
+  padding:9px;
+  background:#f4f8f8;
+  border:1px solid #ddd;
+  }
+
+  .datasource-index strong { font-size:16px; }
+  .datasource-index small { font-size:11px; }

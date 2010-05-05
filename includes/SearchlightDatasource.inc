@@ -217,17 +217,33 @@ class SearchlightDatasource {
     views_include('admin');
     views_include('form');
 
-    $form['name'] = array(
-      '#title' => t('Name'),
-      '#type' => 'item',
-      '#value' => $this->name,
-    );
+    // Theme function will handle formatting of datasource information.
+    $form['#theme'] = 'searchlight_admin_datasource';
+    $form['#datasource'] = $this;
 
-    $base_tables = views_fetch_base_tables();
-    $form['base_table'] = array(
-      '#title' => t('Base table'),
-      '#type' => 'item',
-      '#value' => isset($base_tables[$this->base_table]['title']) ? $base_tables[$this->base_table]['title'] : $this->base_table,
+    // Calculations of indexing percentage.
+    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = '%s' GROUP BY status", $this->base_table);
+    $items_indexed = 0;
+    $items_total = 0;
+    while ($row = db_fetch_object($result)) {
+      $items_indexed = $row->status == 1 ? $row->count : $items_indexed;
+      $items_total = $items_total + $row->count;
+    }
+    $form['index']['#tree'] = TRUE;
+    $form['index']['percent'] = array(
+      '#type' => 'markup',
+      '#value' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
+    );
+    $form['index']['counts'] = array(
+      '#type' => 'markup',
+      '#value' => t('@indexed of @total total', array(
+        '@indexed' => $items_indexed,
+        '@total' => $items_total,
+      )),
+    );
+    $form['index']['invalidate'] = array(
+      '#type' => 'submit',
+      '#value' => t('Queue for reindexing'),
     );
 
     $form['help'] = array(
@@ -405,6 +421,10 @@ class SearchlightDatasource {
    */
   function optionsSubmit($form, &$form_state) {
     switch ($form_state['clicked_button']['#id']) {
+      case 'edit-index-invalidate':
+        // Do nothing. searchlight_datasource_save() will call
+        // searchlight_invalidate_index() for us.
+        break;
       case 'edit-fields-new-add':
         list($table, $field) = explode('.', $form_state['values']['fields']['new']['field']);
         $this->addField($table, $field);

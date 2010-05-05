@@ -173,12 +173,7 @@ class SearchlightEnvironment {
     views_include('form');
 
     $form['#theme'] = 'searchlight_admin_environment';
-
-    $form['name'] = array(
-      '#title' => t('Name'),
-      '#type' => 'item',
-      '#value' => $this->name,
-    );
+    $form['#environment'] = $this;
 
     $form['options']['#tree'] = TRUE;
     $form['options']['active_label'] = array(
@@ -315,7 +310,7 @@ class SearchlightEnvironment {
         break;
     }
 
-    $modifier = urlencode(searchlight_environment_pack($modifier));
+    $modifier = searchlight_environment_pack($modifier);
     if (!empty($modifier)) {
       $options['purl'] = array('provider' => 'searchlight', 'id' => $modifier);
     }

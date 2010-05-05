@@ -143,9 +143,37 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
+   * Override of invalidateIndex().
+   * Since Sphinx indexes can't be fully deleted from within Drupal, we mark
+   * all items as deleted instead.
+   */
+  function invalidateIndex($datasource) {
+    variable_del('searchlight_sphinx_last');
+    $views_data = views_fetch_data($datasource->base_table);
+    $base_field = $views_data['table']['base']['field'];
+
+    $delete = array();
+    $result = db_query("SELECT " . $base_field . " FROM {" . $datasource->base_table . "}");
+    while ($row = db_fetch_object($result)) {
+      $delete[$row->{$base_field}] = array(1);
+    }
+
+    $client = $this->initClient($datasource);
+    $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
+    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
+  }
+
+  /**
    * Override of setFilter().
    */
   function setFilter(&$client, $datasource, $filters) {
+    // Hardwired delete filter. See sphinxDatasourceConf() for how this is
+    // added to the sphinx index.
+    $filters['searchlight_deleted'] = array(
+      'field' => 'searchlight_deleted',
+      'operator' => '=',
+      'args' => array(0),
+    );
     if (!empty($filters)) {
       // Iterate through once to separate out range filters.
       $range_filters = array();
@@ -283,6 +311,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     }
   }
 
+  /**
+   * Override of drushSearchd().
+   */
   function drushSearchd() {
     $file_path = conf_path() .'/sphinx/log';
     if (file_check_directory($file_path, TRUE)) {
@@ -292,30 +323,49 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
 
+  /**
+   * Override of drushIndex().
+   */
   function drushIndex() {
     // Create the sphinx directory if it doesn't exist.
     $file_path = conf_path() .'/sphinx/indexes';
     if (file_check_directory($file_path, TRUE)) {
-      // build list of this site's indexes
-      $indexes = array();
-      foreach (searchlight_datasource_load() as $datasource) {
-        $datasource->init();
-        $indexes[] = $datasource->id;
-      }
-
       // Determine if we should update deltas only.
-      if ($this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $ops['delta_ttl']) > time()) {
-        foreach ($indexes as $k => $v) {
-          $indexes[$k] = $v .'_delta';
-        }
+      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > time();
+
+      // Build list of this site's indexes.
+      $indexes = array();
+      $indexes_delta = array();
+      foreach (searchlight_get_datasource() as $datasource) {
+        $datasource->init();
+        $indexes[$datasource->id] = $datasource->id;
+        $indexes_delta[$datasource->id] = $datasource->id . '_delta';
       }
 
       $conf_file = drush_locate_root() .'/'. conf_path() . '/sphinx/sphinx.conf';
 
-      drush_op('drush_shell_exec', 'indexer --rotate --config ' .$conf_file. ' ' . implode(' ', $indexes));
+      drush_op('drush_shell_exec', 'indexer --rotate --config ' .$conf_file. ' ' . implode(' ', $delta ? $indexes_delta : $indexes));
       $output = drush_shell_exec_output();
       foreach ($output as $line) {
         drush_print($line);
+      }
+
+      // Take care of entity deletion by updating searchlight_delta to 1.
+      // Note that we must update both the main and delta indices.
+      foreach (searchlight_get_datasource() as $datasource) {
+        $delete = array();
+        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+        while ($row = db_fetch_object($result)) {
+          $delete[$row->id] = array(1);
+        }
+        if (!empty($update)) {
+          $client = $this->initClient($datasource);
+          $client->UpdateAttributes($indexes[$datasource->id], array('searchlight_deleted'), $delete);
+          $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
+
+          // Once updates are complete, remove the Drupal-side records.
+          db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+        }
       }
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
@@ -327,13 +377,21 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     return drush_log("An error ocurred while indexing.", 'error');
   }
 
+  /**
+   * Override of drushWriteConf().
+   */
   function drushWriteConf() {
     $file_path = conf_path() .'/sphinx';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $datasources = array();
-      foreach (searchlight_datasource_load() as $datasource) {
-        $datasources = array_merge($datasources, $this->sphinxDatasourceConf($datasource));
+      foreach (searchlight_get_datasource() as $datasource) {
+        $datasources[] = $this->sphinxDatasourceConf($datasource);
+
+        // Add delta index.
+        if (!empty($this->settings['delta_ttl'])) {
+          $datasources[] = $this->sphinxDatasourceConf($datasource, TRUE);
+        }
       }
       // Generate configuration file from datasources.
       $sphinx_conf = theme('searchlight_sphinx_conf', $datasources, $this->sphinxSearchdConf());
@@ -354,8 +412,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Generate an array representing the conf and index settings for a datasource.
    */
-  function sphinxDatasourceConf($datasource) {
+  function sphinxDatasourceConf($datasource, $delta = FALSE) {
     $datasource->init();
+    $datasource_id = $delta ? $datasource->id . '_delta' : $datasource->id;
 
     $conf = array('conf' => array(), 'index' => array());
 
@@ -365,7 +424,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $url = parse_url($url);
 
     // Configuration options.
-    $conf['conf']['id'] = $datasource->id;
+    $conf['conf']['id'] = $datasource_id;
     $conf['conf']['type'] = $db_type;
     $conf['conf']['sql_user'] = urldecode($url['user']);
     $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
@@ -374,7 +433,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
     // Index information
-    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource->id;
+    $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource_id;
     $conf['index']['docinfo'] = 'extern';
     $conf['index']['mlock'] = 0;
     $conf['index']['morphology'] = 'stem_en';
@@ -382,85 +441,81 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['index']['charset_type'] = 'utf-8';
     $conf['index']['html_strip'] = 0;
 
-    $delta = FALSE;
-    $ret = array();
-
     // Build the query.
     $datasource->init();
     $datasource->view->build();
     if ($view = $datasource->view) {
-      do {
-        $sql_query = drupal_clone($view->query);
-        $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
-        if ($delta) {
-          $this->queryFresh($sql_query);
+      $sql_query = drupal_clone($view->query);
+      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+      $sql_query->add_field(NULL, '0', 'searchlight_deleted');
+      if ($delta) {
+        $this->queryFresh($sql_query);
+      }
+      $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
+      $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
+
+      // Build the info query.
+      $sql_query_info = drupal_clone($view->query);
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+      $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
+      if ($delta) {
+        $this->queryFresh($sql_query_info);
+      }
+      $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
+      $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
+
+      // Assume serial ids on the base table and step by 1000.
+      $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
+      $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
+      $conf['conf']['sql_range_step'] = 1000;
+      $conf['conf']['sql_ranged_throttle'] = 0;
+
+      // Merge in attributes.
+      $sql_attr = array();
+      $sphinx_type = array(
+        'text'      => 'sql_attr_str2ordinal',
+        'int'       => 'sql_attr_uint',
+        'float'     => 'sql_attr_float',
+        'timestamp' => 'sql_attr_timestamp',
+      );
+
+      // Hardwired delete flag.
+      $sql_attr[] = "{$sphinx_type['int']} = searchlight_deleted";
+
+      // Generate attribute entries.
+      $fields = $datasource->fields;
+      $fields = array_merge($fields, $datasource->buildNodeaccess());
+      foreach ($fields as $field) {
+        if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
+          $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
         }
-        $conf['conf']['sql_query'] = $this->writeQuery($sql_query->query(), $sql_query->get_where_args());
-        $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
-
-        // Build the info query.
-        $sql_query_info = drupal_clone($view->query);
-        $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
-        if ($delta) {
-          $this->queryFresh($sql_query);
-        }
-        $conf['conf']['sql_query_info'] = $this->writeQuery($sql_query_info->query(), $sql_query_info->get_where_args());
-        $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
-
-        // Assume serial ids on the base table and step by 1000.
-        $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
-        $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
-        $conf['conf']['sql_range_step'] = 1000;
-        $conf['conf']['sql_ranged_throttle'] = 0;
-
-        // Merge in attributes.
-        $sql_attr = array();
-        $sphinx_type = array(
-          'text'      => 'sql_attr_str2ordinal',
-          'int'       => 'sql_attr_uint',
-          'float'     => 'sql_attr_float',
-          'timestamp' => 'sql_attr_timestamp',
-        );
-        // Generate attribute entries.
-        $fields = $datasource->fields;
-        $fields = array_merge($fields, $datasource->buildNodeaccess());
-        foreach ($fields as $field) {
-          if ($field['usage'] === 'attribute' && isset($sphinx_type[$field['datatype']])) {
-            $sql_attr[] = "{$sphinx_type[$field['datatype']]} = {$field['name']}";
-          }
-          // Generate multivalue queries.
-          else if ($field['usage'] === 'multivalue' && $view = searchlight_build_view($field['view'])) {
-            $query = drupal_clone($view->query);
-            // Remove any fields that are not the id field or attribute field.
-            foreach ($query->fields as $alias => $query_field) {
-              if ($query_field['field'] === $view->base_field && $query_field['table'] === $view->base_table) {
-                continue;
-              }
-              if ($query_field['field'] === $field['field']) {
-                continue;
-              }
-              unset($query->fields[$alias]);
+        // Generate multivalue queries.
+        else if ($field['usage'] === 'multivalue' && $mva_view = searchlight_build_view($field['view'])) {
+          $query = drupal_clone($mva_view->query);
+          // Remove any fields that are not the id field or attribute field.
+          foreach ($query->fields as $alias => $query_field) {
+            if ($query_field['field'] === $mva_view->base_field && $query_field['table'] === $mva_view->base_table) {
+              continue;
             }
-            if ($delta) {
-              $this->queryFresh($query);
+            if ($query_field['field'] === $field['field']) {
+              continue;
             }
-            $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
-            $mva_query = str_replace("\n", " \\\n", trim($mva_query));
-            $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
+            unset($query->fields[$alias]);
           }
+          if ($delta) {
+            $this->queryFresh($query);
+          }
+          $mva_query = $this->writeQuery($query->query(), $query->get_where_args());
+          $mva_query = str_replace("\n", " \\\n", trim($mva_query));
+          $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
         }
+      }
 
-        $sql_attr = array_unique($sql_attr);
-        $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
-        $conf['conf']['id'] .= ($delta ? '_delta' : '');
-        $ret[$conf['conf']['id']] = $conf;
-
-        $delta = !$delta;
-      } while ($this->settings['delta_ttl'] && $delta == TRUE);
-
+      $sql_attr = array_unique($sql_attr);
+      $conf['conf']['sql_attr'] = implode(" \n", $sql_attr);
     }
 
-    return $ret;
+    return $conf;
   }
 
   /**
@@ -549,7 +604,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         // Dispatch a Sphinx query to retrieve the ordinal.
         $sphinx->SetGroupBy($name, SPH_GROUPBY_ATTR, '@count desc');
         $sphinx->SetGroupDistinct($name);
-        $result = $sphinx->Query(NULL, $datasource->id);
+        $result = $sphinx->Query(NULL, $this->getIndex($datasource));
 
         if (!empty($result['matches']) && count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.

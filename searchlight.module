@@ -168,13 +168,17 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
  * Implementation of hook_nodeapi().
  */
 function searchlight_nodeapi($node, $op) {
-  if ($op == 'insert') {
-    db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
+  switch ($op) {
+    case 'insert':
+      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
+      break;
+    case 'update':
+      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
+      break;
+    case 'delete':
+      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid);
+      break;
   }
-  elseif ($op == 'update') {
-    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
-  }
-  // @TODO: Deletion.
 }
 
 /**
@@ -188,7 +192,9 @@ function searchlight_comment(&$a1, $op) {
     case 'update':
       db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']);
       break;
-    // @TODO: Deletion.
+    case 'delete':
+      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']);
+      break;
   }
 }
 
@@ -255,12 +261,19 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_admin_datasource' => array(
+      'template' => 'searchlight-admin-datasource',
+      'arguments' => array('form' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
     'searchlight_admin_datasource_fields' => array(
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_environment' => array(
+      'template' => 'searchlight-admin-environment',
       'arguments' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
@@ -602,13 +615,14 @@ function searchlight_environment_pack($value) {
   foreach ($value as $k => $v) {
     $keyvals[] = "{$k}-{$v}";
   }
-  return implode(',', $keyvals);
+  return urlencode(implode(',', $keyvals));
 }
 
 /**
  * Environment PURL modifier unpacker.
  */
 function searchlight_environment_unpack($value) {
+  $value = urldecode($value);
   $parsed = array();
   $split = explode(',', $value);
   foreach ($split as $chunk) {
@@ -746,10 +760,23 @@ function searchlight_task_access($object, $op) {
 /**
  * Retrieve full datasource information for a given base table.
  */
-function searchlight_get_datasource($base_table) {
-  $datasource = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
-  if (!empty($datasource)) {
-    return searchlight_datasource_load($datasource);
+function searchlight_get_datasource($base_table = NULL) {
+  if (!isset($base_table)) {
+    views_include('admin');
+    $active_datasources = array();
+    foreach (array_keys(views_fetch_base_tables()) as $base_table) {
+      $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+      if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
+        $active_datasources[$name] = $datasource;
+      }
+    }
+    return $active_datasources;
+  }
+  else {
+    $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+    if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
+      return $datasource;
+    }
   }
   return FALSE;
 }
@@ -762,16 +789,27 @@ function searchlight_invalidate_cache() {
 }
 
 /**
- * Invalidate search index records.
+ * Invalidate & rebuild search index records.
  */
 function searchlight_invalidate_index($base_table = NULL) {
-  if (!empty($base_table)) {
-    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = '%s'", $base_table);
+  $datasources = array();
+  if (isset($base_table)) {
+    if ($datasource = searchlight_get_datasource($base_table)) {
+      $datasources[] = $datasource;
+    }
   }
   else {
-    db_query("UPDATE {searchlight_search} SET status = 0");
+    $datasources = searchlight_get_datasource();
+    db_query("TRUNCATE {searchlight_search}");
   }
-  foreach (searchlight_registry('backend') as $backend => $info) {
-    variable_del("searchlight_{$backend}_last");
+  $backend = searchlight_get_backend();
+  foreach ($datasources as $datasource) {
+    // Let the backend respond to a rebuild index command.
+    $backend->invalidateIndex($datasource);
+
+    db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
+    $views_data = views_fetch_data($datasource->base_table);
+    $base_field = $views_data['table']['base']['field'];
+    db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '". $datasource->base_table ."', ". $base_field .", 0 FROM {". $datasource->base_table ."}");
   }
 }

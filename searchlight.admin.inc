@@ -345,6 +345,11 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
       switch ($form_state['values']['type']) {
         case 'searchlight_datasource':
           searchlight_datasource_delete($object);
+
+          // If reverting, display a message indicating that the index must be rebuilt.
+          if ($form_state['values']['action'] === 'revert') {
+            drupal_set_message(t('Datasource @datasource reverted. The index for this datasource needs to be rebuilt.', array('@datasource' => $object->name)));
+          }
           $form_state['redirect'] = 'admin/settings/search/datasource';
           break;
         case 'searchlight_environment':
@@ -360,7 +365,7 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
  * System settings form for Searchlight.
  */
 function searchlight_admin_backend($form_state) {
-  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.js');
+  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.admin.js');
 
   $form = array();
 
@@ -401,6 +406,8 @@ function searchlight_admin_backend($form_state) {
 function searchlight_admin_backend_submit(&$form, &$form_state) {
   $current = variable_get('searchlight_backend', 'sphinx');
   if ($current != $form_state['values']['searchlight_backend']) {
+    // Switch backends. This must occur *before* we invalidate the index.
+    variable_set('searchlight_backend', $form_state['values']['searchlight_backend']);
     searchlight_invalidate_index();
     drupal_set_message(t('Searchlight backend settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
   }
