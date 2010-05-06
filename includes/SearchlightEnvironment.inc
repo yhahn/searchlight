@@ -216,41 +216,32 @@ class SearchlightEnvironment {
             '#weight' => isset($this->facets[$name]['weight']) ? $this->facets[$name]['weight'] : 0,
           );
           $form['facets'][$name]['enabled'] = array(
+            '#title' => t('Enabled'),
             '#type' => 'checkbox',
             '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : TRUE,
           );
           $form['facets'][$name]['ui_name'] = array(
+            '#title' => t('Facet'),
             '#type' => 'markup',
             '#value' => $field['label'],
           );
-          // @TODO:
-          // It's terribly confusing that
-          // - facet['label'] (Custom label for facet display)
-          // - field['label'] (The Views UI name for a field)
-          // are so very different.
-          // Resolve this situation by renaming one or the other.
-          $form['facets'][$name]['label'] = array(
-            '#type' => 'textfield',
-            '#size' => 20,
-            '#default_value' => isset($this->facets[$name]['label']) ? $this->facets[$name]['label'] : '',
-          );
           $form['facets'][$name]['weight'] = array(
+            '#title' => t('Weight'),
             '#type' => 'weight',
             '#default_value' => isset($this->facets[$name]['weight']) ? $this->facets[$name]['weight'] : 0,
           );
-          if ($name === 'search_query') {
-            $form['facets'][$name]['items'] = array(
-              '#type' => 'value',
-              '#value' => 1,
-            );
-          }
-          else {
-            $form['facets'][$name]['items'] = array(
-              '#type' => 'select',
-              '#default_value' => isset($this->facets[$name]['items']) ? $this->facets[$name]['items'] : 5,
-              '#options' => drupal_map_assoc(range(1, 20)),
-            );
-          }
+
+          // We instantiate plugins here rather than using initView() as the
+          // facets on this form may not already be enabled for this environment.
+          $plugin = searchlight_get_facet($datasource, $name);
+          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+          $plugin->optionsForm($form['facets'][$name], $form_state);
+
+          $form['facets'][$name]['settings'] = array(
+            '#tree' => TRUE,
+            '#title' => t('Settings'),
+          );
+          $plugin->extendedForm($form['facets'][$name]['settings'], $form_state);
         }
       }
     }
@@ -266,6 +257,14 @@ class SearchlightEnvironment {
         break;
       case 'edit-save':
         $this->facets = $form_state['values']['facets'];
+        // Do additional processing.
+        foreach ($this->facets as $name => $options) {
+          if (isset($options['settings'])) {
+            unset($this->facets[$name]['settings']);
+            $this->facets[$name] = array_merge($this->facets[$name], $options['settings']);
+          }
+        }
+
         $this->options = $form_state['values']['options'];
         break;
     }

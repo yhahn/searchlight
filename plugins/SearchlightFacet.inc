@@ -18,7 +18,7 @@ class SearchlightFacet {
     $this->name = $field['name'];
     $this->field = $field;
     $this->value = $value;
-    $this->options = $options;
+    $this->options = $options + $this->optionsDefault();
     $this->environment = $environment;
 
     $this->view = NULL;
@@ -164,5 +164,39 @@ class SearchlightFacet {
       $items[$id]['title'] = strip_tags($this->handler->render($row));
     }
     return $items;
+  }
+
+  /**
+   * Provide default values for options.
+   */
+  function optionsDefault() {
+    return array(
+      'label' => '',
+      'items' => 5,
+    );
+  }
+
+  /**
+   * Provide an options form to be exposed in the Environment editor.
+   */
+  function optionsForm(&$form, $form_state) {
+    $form['label'] = array(
+      '#title' => t('Label'),
+      '#type' => 'textfield',
+      '#size' => 20,
+      '#default_value' => $this->options['label'],
+    );
+    $form['items'] = array(
+      '#title' => t('Items to show'),
+      '#type' => 'select',
+      '#default_value' => $this->options['items'],
+      '#options' => drupal_map_assoc(range(1, 20)),
+    );
+  }
+
+  /**
+   * Provide extended form elements for a facet in the Environment editor.
+   */
+  function extendedForm(&$form, $form_state) {
   }
 }

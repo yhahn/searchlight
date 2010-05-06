@@ -33,4 +33,24 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
     }
     return $rendered;
   }
+
+  /**
+   * Override of optionsDefault().
+   */
+  function optionsDefault() {
+    $options = parent::optionsDefault();
+    $options['items'] = 1;
+    return $options;
+  }
+
+  /**
+   * Override of optionsForm().
+   */
+  function optionsForm(&$form, $form_state) {
+    parent::optionsForm($form, $form_state);
+    $form['items'] = array(
+      '#type' => 'value',
+      '#value' => 1,
+    );
+  }
 }

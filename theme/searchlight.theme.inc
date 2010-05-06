@@ -215,40 +215,77 @@ function theme_searchlight_admin_datasource_fields($form) {
  * Preprocessor for theme('searchlight_admin_environment').
  */
 function template_preprocess_searchlight_admin_environment($vars) {
+  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.admin.js');
   drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
   drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
 
+  // Basic environment info.
   $environment = $vars['form']['#environment'];
   $vars['name'] = check_plain($environment->name);
 
+  // View switcher.
+  $settings = '';
   $facets = '';
   $rows = array();
   $rows[] = array(
     array('data' => drupal_render($vars['form']['view_display']['view_display']), 'colspan' => 3),
-    array('data' => drupal_render($vars['form']['view_display']['update']), 'colspan' => 2),
+    array('data' => drupal_render($vars['form']['view_display']['update']), 'colspan' => 3),
   );
-  $rows[] = array(
-    array('data' => t('Enabled'), 'header' => TRUE),
-    array('data' => t('Facet'), 'header' => TRUE),
-    array('data' => t('Custom label'), 'header' => TRUE),
-    array('data' => t('Weight'), 'header' => TRUE),
-    array('data' => t('Items to show'), 'header' => TRUE),
-  );
+
+  // Build facets table.
   if (!empty($vars['form']['facets'])) {
     uasort($vars['form']['facets'], 'element_sort');
   }
+  $header_row = array();
+  $facet_rows = array();
   foreach (element_children($vars['form']['facets']) as $key) {
     $row = array();
     foreach (element_children($vars['form']['facets'][$key]) as $cell) {
-      if ($cell === 'weight') {
-        $vars['form']['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
+      // Handle element title as table header.
+      if (empty($header_row[$cell])) {
+        $header_cell = !empty($vars['form']['facets'][$key][$cell]['#title']) ? check_plain($vars['form']['facets'][$key][$cell]['#title']) : '';
+        $header_row[$cell] = array('data' => $header_cell, 'header' => TRUE);
       }
-      $row[] = drupal_render($vars['form']['facets'][$key][$cell]);
+      if (isset($vars['form']['facets'][$key][$cell]['#title'])) {
+        unset($vars['form']['facets'][$key][$cell]['#title']);
+      }
+      // Handling for specific elements.
+      switch ($cell) {
+        case 'weight':
+          $vars['form']['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
+          $row[] = drupal_render($vars['form']['facets'][$key][$cell]);
+          break;
+        case 'settings':
+          $element_settings = drupal_render($vars['form']['facets'][$key][$cell]);
+          $element_settings_id = "searchlight-facet-{$key}";
+          if (!empty($element_settings)) {
+            $element_settings_form = "<div class='environment-settings'>";
+            $element_settings_form .= l(t('Edit'), $_GET['q'], array('attributes' => array('class' => 'environment-settings-link'), 'fragment' => $element_settings_id));
+            $element_settings_form .= "<div class='environment-settings-form' id='{$element_settings_id}'>{$element_settings}</div>";
+            $element_settings_form .= "</div>";
+            $row[] = $element_settings_form;
+          }
+          else {
+            $row[] = '';
+          }
+          break;
+        default:
+          $row[] = drupal_render($vars['form']['facets'][$key][$cell]);
+          break;
+      }
     }
-    $rows[] = array('data' => $row, 'class' => 'draggable');
+    $facet_rows[] = array('data' => $row, 'class' => 'draggable');
   }
+
+  $rows[] = $header_row;
+  $rows = array_merge($rows, $facet_rows);
+
+  // Facet table.
   $facets .= theme('table', array(), $rows, array('id' => 'searchlight-environment'));
   $vars['facets'] = $facets;
+
+  // Per-facet settings.
+  $vars['settings'] = $settings;
 }
 
 /**

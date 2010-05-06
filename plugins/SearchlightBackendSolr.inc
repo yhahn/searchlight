@@ -236,7 +236,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           $options["f.{$facet['field']}.facet.date.start"] = '2005-08-11T00:00:00.000Z';
           $options["f.{$facet['field']}.facet.date.end"] = '2010-08-11T00:00:00.000Z';
 
-          switch ($field['granularity']) {
+          switch ($facet['granularity']) {
             case 'day':
               $gap = '+1DAY';
             case 'year':

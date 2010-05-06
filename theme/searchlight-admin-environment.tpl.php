@@ -6,5 +6,6 @@
   </div>
   <?php print drupal_render($form['options']) ?>
   <?php print $facets ?>
+  <?php print $settings ?>
   <?php print drupal_render($form); ?>
 </div>

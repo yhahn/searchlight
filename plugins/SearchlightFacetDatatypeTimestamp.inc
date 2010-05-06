@@ -6,8 +6,7 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
    */
   function query(&$query) {
     if (isset($this->value)) {
-      $granularity = !empty($this->field['granularity']) ? $this->field['granularity'] : 'month';
-      $range = $query->backend->dateRange($this->value, $granularity);
+      $range = $query->backend->dateRange($this->value, $this->options['granularity']);
 
       $query->search_filter[] = array(
         'field' => $this->name,
@@ -23,7 +22,7 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
 
     // Add this facet to be built by the backend.
     $limit = isset($this->options['items']) ? $this->options['items'] : 5;
-    $query->add_search_facet($this->name, $limit);
+    $query->add_search_facet($this->name, $limit, array('granularity' => $this->options['granularity']));
   }
 
   /**
@@ -49,20 +48,8 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
 
     if (!empty($items)) {
       $op = ($delta === 'active' ? 'remove' : 'add');
-      $granularity = !empty($this->field['granularity']) ? $this->field['granularity'] : 'month';
       foreach ($items as $id => $item) {
-        switch ($granularity) {
-          case 'year':
-            $format = 'Y';
-            break;
-          case 'month':
-            $format = 'F, Y';
-            break;
-          case 'week':
-          case 'day':
-            $format = 'F j, Y';
-            break;
-        }
+        $format = $this->options['date_format'];
         $timestamp = is_numeric($item['id']) ? $item['id'] : strtotime($item['id']);
         $item['title'] = format_date($timestamp, 'custom', $format, 0);
         $title = $op === 'remove' ? t('remove') : $item['title'];
@@ -76,5 +63,36 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
     return $rendered;
   }
 
+  /**
+   * Provide default values for options.
+   */
+  function optionsDefault() {
+    $options = parent::optionsDefault();
+    $options['granularity'] = 'month';
+    $options['date_format'] = 'F, Y';
+    return $options;
+  }
 
+  /**
+   * Provide an options form to be exposed in the Environment editor.
+   */
+  function extendedForm(&$form, $form_state) {
+    parent::extendedForm($form, $form_state);
+    $form['granularity'] = array(
+      '#title' => t('Granularity'),
+      '#type' => 'select',
+      '#options' => array(
+        'year' => t('By year'),
+        'month' => t('By month'),
+        'day' => t('By day'),
+      ),
+      '#default_value' => $this->options['granularity'],
+    );
+    $form['date_format'] = array(
+      '#title' => t('Date format'),
+      '#type' => 'textfield',
+      '#size' => 10,
+      '#default_value' => $this->options['date_format'],
+    );
+  }
 }

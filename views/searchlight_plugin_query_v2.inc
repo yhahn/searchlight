@@ -101,8 +101,8 @@ class searchlight_plugin_query extends views_query {
     }
   }
 
-  function add_search_facet($name, $limit = 5) {
-    $this->search_facets[] = array('field' => $name, 'limit' => $limit);
+  function add_search_facet($name, $limit = 5, $options = array()) {
+    $this->search_facets[] = array('field' => $name, 'limit' => $limit) + $options;
   }
 
   function set_search_options($options) {

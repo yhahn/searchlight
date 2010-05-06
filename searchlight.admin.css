@@ -21,3 +21,36 @@
 
   .datasource-index strong { font-size:16px; }
   .datasource-index small { font-size:11px; }
+
+/**
+ * Environment facet settings =================================================
+ */
+.environment-settings { position:relative; }
+
+.environment-settings-form {
+  display:none;
+  position:absolute;
+  right:0px;
+  top:100%;
+  z-index:1;
+
+  padding:10px;
+  background:#f8f8f8;
+  min-width:160px;
+
+  -moz-box-shadow:#ccc 0px 2px 3px;
+  -webkit-box-shadow:#ccc 0px 2px 3px;
+  }
+
+  tr.odd .environment-settings .form-item,
+  tr.even .environment-settings .form-item { margin:5px 0px; }
+
+.environment-settings-link {
+  display:block;
+  padding:5px 10px;
+  }
+
+.environment-settings .settings-active {
+  background:#f8f8f8;
+  color:#222;
+  }
