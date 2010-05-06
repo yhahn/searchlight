@@ -83,4 +83,29 @@ must provide. The methods fall roughly into these categories:
   but ideally the UI and rendering methods can be left alone.
 
 
+Search Service Installation
+------------
+
+Searchlight currently support Sphinx and Apache Solr. You only need to install
+one of these search services. Searchligh cannot use both Solr and Sphinx at the
+same time. Instructions for installing each are below.
+
+- Searchlight has been tested against [Sphinx 9.9.9][2]. Run the usual 
+  `.configure`, `make` and `make install` commands. Note: On some OS X installs
+  you have to adjust the $PATH environment variable to make sure that the
+  mysql_config binary was in available (edit .profile and add
+  `/opt/local/lib/mysql5/bin`). Then enable and configure the Searchlight
+  module run `drush searchlight-conf` to generate your configuration file, then
+  `drush searchlight-index` to generate the index, and finally 
+  drush searchlight-searchd &` to start the daemon.
+
+- Searchlight has been tested against [Apache Solr 1.4][3]. If you uncompress
+  the download into `/usr/local/apache-solr-1.4.0/` you can simply enable and
+  configure the Searchlight module, run `drush searchlight-conf` to generate
+  your configuration files, then `drush searchlight-searchd &` to start Solr,
+  and run `drush searchlight-index` to index existing content.
+
+
 [1]: http://github.com/yhahn/sphinx_views
+[2]: http://www.sphinxsearch.com/downloads.html
+[3]: http://www.apache.org/dyn/closer.cgi/lucene/solr/
