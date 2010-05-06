@@ -228,24 +228,35 @@ class SearchlightBackendSolr extends SearchlightBackend {
       switch ($field['datatype']) {
         case 'timestamp':
           $options['facet.date'][] = $facet['field'];
-          // TODO several issues here
+          // @TODO several issues here
           //      - start and end times are going to need to detected
           //      - start/end will need to be adjusted to match an even started
           //        point for the gap so that dates all fit within the declared 
           //        gap, and we avoid "midnight" problems.
-          $options["f.{$facet['field']}.facet.date.start"] = '2005-08-11T00:00:00.000Z';
-          $options["f.{$facet['field']}.facet.date.end"] = '2010-08-11T00:00:00.000Z';
+          //      - the month/day/time is set to Jan 1 00:00:00 as granularity/gaps
+          //        are calculated as increments from the starting point. HOWEVER,
+          //        post Solr query, Drupal's format_date() will apply a user/site
+          //        timezone adjustment before formatting the date. This means that,
+          //        for example, year granularity can give us incorrect time displays
+          //        to the user. Proposed solution is to apply an inverse of the TZ
+          //        adjustment to the start/end dates *before* sending to Solr.
+          $options["f.{$facet['field']}.facet.date.start"] = '1985-01-01T00:00:00.000Z';
+          $options["f.{$facet['field']}.facet.date.end"] = '2050-01-01T00:00:00.000Z';
 
           switch ($facet['granularity']) {
             case 'day':
               $gap = '+1DAY';
+              break;
             case 'year':
               $gap = '+1YEAR';
+              break;
             case 'week':
               $gap = '+1WEEK';
+              break;
             case 'month':
             default:
               $gap = '+1MONTH';
+              break;
           }
           $options["f.{$facet['field']}.facet.date.gap"] = $gap;
           break;
