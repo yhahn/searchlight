@@ -74,8 +74,17 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $offset = $client->searchlightOffset;
     $limit = $client->searchlightLimit;
 
+    $options = array();
+    if (isset($client->searchlightSort)) {
+      foreach ($client->searchlightSort as $field => $order) {
+        $field = ($field == 'searchlight_weight' ? 'score' : $field);
+        $sort .= $field .' '. strtolower($order) .',';
+      }
+      $options['sort'] = rtrim($sort, ',');
+    }
+
     try { 
-      $response = $client->search($query, $offset, $limit, array());
+      $response = $client->search($query, $offset, $limit, $options);
     }
     catch (Exception $e) {
       drupal_set_message('Caught exception: '.  $e->getMessage(), 'error');
@@ -175,7 +184,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Set a sort parameter for the search backend.
    */
   function setSort(&$client, $datasource, $sorts) {
-    // TODO
+    if (!empty($sorts)) {
+      $client->searchlightSort = array();
+      foreach ($sorts as $sort) {
+        $client->searchlightSort[$sort['field']] = $sort['order'];
+      }
+    }
   }
 
 
