@@ -214,6 +214,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function facetBuild(&$client, $datasource, $query = '', $facets) {
     $query = $this->solrPrepareQuery($client, $datasource, $query);
 
+    $limit_options = $options;
     $options = array(
       'facet' => 'true',
       'facet.mincount' => '1',
@@ -227,9 +228,29 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $field = $datasource->fields[$facet['field']];
       switch ($field['datatype']) {
         case 'timestamp':
+          // TODO cache this value so it's not requested on every page load.
+          $limits = array(
+            'max' => $facet['field'] ." desc",
+            'min' => $facet['field'] ." asc",
+          );
+
+          foreach ($limits as $lim => $sort) {
+            $limit_options['sort'] = $sort;
+            try {
+              // We ask for two items here because, for some unknown reason
+              // Solr will return some random, unsorted, element as the last
+              // item for certain date sorts. This is a hack.
+              $response = $client->search($query, 0, 2, $limit_options);
+              $limits[$lim] = $response->response->docs[0]->{$facet['field']};
+            }
+            catch (Exception $e) {
+              drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+              return;
+            }
+          }
+
           $options['facet.date'][] = $facet['field'];
           // @TODO several issues here
-          //      - start and end times are going to need to detected
           //      - start/end will need to be adjusted to match an even started
           //        point for the gap so that dates all fit within the declared 
           //        gap, and we avoid "midnight" problems.
@@ -240,8 +261,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
           //        for example, year granularity can give us incorrect time displays
           //        to the user. Proposed solution is to apply an inverse of the TZ
           //        adjustment to the start/end dates *before* sending to Solr.
-          $options["f.{$facet['field']}.facet.date.start"] = '1985-01-01T00:00:00.000Z';
-          $options["f.{$facet['field']}.facet.date.end"] = '2050-01-01T00:00:00.000Z';
+          $options["f.{$facet['field']}.facet.date.start"] = $limits['min'];
+          $options["f.{$facet['field']}.facet.date.end"] = $limits['max'];
 
           switch ($facet['granularity']) {
             case 'day':
