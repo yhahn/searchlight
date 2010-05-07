@@ -134,14 +134,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
             $client->searchlightFilters[] = '-'. $field .':"'. $args[0] .'"';
             break;
           case 'IN':
-            foreach ($args as $arg) {
-              $client->searchlightFilters[] = "{$field}:$arg";
-            }
+            $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $args) .")";
             break;
           case 'NOT IN':
-            foreach ($args as $arg) {
-              $client->searchlightFilters[] = "-{$field}:$arg";
-            }
+            // @TODO: not sure this is correct.
+            $client->searchlightFilters[] = "{$field}:(" . implode(' NOT ', $args) .")";
             break;
           default:
             //dsm($params);
