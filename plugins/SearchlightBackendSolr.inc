@@ -224,12 +224,17 @@ class SearchlightBackendSolr extends SearchlightBackend {
       'facet.date' => array(),
     );
 
+    // Store date facet information for further processing post-query.
+    $date_facets = array();
+
     foreach ($facets as $facet) {
       $options["f.{$facet['field']}.facet.limit"] = $facet['limit'];
 
       $field = $datasource->fields[$facet['field']];
       switch ($field['datatype']) {
         case 'timestamp':
+          $date_facets[$facet['field']] = $facet;
+
           // TODO cache this value so it's not requested on every page load.
           $limits = array(
             'max' => $facet['field'] ." desc",
@@ -315,6 +320,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
           // $build[$k][$i]format_date($time);
           $built[$k][$i] = array('id' => $i, 'count' => $j);
         }
+      }
+      // Reverse-chronological sort the dates.
+      // @TODO: unhardwire this and do handling of facets sorting in general.
+      krsort($built[$k]);
+      // Hard limit the date facet as Solr returns all elements between start
+      // and end times.
+      if (!empty($date_facets[$k]['limit']) && count($built[$k]) > $date_facets[$k]['limit']) {
+        $built[$k] = array_slice($built[$k], 0, $date_facets[$k]['limit']);
       }
     }
     return $built;
