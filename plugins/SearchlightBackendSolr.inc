@@ -304,6 +304,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
       foreach ($response->facet_counts->facet_fields as $k => $v) {
         $built[$k] = array();
         foreach ($v as $i => $j) {
+          // '_empty_' is Solr speak for NULL or empty values. Convert that
+          // string back into something more palatable in Drupal.
+          $i = $i === '_empty_' ? NULL : $i;
           $built[$k][$i] = array('id' => $i, 'count' => $j);
         }
       }
