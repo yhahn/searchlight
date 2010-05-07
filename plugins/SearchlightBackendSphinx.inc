@@ -357,9 +357,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-   * Override of drushWriteConf().
+   * Override of drushConf().
    */
-  function drushWriteConf() {
+  function drushConf() {
     $file_path = conf_path() .'/sphinx';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.

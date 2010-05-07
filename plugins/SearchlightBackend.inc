@@ -89,7 +89,12 @@ class SearchlightBackend {
   }
 
   /**
-   * Execute a query using the search backend.
+   * Execute a query using the search backend. Should return an array with the
+   * following keys:
+   *
+   *   'result': An array of base field IDs, e.g. nids.
+   *   'total': Total number of non-paged results.
+   *   'raw': The raw result object/array/data from the search client.
    */
   function executeQuery(&$client, $datasource, $query = '') {
   }
@@ -122,28 +127,6 @@ class SearchlightBackend {
    * Set node_access attribute filters.
    */
   function setNodeAccess(&$client) {
-  }
-
-  /**
-   * Drush methods ============================================================
-   */
-
-  /**
-   * Start a search backend daemon process through drush.
-   */
-  function drushSearchd() {
-  }
-
-  /**
-   * Start a search backend indexing process through drush.
-   */
-  function drushIndex() {
-  }
-
-  /**
-   * Write search backend configuration files through drush.
-   */
-  function drushWriteConf() {
   }
 
   /**
@@ -208,5 +191,27 @@ class SearchlightBackend {
    * Invalidate the search index associated with this datasource.
    */
   function invalidateIndex($datasource) {
+  }
+
+  /**
+   * Drush methods ============================================================
+   */
+
+  /**
+   * Start a search backend daemon process through drush.
+   */
+  function drushSearchd() {
+  }
+
+  /**
+   * Start a search backend indexing process through drush.
+   */
+  function drushIndex() {
+  }
+
+  /**
+   * Write search backend configuration files through drush.
+   */
+  function drushConf() {
   }
 }

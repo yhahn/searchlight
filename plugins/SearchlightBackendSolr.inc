@@ -60,7 +60,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of initClient().
    */
   function initClient($datasource) {
-    $this->includeSolr();
+    $this->solrInclude();
     $path = $this->settings['path'] .'/'. $datasource->id;
     $client = new Apache_Solr_Service($this->settings['host'], (int) $this->settings['port'], $path);
     return $client;
@@ -104,17 +104,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
       );
     }
     return FALSE;
-  }
-
-  /**
-   * Assemble the query string.
-   */
-  function solrPrepareQuery(&$client, $datasource, $query) {
-    $query = empty($query) ? '[* TO *]' : '"'. $query .'"'; //  Is this really right?
-    if (isset($client->searchlightFilters)) {
-      $query .= ' '. implode(' ', $client->searchlightFilters);
-    }
-    return $query;
   }
 
   /**
@@ -169,18 +158,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   /**
-   * Override of dataRange
-   */
-  function dateRange($timestamp, $granularity = 'month') {
-    $unixtime = strtotime($timestamp);
-    $range = parent::dateRange($unixtime, $granularity);
-    return array(
-      'from' => $timestamp,
-      'to' => gmdate('Y-m-d\\TH:i:s\\Z', $range['to']),
-    );
-  }
-
-  /**
    * Set a sort parameter for the search backend.
    */
   function setSort(&$client, $datasource, $sorts) {
@@ -220,6 +197,18 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
     }
     */
+  }
+
+  /**
+   * Override of dataRange().
+   */
+  function dateRange($timestamp, $granularity = 'month') {
+    $unixtime = strtotime($timestamp);
+    $range = parent::dateRange($unixtime, $granularity);
+    return array(
+      'from' => $timestamp,
+      'to' => gmdate('Y-m-d\\TH:i:s\\Z', $range['to']),
+    );
   }
 
   /**
@@ -464,19 +453,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
     }
   }
 
-  // From the apachsolr module
-  function apachesolr_clean_text($text) {
-    // Add spaces before stripping tags to avoid running words together.
-    $text = filter_xss(str_replace(array('<', '>'), array(' <', '> '), $text), array());
-    // Decode entities and then make safe any < or > characters.
-    return htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
-  }
-
   /**
-   * Override of drushWriteConf().
+   * Override of drushConf().
    * Write the Solr configuration files.
    */
-  function drushWriteConf() {
+  function drushConf() {
     $file_path = conf_path() .'/solr';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
@@ -509,6 +490,27 @@ class SearchlightBackendSolr extends SearchlightBackend {
     else {
       return drush_log("/{$filepath} could not be written to.", 'error');
     }
+  }
+
+  /**
+   * From the apachsolr module.
+   */
+  function apachesolr_clean_text($text) {
+    // Add spaces before stripping tags to avoid running words together.
+    $text = filter_xss(str_replace(array('<', '>'), array(' <', '> '), $text), array());
+    // Decode entities and then make safe any < or > characters.
+    return htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
+  }
+
+  /**
+   * Assemble the query string.
+   */
+  function solrPrepareQuery(&$client, $datasource, $query) {
+    $query = empty($query) ? '[* TO *]' : '"'. $query .'"'; //  Is this really right?
+    if (isset($client->searchlightFilters)) {
+      $query .= ' '. implode(' ', $client->searchlightFilters);
+    }
+    return $query;
   }
 
   /**
@@ -582,7 +584,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
   /**
    * Include the solr PHP API library.
    */
-  function includeSolr() {
+  function solrInclude() {
     module_load_include('php', 'searchlight', 'libraries/SolrPhpClient/Apache/Solr/Service');
   }
 
@@ -606,7 +608,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     );
     return $base_field;
   }
-  
+
   /**
    * Lookup and return the base field for a table.
    */

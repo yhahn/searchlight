@@ -32,7 +32,7 @@ function searchlight_drush_command() {
  */
 function drush_searchlight_conf() {
   $backend = searchlight_get_backend();
-  $backend->drushWriteConf();
+  $backend->drushConf();
 }
 
 /**
