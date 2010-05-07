@@ -312,22 +312,26 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
     }
 
-    foreach ($response->facet_counts->facet_dates as $k => $v) {
-      foreach ($v as $i => $j) {
-        // Filter out empty ranges.
-        if (!empty($j) && !in_array($i, array('gap', 'end'))) {
-          // $time = gmmktime($i);
-          // $build[$k][$i]format_date($time);
-          $built[$k][$i] = array('id' => $i, 'count' => $j);
+    if (isset($response->facet_counts->facet_dates)) {
+      foreach ($response->facet_counts->facet_dates as $k => $v) {
+        foreach ($v as $i => $j) {
+          // Filter out empty ranges.
+          if (!empty($j) && !in_array($i, array('gap', 'end'))) {
+            // $time = gmmktime($i);
+            // $build[$k][$i]format_date($time);
+            $built[$k][$i] = array('id' => $i, 'count' => $j);
+          }
         }
-      }
-      // Reverse-chronological sort the dates.
-      // @TODO: unhardwire this and do handling of facets sorting in general.
-      krsort($built[$k]);
-      // Hard limit the date facet as Solr returns all elements between start
-      // and end times.
-      if (!empty($date_facets[$k]['limit']) && count($built[$k]) > $date_facets[$k]['limit']) {
-        $built[$k] = array_slice($built[$k], 0, $date_facets[$k]['limit']);
+        // Reverse-chronological sort the dates.
+        // @TODO: unhardwire this and do handling of facets sorting in general.
+        if (!empty($built[$k])) {
+          krsort($built[$k]);
+          // Hard limit the date facet as Solr returns all elements between start
+          // and end times.
+          if (!empty($date_facets[$k]['limit']) && count($built[$k]) > $date_facets[$k]['limit']) {
+            $built[$k] = array_slice($built[$k], 0, $date_facets[$k]['limit']);
+          }
+        }
       }
     }
     return $built;
@@ -376,56 +380,117 @@ class SearchlightBackendSolr extends SearchlightBackend {
     // build list of this site's indexes
     $indexes = array();
     foreach (searchlight_get_datasource() as $datasource) {
+      $views = array();
+      $items = array();
+      $raw_items = array();
+
       // Add the base field to the datasource field representation.
       $datasource->addField($datasource->base_table, $datasource->base_field);
+      $datasource->viewInit()->viewSetHandlers();
 
-      $datasource->viewInit();
-      $datasource->view->new_display('searchlight_solr', 'Searchlight Solr', 'searchlight_solr');
-      $datasource->view->set_display('searchlight_solr');
-      $datasource->viewSetHandlers();
-      $handler = $datasource->view->display_handler;
+      // Collect all views we need to render items for.
+      $views['datasource'] = $datasource->view;
+      foreach ($datasource->getMultivalues() as $name => $field) {
+        $views[$name] = searchlight_build_view($field['view']);
+      }
+      // Build and render each view.
+      foreach ($views as $name => $view) {
+        $options = $view->display_handler->options;
 
-      // Add sort
-      $sorts[$datasource->base_field] = array(
-        'id' => $datasource->base_field,
-        'table' => $datasource->base_table,
-        'field' => $datasource->base_field,
-      );
-      $handler->override_option('sorts', $sorts);
+        $view->new_display('searchlight_solr', 'Searchlight Solr', 'searchlight_solr');
+        $view->set_display('searchlight_solr');
+        $view->built = FALSE;
 
-      $datasource->view->build();
+        $handler = $view->display_handler;
+        $handler->options = $options;
 
-      // Build query object and add the "fresh" join.
-      $datasource->view->built = false;
-      $this->queryFresh($datasource->view->query);
+        // Add sort
+        $sorts = array();
+        $sorts[$datasource->base_field] = array(
+          'id' => $datasource->base_field,
+          'table' => $datasource->base_table,
+          'field' => $datasource->base_field,
+        );
+        $handler->override_option('sorts', $sorts);
 
-      // Set limit for number of items to index at once.
-      $datasource->view->set_items_per_page($this->settings['item_limit']);
+        $view->init_query();
+        $view->init_handlers();
 
-      $items = $datasource->view->render();
-      $raw_items = $datasource->view->result;
+        // Datasource view:
+        // - Add the "fresh" join.
+        // - Set the pager limit.
+        if ($name === 'datasource') {
+          $view->set_items_per_page($this->settings['item_limit']);
+          $view->query->pager->query();
+          $this->queryFresh($view->query);
+        }
+        // MVA view:
+        // - add an additional WHERE condition against items retrieved by the datasource view.
+        else if (!empty($items['datasource'])) {
+          $view->set_items_per_page(0);
+          $view->query->pager->query();
+          $ids = implode(',', array_keys($items['datasource']));
+          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
+        }
+        else {
+          continue;
+        }
+        $view->build();
 
-      if (!empty($items)) {
+        // Re-key the render & raw items by base field ID.
+        $items[$name] = $raw_items[$name] = array();
+        foreach ($view->render() as $row) {
+          $row = (object) $row;
+          $id = $row->{$view->base_field};
+          $items[$name][$id] = $row;
+        }
+        foreach ($view->result as $row) {
+          $id = $row->{$view->base_field};
+          $raw_items[$name][$id] = $row;
+        }
+      }
+
+      // Build documents.
+      if (!empty($items['datasource'])) {
         $solr = $this->initClient($datasource);
         $documents = array();
         $ids = array();
-        foreach($items as $pos => $item) {
+        foreach ($items['datasource'] as $id => $item) {
           $document = new Apache_Solr_Document();
           $content = array();
           foreach ($datasource->fields as $field) {
-            if ($field['usage'] == 'content') {
-              $content[] = $this->apachesolr_clean_text($item[$field['name']]);
-            }
-            else {
-              if ($field['datatype'] == 'timestamp') {
-                $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $raw_items[$pos]->{$field['name']});
-              }
-              else {
-                $document->{$field['name']} = $raw_items[$pos]->{$field['name']};
-              }
+            switch ($field['usage']) {
+              case 'content':
+                $content[] = $this->apachesolr_clean_text($item->{$field['name']});
+                break;
+              case 'multivalue':
+                $mva_item = $raw_items[$field['name']][$id];
+                // Ideally we would use the handler to discover the MVA field
+                // alias. For now just do it by convention.
+                $alias = "{$field['table']}_{$field['field']}";
+                if (isset($mva_item->{$alias})) {
+                  if ($field['datatype'] == 'timestamp') {
+                    $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $mva_item->{$alias});
+                  }
+                  else {
+                    $document->{$field['name']} = $mva_item->{$alias};
+                  }
+                }
+                break;
+              default:
+                $raw_item = $raw_items['datasource'][$id];
+                if (isset($raw_item->{$field['name']})) {
+                  if ($field['datatype'] == 'timestamp') {
+                    $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $raw_item->{$field['name']});
+                  }
+                  else {
+                    $document->{$field['name']} = $raw_item->{$field['name']};
+                  }
+                }
+                break;
             }
           }
-          $ids[] = $item[$datasource->view->base_field];
+          $ids[] = $id;
           $document->_body = implode(' ', $content);
           $documents[] = $document;
         }
