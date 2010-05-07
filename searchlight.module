@@ -301,6 +301,8 @@ function searchlight_ctools_plugin_api($module, $api) {
         return array('version' => 1);
       case 'datasource':
         return array('version' => 1);
+      case 'environment':
+        return array('version' => 1);
     }
   }
 }

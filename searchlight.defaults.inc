@@ -73,6 +73,65 @@ function _searchlight_searchlight_default_datasources() {
     'node_access' => 1,
   );
 
-  $export['node'] = $searchlight_datasource;
+  $export['searchlight_node'] = $searchlight_datasource;
+  return $export;
+}
+
+/**
+ * Helper to implementation of hook_searchlight_default_environments().
+ */
+function _searchlight_searchlight_default_environments() {
+  $export = array();
+  $searchlight_environment = new SearchlightEnvironment;
+  $searchlight_environment->disabled = FALSE; /* Edit this to true to make a default searchlight_environment disabled initially */
+  $searchlight_environment->api_version = 1;
+  $searchlight_environment->name = 'searchlight_search';
+  $searchlight_environment->view_display = 'searchlight_search:page_1';
+  $searchlight_environment->facets = array(
+    'node_status' => array(
+      'enabled' => 0,
+      'weight' => '-6',
+      'label' => '',
+      'items' => '5',
+    ),
+    'node_created' => array(
+      'enabled' => 1,
+      'weight' => '-9',
+      'label' => '',
+      'items' => '5',
+      'granularity' => 'month',
+      'date_format' => 'F, Y',
+    ),
+    'users_name' => array(
+      'enabled' => 1,
+      'weight' => '-7',
+      'label' => '',
+      'items' => '5',
+    ),
+    'users_uid' => array(
+      'enabled' => 0,
+      'weight' => '-5',
+      'label' => '',
+      'items' => '5',
+    ),
+    'node_type' => array(
+      'enabled' => 1,
+      'weight' => '-8',
+      'label' => '',
+      'items' => '5',
+    ),
+    'search_query' => array(
+      'enabled' => 1,
+      'weight' => '-10',
+      'label' => '',
+      'items' => 1,
+    ),
+  );
+  $searchlight_environment->options = array(
+    'active_label' => 'Active search',
+    'facets_label' => 'Search facets',
+  );
+
+  $export['searchlight_search'] = $searchlight_environment;
   return $export;
 }
