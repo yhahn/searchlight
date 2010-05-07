@@ -10,10 +10,11 @@ Searchlight
 -----------
 Searchlight is a refactored version of the early experiment [sphinx_views][1],
 an attempt to build a views-driven search implementation specific to Sphinx.
-Searchlight claims to be able to use search backends in a pluggable and/or
-interchangeable manner, but currently there is only the Sphinx backend, so it's
-all smoke & mirrors until I get a chance to put some Solr/Lucine action behind
-it and see how well my design decisions worked out.
+Searchlight is designed to use search backends in a pluggable and
+interchangeable manner. There are currently two backend plugins available for
+Searchlight: Sphinx and Apache Solr.
+
+[1]: http://github.com/yhahn/sphinx_views
 
 
 Goals
@@ -31,11 +32,27 @@ goals that set it apart:
   using backend A and switch to backend B without rebuilding your Views, etc.
 
 
+Installation, requirements & setup
+----------------------------------
+Please see `INSTALL.markdown` for full instructions on installing and setting
+up one of the Search backend services and Searchlight.
+
+
 Status
 ------
-This is not ready for deployment. It's hardly ready for collaborative
-development. If you're reading this it should be because you're curious and are
-willing to get burned, not because you want to actually use this code.
+This is not ready for production deployment. If you're reading this it should
+be because you're curious and are willing to get burned.
+
+
+Current features
+----------------
+- Swappable backend plugins. Currently supports Sphinx and Apache Solr.
+- The ability to define multiple datasources and choose which datasource is
+  active for a given base table / entity type.
+- A Views search filter, argument and relevance sort.
+- Faceted search through configurable search environments.
+- Drush-based search configuration writing, indexing and service dispatching.
+- Full exportables & Features module integration through CTools export API.
 
 
 Terminology
@@ -43,17 +60,24 @@ Terminology
 - A **backend** is a CTools plugin class that interfaces with a specific search
   technology.
 - A **datasource** is a backend-agnostic representation of a search datasource
-  (aka index). In Searchlight, there are specific Views displays which help you
-  represent each base table (and joining tables) as a datasource.
+  (aka index). Each datasource belongs to a Views base table (e.g. node, users,
+  comments) and defines what and how data related to those entities should be
+  indexed.
 - A **field** is a data element exposed to the search backend. Each field is
   referenced by the **views alias** generated for it in its datasource view, and
-  contains additional metadata like: datatype (int, text, timestamp, etc.),
-  whether it should be exposed as a facet or not, etc. Each datasource contains
-  definitions of one or more fields.
+  contains additional metadata like its datatype (int, text, timestamp, etc.).
+  Each datasource contains definitions of one or more fields.
+- A **multivalue** is a field that may have multiple values per entitiy record.
+  In Searchlight, these are modeled using Multivalue views displays that can be
+  referenced by a datasource.
+- An **environment** is a CTools configuration object that allows
+  administrators to define the search experience for a given portion of their
+  site. For example, they can choose which facets to display and customize
+  different settings related to them.
 
 
-The backend interface
----------------------
+The backend API
+---------------
 The backend is a base class that defines the methods each implementing backend
 must provide. The methods fall roughly into these categories:
 
@@ -75,37 +99,9 @@ must provide. The methods fall roughly into these categories:
   object, and translate it into parameters for the search backend like
   `->setFilter($field, $operator, $args)`.
 - **Search query methods.** These are the main methods the backend is
-  responsible for implementing. They include things like: queryInit(),
-  queryExecute(), setFilter(), setSort().
+  responsible for implementing. They include things like: initClient(),
+  setFilter(), setSort().
 - **Facet builiding, rendering.** Facets represent a group of user-story driven
   queries (generally groupby's with a certain sort, like count desc or timestamp
   desc) and interface patterns. Backends will need to implement the query logic
   but ideally the UI and rendering methods can be left alone.
-
-
-Search Service Installation
-------------
-
-Searchlight currently support Sphinx and Apache Solr. You only need to install
-one of these search services. Searchligh cannot use both Solr and Sphinx at the
-same time. Instructions for installing each are below.
-
-- Searchlight has been tested against [Sphinx 9.9.9][2]. Run the usual 
-  `.configure`, `make` and `make install` commands. Note: On some OS X installs
-  you have to adjust the $PATH environment variable to make sure that the
-  mysql_config binary was in available (edit .profile and add
-  `/opt/local/lib/mysql5/bin`). Then enable and configure the Searchlight
-  module run `drush searchlight-conf` to generate your configuration file, then
-  `drush searchlight-index` to generate the index, and finally 
-  drush searchlight-searchd &` to start the daemon.
-
-- Searchlight has been tested against [Apache Solr 1.4][3]. If you uncompress
-  the download into `/usr/local/apache-solr-1.4.0/` you can simply enable and
-  configure the Searchlight module, run `drush searchlight-conf` to generate
-  your configuration files, then `drush searchlight-searchd &` to start Solr,
-  and run `drush searchlight-index` to index existing content.
-
-
-[1]: http://github.com/yhahn/sphinx_views
-[2]: http://www.sphinxsearch.com/downloads.html
-[3]: http://www.apache.org/dyn/closer.cgi/lucene/solr/
