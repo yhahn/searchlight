@@ -91,9 +91,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
       return FALSE;
     }
 
-    $base_field = $this->solrGetBaseField($datasource);
     foreach ($response->response->docs as $doc) {
-      $ids[] = $doc->{$base_field};
+      $ids[] = $doc->{$datasource->base_field};
     }
 
     if (!empty($ids)) {
@@ -364,6 +363,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
     // build list of this site's indexes
     $indexes = array();
     foreach (searchlight_get_datasource() as $datasource) {
+      // Add the base field to the datasource field representation.
+      $datasource->addField($datasource->base_table, $datasource->base_field);
+
       $datasource->viewInit();
       $datasource->view->new_display('searchlight_solr', 'Searchlight Solr', 'searchlight_solr');
       $datasource->view->set_display('searchlight_solr');
@@ -371,11 +373,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $handler = $datasource->view->display_handler;
 
       // Add sort
-      $base_field = $this->solrAddBaseField($datasource);
-      $sorts[$base_field] = array(
-        'id' => $base_field,
+      $sorts[$datasource->base_field] = array(
+        'id' => $datasource->base_field,
         'table' => $datasource->base_table,
-        'field' => $base_field,
+        'field' => $datasource->base_field,
       );
       $handler->override_option('sorts', $sorts);
 
@@ -531,7 +532,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
       ),
     );
     $conf['conf']['id'] = $datasource->id;
-    $conf['conf']['unique_key'] = $this->solrAddBaseField($datasource);
+    $conf['conf']['unique_key'] = $datasource->base_field;
+
+    // Add the base field to the datasource field representation.
+    $datasource->addField($datasource->base_table, $datasource->base_field);
 
     // Attributes: name, type, indexed, stored, required, multiValued, omitNorms
     foreach ($datasource->fields as $field) {
@@ -586,34 +590,5 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function solrInclude() {
     module_load_include('php', 'searchlight', 'libraries/SolrPhpClient/Apache/Solr/Service');
-  }
-
-  /**
-   * Make sure the base field is on the $datasource, and return it's name.
-   */
-  function solrAddBaseField(&$datasource) {
-    $base_field = $this->solrGetBaseField($datasource);
-
-    // Determine the primary id field of the view & determine if it is present.
-    foreach ($datasource->fields as $field) {
-      if ($field['table'] == $datasource->base_table && $field['name'] == $base_field) {
-        return $base_field;
-      }
-    }
-
-    // Add the primary field if it isn't present
-    $datasource->fields[] = array(
-      'name' => $base_field,
-      'datatype' => 'int',
-    );
-    return $base_field;
-  }
-
-  /**
-   * Lookup and return the base field for a table.
-   */
-  function solrGetBaseField($datasource) {
-    $base_table = views_fetch_data($datasource->base_table);
-    return $base_table['table']['base']['field']; 
   }
 }
