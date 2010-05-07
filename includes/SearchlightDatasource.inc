@@ -4,6 +4,7 @@ class SearchlightDatasource {
   var $id;
   var $name;
   var $base_table;
+  var $base_field;
   var $fields;
   var $filters;
   var $options;
@@ -13,10 +14,15 @@ class SearchlightDatasource {
   function construct() {
     $this->name = isset($this->name) ? $this->name : '';
     $this->base_table = isset($this->base_table) ? $this->base_table : '';
+
+    $this->base_field = '';
+    if ($views_data = views_fetch_data($this->base_table)) {
+      $this->base_field = $views_data['table']['base']['field'];
+    }
+
     $this->fields = !empty($this->fields) ? $this->fields : array();
     $this->filters = !empty($this->filters) ? $this->filters : array();
     $this->options = !empty($this->options) ? $this->options : array();
-
     $this->options = $this->options + array(
       'node_access' => TRUE,
     );
@@ -56,13 +62,11 @@ class SearchlightDatasource {
     $fields = array();
 
     // Force the base field onto the view if possible.
-    $data = views_fetch_data($this->base_table);
-    if (isset($data['table']['base']['field'])) {
-      $base_field = $data['table']['base']['field'];
-      $fields[$base_field] = array(
-        'id' => $base_field,
+    if ($this->base_field) {
+      $fields[$this->base_field] = array(
+        'id' => $this->base_field,
         'table' => $this->base_table,
-        'field' => $base_field,
+        'field' => $this->base_field,
         'relationship' => 'none'
       );
     }
@@ -88,7 +92,7 @@ class SearchlightDatasource {
    *   `float`:     float column.
    *   `timestamp`: unix timestamp.
    */
-  function getDatatype($handler, $table, $field) {
+  function getDatatype($handler = NULL, $table, $field) {
     $attribute = array();
 
     // Ensure that pseudo table names are traced back to their literal tables
@@ -105,7 +109,7 @@ class SearchlightDatasource {
 
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
-      $class = get_class($handler);
+      $class = $handler ? get_class($handler) : NULL;
 
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
@@ -480,8 +484,20 @@ class SearchlightDatasource {
     $this->view->build();
 
     // Retrieve field information for storage with datasource.
-    $handler = $this->view->field[$field];
-    if ($handler->real_field !== $handler->view->base_field) {
+    $handler = isset($this->view->field[$field]) ? $this->view->field[$field] : NULL;
+
+    // Don't use alias for base field.
+    if ($field === $this->view->base_field) {
+      $this->fields[$field] = array(
+        'label' => $field,
+        'datatype' => $this->getDatatype(NULL, $table, $field),
+        'table' => $table,
+        'field' => $field,
+        'name' => $field,
+      );
+    }
+    // Use alias for all other fields.
+    if ($handler) {
       $this->fields[$handler->field_alias] = array(
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
