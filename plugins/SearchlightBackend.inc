@@ -3,7 +3,7 @@
 /**
  * Abstract class, defines interface for swappable search backends.
  */
-class SearchlightBackend {
+abstract class SearchlightBackend {
   var $settings;
   var $views;
 
