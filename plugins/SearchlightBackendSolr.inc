@@ -349,6 +349,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
     }
   }
 
+  /**
+   * Override of drushSearchd().
+   * Start the Solr service.
+   */
   function drushSearchd() {
     $file_path = conf_path() .'/solr';
     $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
@@ -363,6 +367,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
 
+  /**
+   * Override of drushIndex().
+   * Run an indexing job. Requires that the Solr service is available.
+   */
   function drushIndex() {
     // build list of this site's indexes
     $indexes = array();
@@ -464,6 +472,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
     return htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
   }
 
+  /**
+   * Override of drushWriteConf().
+   * Write the Solr configuration files.
+   */
   function drushWriteConf() {
     $file_path = conf_path() .'/solr';
     if (file_check_directory($file_path, TRUE)) {
