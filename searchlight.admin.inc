@@ -384,7 +384,7 @@ function searchlight_admin_backend($form_state) {
       'class' => 'searchlight-backend-select',
     ),
   );
-  foreach (searchlight_registry('backend') as $key => $info) {
+  foreach (searchlight_registry('backend', TRUE) as $key => $info) {
     $form['backend']['searchlight_backend']['#options'][$key] = $info['title'];
     $backend = searchlight_get_backend($key);
     $form["searchlight_backend_{$key}"] = $backend->settingsForm(variable_get("searchlight_backend_{$key}", array()));
