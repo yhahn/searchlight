@@ -12,6 +12,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     return array(
       'port' => 9312,
       'delta_ttl' => 0,
+      'sql_sock' => '',
     );
   }
 
@@ -20,6 +21,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function settingsForm() {
     $form = array();
+    $form['sql_sock'] = array(
+      '#title' => t('DB sock'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['sql_sock'],
+      '#description' => t('The DB sock file to use. Example: <code>/var/lib/mysql/mysql.sock</code>. If left empty, Sphinx will try to autodetect its location.'),
+      '#size' => 30,
+    );
     $form['port'] = array(
       '#title' => t('searchd port'),
       '#type' => 'textfield',
@@ -435,6 +443,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['conf']['sql_host'] = urldecode($url['host']);
     $conf['conf']['sql_db']   = trim(urldecode($url['path']), '/');
     $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
+
+    // Check for optional sql_sock option.
+    $sock = trim($this->settings['sql_sock']);
+    if (!empty($sock)) {
+      $conf['conf']['sql_sock'] = $sock;
+    }
 
     // Index information
     $conf['index']['path'] = drush_locate_root() .'/'. conf_path() . '/sphinx/indexes/' . $datasource_id;

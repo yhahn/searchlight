@@ -11,6 +11,9 @@ sql_user = <?php print $datasource['conf']['sql_user'] ?>
 sql_pass = <?php print $datasource['conf']['sql_pass'] ?>
 sql_db   = <?php print $datasource['conf']['sql_db'] ?>
 sql_port = <?php print $datasource['conf']['sql_port'] ?>
+<?php if (!empty($datasource['conf']['sql_sock'])): ?>
+sql_sock = <?php print $datasource['conf']['sql_sock'] ?>
+<?php endif; ?>
 
 sql_query = \
   <?php print $datasource['conf']['sql_query'] ?>
