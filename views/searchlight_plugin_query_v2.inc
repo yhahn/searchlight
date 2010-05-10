@@ -131,8 +131,9 @@ class searchlight_plugin_query extends views_query {
     // Fail the rest of the build entirely if the hideEmpty option is true and
     // there is no search query available. We don't exit right here in order
     // to allow facet queries to run.
-    if (!empty($this->search_options['hideEmpty']) && empty($this->search_query)) {
+    if (empty($this->fields) || (!empty($this->search_options['hideEmpty']) && empty($this->search_query))) {
       $this->abort = TRUE;
+      $this->clear_fields();
     }
 
     // Views pager initialization.
