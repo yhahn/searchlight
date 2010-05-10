@@ -429,7 +429,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     // Configuration options.
     $conf['conf']['id'] = $datasource_id;
-    $conf['conf']['type'] = $db_type;
+    $conf['conf']['type'] = $db_type === 'mysqli' ? 'mysql' : $db_type;
     $conf['conf']['sql_user'] = urldecode($url['user']);
     $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
     $conf['conf']['sql_host'] = urldecode($url['host']);
