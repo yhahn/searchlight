@@ -294,7 +294,7 @@ function searchlight_views_api() {
 /**
  * Implementation of hook_ctools_plugin_api().
  */
-function searchlight_ctools_plugin_api($module, $api) {
+function searchlight_ctools_plugin_api($module = NULL, $api = NULL) {
   if ($module === 'searchlight') {
     switch ($api) {
       case 'plugins':
