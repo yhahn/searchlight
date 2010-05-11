@@ -373,7 +373,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Collect configuration arrays for each datasource.
       foreach (searchlight_get_datasource() as $datasource) {
         $source = $this->sphinxDatasourceConf($datasource);
-        dlm($source);
 
         // Add delta index.
         if (!empty($this->settings['delta_ttl'])) {
