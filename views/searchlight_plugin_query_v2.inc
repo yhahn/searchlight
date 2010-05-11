@@ -55,6 +55,7 @@ class searchlight_plugin_query extends views_query {
     if (count($split) >= 2) {
       $field = explode('.', trim(array_shift($split)));
       $operator = strtoupper(trim(array_shift($split)));
+      $possible_args = count($split) ? array_shift($split) : '';
       if (count($field) === 2) {
         $table = $field[0];
         $field = $field[1];
@@ -62,11 +63,25 @@ class searchlight_plugin_query extends views_query {
           if ($info['table'] === $table && ($info['name'] === $field || $info['field'] === $field)) {
             // Get the arguments for this where clause.
             $args = array();
+
+            // If arguments have been specified using query placeholders,
+            // simply grab as many as there have been placeholders specified.
             $argnum = substr_count($clause, '%');
-            if (count($where_args) >= $argnum) {
+            if ($argnum && count($where_args) >= $argnum) {
               while ($argnum > 0) {
                 $args[] = array_shift($where_args);
                 $argnum--;
+              }
+            }
+            // Otherwise, groan, breath deeply & try to retrieve arguments from
+            // the query.
+            else {
+              $matches = array();
+              preg_match_all('/\w+|\d+/', $possible_args, $matches);
+              if (!empty($matches)) {
+                foreach ($matches as $match) {
+                  $args = array_merge($args, $match);
+                }
               }
             }
 
