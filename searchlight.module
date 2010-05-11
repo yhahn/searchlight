@@ -218,7 +218,13 @@ function searchlight_theme() {
   return array(
     'searchlight_sphinx_conf' => array(
       'template' => 'searchlight-sphinx-conf',
-      'arguments' => array('datasources' => array(), 'searchd' => array()),
+      'arguments' => array('searchd' => array()),
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_sphinx_index_conf' => array(
+      'template' => 'searchlight-sphinx-index-conf',
+      'arguments' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),

@@ -4,16 +4,17 @@
  * Preprocessor for theme('searchlight_sphinx_conf').
  */
 function template_preprocess_searchlight_sphinx_conf(&$vars) {
-  foreach ($vars['datasources'] as $id => $datasource) {
-    foreach ($datasource['conf'] as $key => $value) {
-      $vars['datasources'][$id]['conf'][$key] = "$value\n";
-    }
-    foreach ($datasource['index'] as $key => $value) {
-      $vars['datasources'][$id]['index'][$key] = "$value\n";
-    }
-  }
   foreach ($vars['searchd'] as $key => $value) {
     $vars['searchd'][$key] = "$value\n";
+  }
+}
+
+function template_preprocess_searchlight_sphinx_index_conf(&$vars) {
+  foreach ($vars['datasource']['conf'] as $key => $value) {
+    $vars['datasource']['conf'][$key] = "$value\n";
+  }
+  foreach ($vars['datasource']['index'] as $key => $value) {
+    $vars['datasource']['index'][$key] = "$value\n";
   }
 }
 

@@ -371,29 +371,48 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $file_path = conf_path() .'/sphinx';
     if (file_check_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
-      $datasources = array();
       foreach (searchlight_get_datasource() as $datasource) {
-        $datasources[] = $this->sphinxDatasourceConf($datasource);
+        $source = $this->sphinxDatasourceConf($datasource);
 
         // Add delta index.
         if (!empty($this->settings['delta_ttl'])) {
-          $datasources[] = $this->sphinxDatasourceConf($datasource, TRUE);
+          $source = $this->sphinxDatasourceConf($datasource, TRUE);
         }
-      }
-      // Generate configuration file from datasources.
-      $sphinx_conf = theme('searchlight_sphinx_conf', $datasources, $this->sphinxSearchdConf());
-      if ($sphinx_conf) {
-        $existing = file_exists("{$file_path}/sphinx.conf") ? file_get_contents("{$file_path}/sphinx.conf") : '';
-        if ($sphinx_conf === $existing) {
-          return drush_log("{$file_path}/sphinx.conf is unchanged.", 'success');
+
+        $conf_file = "{$file_path}/conf.d/{$source['id']}.conf";
+
+        if (file_check_directory(dirname($conf_file), TRUE) {
+          // Generate configuration file from datasource.
+          $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
+          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+          if ($sphinx_conf !== $existing) {
+            file_put_contents($conf_file, $sphinx_conf);
+            drush_log("{$conf_file} was written successfully.", 'success');
+          }
         }
         else {
-          file_put_contents("{$file_path}/sphinx.conf", $sphinx_conf);
-          return drush_log("{$file_path}/sphinx.conf was written successfully.", 'success');
+          return drush_log("{$conf_file} could not be written.", 'error');
         }
       }
+
+      if (drush_get_option('sl--sphinx-base-conf', true)) {
+        $conf_file = "{$file_path}/sphinx.conf";
+        $sphinx_conf = theme('searchlight_sphinx_conf', $this->sphinxSearchdConf());
+        if ($sphinx_conf) {
+          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+          if ($sphinx_conf === $existing) {
+            return drush_log("{$conf_file}/sphinx.conf is unchanged.", 'success');
+          }
+          else {
+            file_put_contents($conf_file, $sphinx_conf);
+            return drush_log("{$conf_file} was written successfully.", 'success');
+          }
+        }
+      }
+      return TRUE;
+
     }
-    return drush_log("{$file_path}/sphinx.conf could not be written.", 'error');
+    return drush_log("Sphinx configuration files could not be written.", 'error');
   }
 
   /**
