@@ -381,7 +381,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
         $conf_file = "{$file_path}/conf.d/{$source['id']}.conf";
 
-        if (file_check_directory(dirname($conf_file), TRUE) {
+        if (file_check_directory(dirname($conf_file), TRUE)) {
           // Generate configuration file from datasource.
           $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
           $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
@@ -395,7 +395,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
       }
 
-      if (drush_get_option('sl--sphinx-base-conf', true)) {
+      if (drush_get_option('sl--sphinx-base-conf', false)) {
         $conf_file = "{$file_path}/sphinx.conf";
         $sphinx_conf = theme('searchlight_sphinx_conf', $this->sphinxSearchdConf());
         if ($sphinx_conf) {
@@ -409,7 +409,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           }
         }
       }
-      return TRUE;
+      return drush_log("Sphinx configuration files were written", 'success');
 
     }
     return drush_log("Sphinx configuration files could not be written.", 'error');
