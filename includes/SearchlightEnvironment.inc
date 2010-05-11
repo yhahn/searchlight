@@ -99,7 +99,13 @@ class SearchlightEnvironment {
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
       if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
-        $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $render);
+        // Theme each item
+        $items = array();
+        foreach ($render as $item) {
+          $items[] = $plugin->theme($item, $delta);
+        }
+        // Generate a label/items array suitable for theme('searchlight_facet')
+        $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items);
       }
     }
     return $rendered;
