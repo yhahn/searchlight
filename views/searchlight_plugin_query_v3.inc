@@ -131,7 +131,14 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     // Views pager initialization.
     if (!$this->abort) {
-      $this->init_pager($view);
+      // Views 3.x-alpha3 and prior.
+      if (method_exists($this, 'init_pager')) {
+        $this->init_pager($view);
+      }
+      // Views 3.x dev
+      else if (method_exists($view, 'init_pager')) {
+        $view->init_pager();
+      }
       if ($this->pager->use_pager()) {
         $this->pager->set_current_page($view->current_page);
       }
