@@ -416,6 +416,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $view->init_query();
         $view->init_handlers();
 
+        // View 3.x dev.
+        if (method_exists($view, 'init_pager')) {
+          $view->init_pager();
+        }
+
         // Datasource view:
         // - Add the "fresh" join.
         // - Set the pager limit.
