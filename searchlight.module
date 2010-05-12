@@ -643,25 +643,36 @@ function searchlight_environment_init($packed) {
   $values = searchlight_environment_unpack($packed);
   if (!empty($values['environment']) && $environment = searchlight_environment_load($values['environment'])) {
     $environment->initValues($values);
+    searchlight_environment_active($environment);
   }
 }
 
 /**
- * Retrieve a searchlight environment for a given View/display combination.
- * If the $view_only flag is TRUE, will attempt to match by View only.
+ * Static cache/lazy retrieval of the current active environment.
+ * If an environment is active (via PURL modifier), return that environment.
+ * Otherwise, try to locate an environment "relevant" to the specified view
+ * using the view name and display id.
  */
-function searchlight_environment_get($view = NULL, $display = NULL, $view_only = TRUE) {
-  $environments = searchlight_environment_load();
-  // Match both view & display.
-  foreach ($environments as $environment) {
-    if ($environment->view_display === "{$view}:{$display}") {
-      return $environment;
-    }
+function searchlight_environment_active($environment = NULL, $view = NULL, $display = NULL, $reset = FALSE) {
+  static $active;
+
+  // Setting.
+  if (!isset($active) || $reset) {
+    $active = NULL;
   }
-  // Match only view.
-  if ($view_only) {
-    foreach ($environments as $environment) {
-      if (array_shift(explode(':', $environment->view_display)) === $view) {
+  if (isset($environment)) {
+    $active = $environment;
+  }
+
+  // Retrieval.
+  if (isset($active)) {
+    return $active;
+  }
+  // Match both view & display. Note that a lazy matched environment is not
+  // static cached as multiple may be active on the same page.
+  else if (isset($view, $display)) {
+    foreach (searchlight_environment_load() as $environment) {
+      if ($environment->view_display === "{$view}:{$display}") {
         return $environment;
       }
     }
