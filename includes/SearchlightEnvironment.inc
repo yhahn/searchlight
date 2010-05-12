@@ -129,7 +129,7 @@ class SearchlightEnvironment {
     if ($this->initView()) {
       $output = '';
       foreach ($this->render($delta) as $rendered) {
-        $output .= theme('searchlight_facet', $rendered);
+        $output .= theme('searchlight_facet', $rendered, $delta);
       }
       if (!empty($output)) {
         return array(
