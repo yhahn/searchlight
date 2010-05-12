@@ -648,11 +648,22 @@ function searchlight_environment_init($packed) {
 
 /**
  * Retrieve a searchlight environment for a given View/display combination.
+ * If the $view_only flag is TRUE, will attempt to match by View only.
  */
-function searchlight_environment_get($view, $display) {
-  foreach (searchlight_environment_load() as $environment) {
+function searchlight_environment_get($view = NULL, $display = NULL, $view_only = TRUE) {
+  $environments = searchlight_environment_load();
+  // Match both view & display.
+  foreach ($environments as $environment) {
     if ($environment->view_display === "{$view}:{$display}") {
       return $environment;
+    }
+  }
+  // Match only view.
+  if ($view_only) {
+    foreach ($environments as $environment) {
+      if (array_shift(explode(':', $environment->view_display)) === $view) {
+        return $environment;
+      }
     }
   }
   return FALSE;
