@@ -125,26 +125,22 @@ function searchlight_views_init_query(&$view) {
   // The following is a copy of the $view->query_init() method, with the only
   // difference being that we use the searchlight backend plugin rather than
   // the default views query plugin and pass the backend to the query plugin.
-  if ($backend = searchlight_get_backend()) {
-    if (!empty($view->query)) {
-      $class = get_class($view->query);
-      if ($class && $class != 'stdClass' && !empty($view->query->searchlight)) {
-        // return if query is already initialized.
-        return;
-      }
+  if (!empty($view->query)) {
+    $class = get_class($view->query);
+    if ($class && $class != 'stdClass' && !empty($view->query->searchlight)) {
+      // return if query is already initialized.
+      return;
     }
-
-    // Create and initialize the query object.
-    $views_data = views_fetch_data($view->base_table);
-    $view->base_field = $views_data['table']['base']['field'];
-    if (!empty($views_data['table']['base']['database'])) {
-      $view->base_database = $views_data['table']['base']['database'];
-    }
-
-    // Create and initialize the query object.
-    $view->query = views_get_plugin('query', 'searchlight');
-    $view->query->init($view->base_table, $view->base_field, $backend);
   }
+
+  // Create and initialize the query object.
+  $views_data = views_fetch_data($view->base_table);
+  $view->base_field = $views_data['table']['base']['field'];
+  if (!empty($views_data['table']['base']['database'])) {
+    $view->base_database = $views_data['table']['base']['database'];
+  }
+
+  $view->query = searchlight_get_query($view->base_table, $view->base_field);
 }
 
 /**
