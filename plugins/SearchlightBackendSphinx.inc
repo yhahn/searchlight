@@ -357,14 +357,22 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushSearchd() {
     $file_path = $this->drushGetConfigPath() . '/log';
+
+    $lock_file = "{$file_path}/searchd.lock";
+    if (file_exists($lock_file)) {
+      $lock = file_get_contents($lock_file);
+      if ((int) $lock === 1) {
+        return drush_log('Search demon is already being restarted', 'error');
+      }
+    }
+    file_put_contents($lock_file, 1);
     if (file_check_directory($file_path, TRUE)) {
       if ($this->drushGenerateMergedConfig()) {
         drush_op('drush_shell_exec', 'searchd -c ' . $this->drushGetConfigFile());
-        return drush_log('Search daemon started.', 'success');
       }
-
     }
-    return drush_log("An error ocurred while starting the search daemon.", 'error');
+    file_put_contents($lock_file, 0);
+    return drush_log('Search daemon started.', 'success');
   }
 
   /**
