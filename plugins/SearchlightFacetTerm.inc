@@ -12,8 +12,13 @@ class SearchlightFacetTerm extends SearchlightFacet {
     $this->term = taxonomy_get_term($this->value);
 
     // Attempt to parse the vocab from the field name.
-    // @TODO: Refactor multivalue handling to make this more palatable.
-    $vid = trim(array_pop(explode('_', $this->name)), 'v');
+    $identifier = trim(array_pop(explode('term_data_tid_', $this->name)));
+    if (is_numeric($identifier)) {
+      $vid = $identifier;
+    }
+    else {
+      $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module = '%s' LIMIT 1", $identifier));
+    }
     $this->vocab = taxonomy_vocabulary_load($vid);
     if (!empty($this->vocab->hierarchy)) {
       $this->tree = array();
