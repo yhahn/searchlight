@@ -169,6 +169,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of setPager().
    */
   function setPager(&$client, $offset, $limit) {
+    // If $limit is 0, interpret as 'unlimited'.
+    $limit = $limit == 0 ? 1000 : $limit;
     $client->searchlightOffset = (int) $offset;
     $client->searchlightLimit = (int) $limit;
   }
