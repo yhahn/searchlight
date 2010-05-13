@@ -32,7 +32,6 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
     // We init the view solely for the generation of labels via the field handler.
     $this->viewInit($query);
 
-    $rendered = array();
     switch ($delta) {
       case 'active':
         if (isset($this->value)) {
@@ -45,22 +44,15 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
         }
         break;
     }
-
     if (!empty($items)) {
-      $op = ($delta === 'active' ? 'remove' : 'add');
-      foreach ($items as $id => $item) {
+      foreach ($items as $k => $item) {
         $format = $this->options['date_format'];
         $timestamp = is_numeric($item['id']) ? $item['id'] : strtotime($item['id']);
-        $item['title'] = format_date($timestamp, 'custom', $format, 0);
-        $title = $op === 'remove' ? t('remove') : $item['title'];
-        $options = $this->environment->getURLOptions($op, $this->name, $id);
-        $item['link'] = l($title, $_GET['q'], $options);
-        $rendered[$id] = $op === 'remove' ?
-          theme('searchlight_facet_active', $this->field, $item) :
-          theme('searchlight_facet_link', $this->field, $item);
+        $items[$k]['title'] = format_date($timestamp, 'custom', $format, 0);
       }
+      return $items;
     }
-    return $rendered;
+    return array();
   }
 
   /**

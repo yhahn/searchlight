@@ -137,8 +137,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
             $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $args) .")";
             break;
           case 'NOT IN':
-            // @TODO: not sure this is correct.
-            $client->searchlightFilters[] = "{$field}:(" . implode(' NOT ', $args) .")";
+            $client->searchlightFilters[] = "-{$field}:(" . implode(' OR ', $args) .")";
             break;
           default:
             //dsm($params);
@@ -170,6 +169,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Override of setPager().
    */
   function setPager(&$client, $offset, $limit) {
+    // If $limit is 0, interpret as 'unlimited'.
+    $limit = $limit == 0 ? 1000 : $limit;
     $client->searchlightOffset = (int) $offset;
     $client->searchlightLimit = (int) $limit;
   }
@@ -415,6 +416,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
         $view->init_query();
         $view->init_handlers();
+
+        // View 3.x dev.
+        if (method_exists($view, 'init_pager')) {
+          $view->init_pager();
+        }
 
         // Datasource view:
         // - Add the "fresh" join.

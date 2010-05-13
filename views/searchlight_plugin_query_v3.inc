@@ -48,6 +48,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if (count($split) >= 2) {
       $field = explode('.', trim(array_shift($split)));
       $operator = strtoupper(trim(array_shift($split)));
+      $possible_args = count($split) ? array_shift($split) : '';
       if (count($field) === 2) {
         $table = $field[0];
         $field = $field[1];
@@ -55,21 +56,39 @@ class searchlight_plugin_query extends views_plugin_query_default {
           if ($info['table'] === $table && ($info['name'] === $field || $info['field'] === $field)) {
             // Get the arguments for this where clause.
             $args = array();
+
+            // If arguments have been specified using query placeholders,
+            // simply grab as many as there have been placeholders specified.
             $argnum = substr_count($clause, '%');
-            if (count($where_args) >= $argnum) {
+            if ($argnum && count($where_args) >= $argnum) {
               while ($argnum > 0) {
                 $args[] = array_shift($where_args);
                 $argnum--;
               }
             }
+            // Otherwise, groan, breath deeply & try to retrieve arguments from
+            // the query.
+            else {
+              $matches = array();
+              preg_match_all('/\w+|\d+/', $possible_args, $matches);
+              if (!empty($matches)) {
+                foreach ($matches as $match) {
+                  $args = array_merge($args, $match);
+                }
+              }
+            }
 
             // Done.
             $this->search_filter[] = array('field' => $name, 'operator' => $operator, 'args' => $args);
-            break;
+            return;
           }
         }
       }
     }
+
+    // If no backend-based filter was added, call the parent method to add
+    // the filter SQL side.
+    parent::add_where($group, $clause, $where_args);
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
@@ -131,7 +150,14 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     // Views pager initialization.
     if (!$this->abort) {
-      $this->init_pager($view);
+      // Views 3.x-alpha3 and prior.
+      if (method_exists($this, 'init_pager')) {
+        $this->init_pager($view);
+      }
+      // Views 3.x dev
+      else if (method_exists($view, 'init_pager')) {
+        $view->init_pager();
+      }
       if ($this->pager->use_pager()) {
         $this->pager->set_current_page($view->current_page);
       }
@@ -168,11 +194,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
 
     if ($this->search_result) {
-      // Clear out normal field, sort, where portions of the query that
-      // have been taken care of by the backend.
-      $this->orderby = array();
-      $this->where = array();
-
       // @TODO: do this with placeholders, args.
       $ids = implode(',', $this->search_result['result']);
       parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");

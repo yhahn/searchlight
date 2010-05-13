@@ -514,6 +514,43 @@ function searchlight_get_facet($datasource, $name) {
 }
 
 /**
+ * Retrieve full datasource information for a given base table.
+ */
+function searchlight_get_datasource($base_table = NULL) {
+  if (!isset($base_table)) {
+    views_include('admin');
+    $active_datasources = array();
+    foreach (array_keys(views_fetch_base_tables()) as $base_table) {
+      $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+      if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
+        $active_datasources[$name] = $datasource;
+      }
+    }
+    return $active_datasources;
+  }
+  else {
+    $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+    if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
+      return $datasource;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Retrieve a new inited Searchlight query.
+ */
+function searchlight_get_query($base_table, $base_field, $backend = NULL) {
+  $backend = !isset($backend) ? searchlight_get_backend() : $backend;
+  if ($backend) {
+    $query = views_get_plugin('query', 'searchlight');
+    $query->init($base_table, $base_field, $backend);
+    return $query;
+  }
+  return FALSE;
+}
+
+/**
  * Parse and build a view from a "$view_name:$view_display" string.
  * @TODO: Deprecate this function. It's primarily used atm for building a view
  * associated with a multivalue field. Once the multivalue field is represented
@@ -649,16 +686,38 @@ function searchlight_environment_init($packed) {
   $values = searchlight_environment_unpack($packed);
   if (!empty($values['environment']) && $environment = searchlight_environment_load($values['environment'])) {
     $environment->initValues($values);
+    searchlight_environment_active($environment);
   }
 }
 
 /**
- * Retrieve a searchlight environment for a given View/display combination.
+ * Static cache/lazy retrieval of the current active environment.
+ * If an environment is active (via PURL modifier), return that environment.
+ * Otherwise, try to locate an environment "relevant" to the specified view
+ * using the view name and display id.
  */
-function searchlight_environment_get($view, $display) {
-  foreach (searchlight_environment_load() as $environment) {
-    if ($environment->view_display === "{$view}:{$display}") {
-      return $environment;
+function searchlight_environment_active($environment = NULL, $view = NULL, $display = NULL, $reset = FALSE) {
+  static $active;
+
+  // Setting.
+  if (!isset($active) || $reset) {
+    $active = NULL;
+  }
+  if (isset($environment)) {
+    $active = $environment;
+  }
+
+  // Retrieval.
+  if (isset($active)) {
+    return $active;
+  }
+  // Match both view & display. Note that a lazy matched environment is not
+  // static cached as multiple may be active on the same page.
+  else if (isset($view, $display)) {
+    foreach (searchlight_environment_load() as $environment) {
+      if ($environment->view_display === "{$view}:{$display}") {
+        return $environment;
+      }
     }
   }
   return FALSE;
@@ -761,30 +820,6 @@ function searchlight_task_access($object, $op) {
         return !empty($object->disabled);
     }
     return TRUE;
-  }
-  return FALSE;
-}
-
-/**
- * Retrieve full datasource information for a given base table.
- */
-function searchlight_get_datasource($base_table = NULL) {
-  if (!isset($base_table)) {
-    views_include('admin');
-    $active_datasources = array();
-    foreach (array_keys(views_fetch_base_tables()) as $base_table) {
-      $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
-      if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
-        $active_datasources[$name] = $datasource;
-      }
-    }
-    return $active_datasources;
-  }
-  else {
-    $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
-    if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
-      return $datasource;
-    }
   }
   return FALSE;
 }

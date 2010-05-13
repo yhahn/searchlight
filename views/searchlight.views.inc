@@ -125,26 +125,22 @@ function searchlight_views_init_query(&$view) {
   // The following is a copy of the $view->query_init() method, with the only
   // difference being that we use the searchlight backend plugin rather than
   // the default views query plugin and pass the backend to the query plugin.
-  if ($backend = searchlight_get_backend()) {
-    if (!empty($view->query)) {
-      $class = get_class($view->query);
-      if ($class && $class != 'stdClass' && !empty($view->query->searchlight)) {
-        // return if query is already initialized.
-        return;
-      }
+  if (!empty($view->query)) {
+    $class = get_class($view->query);
+    if ($class && $class != 'stdClass' && !empty($view->query->searchlight)) {
+      // return if query is already initialized.
+      return;
     }
-
-    // Create and initialize the query object.
-    $views_data = views_fetch_data($view->base_table);
-    $view->base_field = $views_data['table']['base']['field'];
-    if (!empty($views_data['table']['base']['database'])) {
-      $view->base_database = $views_data['table']['base']['database'];
-    }
-
-    // Create and initialize the query object.
-    $view->query = views_get_plugin('query', 'searchlight');
-    $view->query->init($view->base_table, $view->base_field, $backend);
   }
+
+  // Create and initialize the query object.
+  $views_data = views_fetch_data($view->base_table);
+  $view->base_field = $views_data['table']['base']['field'];
+  if (!empty($views_data['table']['base']['database'])) {
+    $view->base_database = $views_data['table']['base']['database'];
+  }
+
+  $view->query = searchlight_get_query($view->base_table, $view->base_field);
 }
 
 /**
@@ -212,8 +208,11 @@ function searchlight_views_default_views_alter(&$views) {
     $view->api_version = 3.0-alpha1;
     $handler = $view->new_display('default', 'Default', 'default');
     foreach (taxonomy_get_vocabularies() as $vocab) {
+      $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
+      $identifier = strtr($identifier, ' -:', '___');
+
       /* Display: Vocabulary */
-      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_'. $vocab->vid);
+      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_'. $identifier);
       $handler->override_option('arguments', array());
       $handler->override_option('relationships', array());
       $handler->override_option('sorts', array());
@@ -232,19 +231,35 @@ function searchlight_views_default_views_alter(&$views) {
           'label' => $vocab->name,
         ),
       ));
-      $handler->override_option('filters', array(
-        'vid' => array(
-          'id' => 'vid',
-          'table' => 'term_data',
-          'field' => 'vid',
-          'value' => array($vocab->vid => $vocab->vid),
-        ),
-      ));
+
+      // If Views can handle the Taxonomy vocab module field for supporting
+      // exportable vocabularies, use it.
+      $data = views_fetch_data('vocabulary');
+      if (isset($data['module']) && !is_numeric($identifier)) {
+        $handler->override_option('filters', array(
+          'module' => array(
+            'id' => 'module',
+            'table' => 'vocabulary',
+            'field' => 'module',
+            'value' => array($vocab->module => $vocab->module),
+          ),
+        ));
+      }
+      else {
+        $handler->override_option('filters', array(
+          'vid' => array(
+            'id' => 'vid',
+            'table' => 'term_data',
+            'field' => 'vid',
+            'value' => array($vocab->vid => $vocab->vid),
+          ),
+        ));
+      }
       $handler->override_option('searchlight_multivalue', array(
         'field' => 'term_data_tid',
         'label_field' => 'term_data_name',
         'override' => array(
-          'name' => 'term_data_tid_v'. $vocab->vid,
+          'name' => 'term_data_tid_'. $identifier,
           'label' => $vocab->name,
         ),
       ));

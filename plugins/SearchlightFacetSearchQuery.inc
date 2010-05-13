@@ -17,21 +17,31 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
   }
 
   /**
+   * Override of theme().
+   * Only theme active we use a different op for the URL options.
+   */
+  function theme($item, $delta) {
+    switch ($delta) {
+      case 'active':
+        $options = $this->environment->getURLOptions('active', $this->name, $item['id']);
+        $item['link'] = l(t('remove'), $_GET['q'], $options);
+        return theme('searchlight_facet_active', $this->field, $item);
+    }
+  }
+
+  /**
    * Override of render().
    * The SearchQuery is only rendered active and when a search query is present
    * on the current page query.
    */
   function render($query, $delta) {
-    $rendered = array();
     if ($delta === 'active' && !empty($query->search_query)) {
-      $item = array(
+      return array(array(
         'id' => $query->search_query,
         'title' => $query->search_query,
-      );
-      $item['link'] = l(t('remove'), $_GET['q'], $this->environment->getURLOptions('active'));
-      $rendered[] = theme('searchlight_facet_active', $this->field, $item);
+      ));
     }
-    return $rendered;
+    return array();
   }
 
   /**
