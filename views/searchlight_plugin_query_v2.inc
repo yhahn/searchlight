@@ -87,11 +87,15 @@ class searchlight_plugin_query extends views_query {
 
             // Done.
             $this->search_filter[] = array('field' => $name, 'operator' => $operator, 'args' => $args);
-            break;
+            return;
           }
         }
       }
     }
+
+    // If no backend-based filter was added, call the parent method to add
+    // the filter SQL side.
+    parent::add_where($group, $clause, $where_args);
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
@@ -190,11 +194,6 @@ class searchlight_plugin_query extends views_query {
     $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
 
     if ($this->search_result) {
-      // Clear out normal field, sort, where portions of the query that
-      // have been taken care of by the backend.
-      $this->orderby = array();
-      $this->where = array();
-
       // @TODO: do this with placeholders, args.
       $ids = implode(',', $this->search_result['result']);
       parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");
