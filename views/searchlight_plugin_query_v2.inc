@@ -183,7 +183,7 @@ class searchlight_plugin_query extends views_query {
     $this->backend->setSort($this->client, $this->datasource, $this->search_sort);
     $this->backend->setFilter($this->client, $this->datasource, $this->search_filter);
     $this->backend->setPager($this->client, $this->offset, $this->limit);
-    if ($this->base_table === 'node' && !user_access('administer nodes')) {
+    if ($this->base_table === 'node' && !user_access('administer nodes') && !empty($this->datasource->options['node_access'])) {
       $this->backend->setNodeAccess($this->client, node_access_grants('view'));
     }
 
