@@ -88,12 +88,14 @@ class SearchlightFacetTerm extends SearchlightFacet {
         // facet or (root terms) removing the term facets alltogether.
         else {
           if ($parent = reset($term_item->parents)) {
+            $path = $this->environment->getURLPath();
             $options = $this->environment->getURLOptions('add', $this->name, $parent);
-            $item['link'] = l(t('remove'), $_GET['q'], $options);
+            $item['link'] = l(t('remove'), $path, $options);
           }
           else {
+            $path = $this->environment->getURLPath();
             $options = $this->environment->getURLOptions('remove', $this->name, $term_item->tid);
-            $item['link'] = l(t('remove'), $_GET['q'], $options);
+            $item['link'] = l(t('remove'), $path, $options);
           }
           return theme('searchlight_facet_active', $this->field, $item);
         }

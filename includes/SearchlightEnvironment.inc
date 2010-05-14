@@ -289,6 +289,16 @@ class SearchlightEnvironment {
   }
 
   /**
+   * Get the URL path for this environment.
+   */
+  function getURLPath() {
+    if ($this->initView()) {
+      return $this->view->get_url();
+    }
+    return $_GET['q'];
+  }
+
+  /**
    * Get the URL options for the current set of active facets, adjusted using
    * one of the $op operations.
    *
