@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Facet plugin class for taxonomy terms.
+ */
 class SearchlightFacetTerm extends SearchlightFacet {
   /**
    * Override of construct().

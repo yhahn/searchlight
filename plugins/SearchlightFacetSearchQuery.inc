@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Facet plugin class that provides a facet corresponding to the current
+ * fulltext search query.
+ */
 class SearchlightFacetSearchQuery extends SearchlightFacet {
   /**
    * Override of query().

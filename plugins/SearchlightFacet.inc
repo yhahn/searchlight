@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Base Facet plugin class.
+ */
 class SearchlightFacet {
   var $name;
   var $field;

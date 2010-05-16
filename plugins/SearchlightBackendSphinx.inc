@@ -3,7 +3,9 @@
 define('SEARCHLIGHT_SPHINX_FILTER_MAX', 100000000000);
 define('SEARCHLIGHT_SPHINX_FILTER_MIN', 0);
 
-
+/**
+ * Provides integration with Sphinx.
+ */
 class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of settingsDefault().

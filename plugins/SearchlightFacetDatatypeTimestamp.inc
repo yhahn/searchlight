@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Facet plugin class for timestamps.
+ */
 class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
   /**
    * Override of query().
