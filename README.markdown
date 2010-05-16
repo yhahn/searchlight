@@ -1,11 +1,3 @@
-READ THIS
----------
-- Searchlight is currently being built against Views 3.x-alpha3. There is a
-  small API change in Views 3.x-dev that **breaks** Searchlight. Once the next
-  3.x tag is out, we will update the Searchlight API to work with the new
-  release.
-
-
 Searchlight
 -----------
 Searchlight is a refactored version of the early experiment [sphinx_views][1],
@@ -25,7 +17,7 @@ goals that set it apart:
 
 - Each Drupal site should be able to define its own schema and index
   configuration. We're Views-centric, not node-centric, so anything that has
-  been properly exposed to Views should be fair game.
+  been properly exposed to Views is fair game.
 - We think there is a lot of common ground between good search solutions, enough
   so that there can be a lot of shared interface points. We want search backends
   to be as swappable as possible, to the point where you can take a site that's
