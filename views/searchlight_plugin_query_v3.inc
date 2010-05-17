@@ -222,6 +222,16 @@ class searchlight_plugin_query extends views_plugin_query_default {
       // Restore original values.
       $this->offset = $offset;
       $this->limit = $limit;
+
+      if ($view->built && !empty($this->search_result)) {
+        // Ensure the order of the result set from Views matches that of the
+        // search backend.
+        $result = array_fill_keys($this->search_result['result'], NULL);
+        foreach ($view->result as $row) {
+          $result[$row->{$view->base_field}] = $row;
+        }
+        $view->result = array_values(array_filter($result));
+      }
     }
   }
 }

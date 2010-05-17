@@ -201,6 +201,7 @@ class searchlight_plugin_query extends views_query {
       $view->build_info['query'] = $this->query();
       $view->build_info['count_query'] = "SELECT FALSE";
       $view->build_info['query_args'] = $this->get_where_args();
+      $view->built = TRUE;
     }
   }
 
@@ -221,6 +222,19 @@ class searchlight_plugin_query extends views_query {
       // Restore original values.
       $this->offset = $offset;
       $this->limit = $limit;
+
+      if ($view->built && !empty($this->search_result)) {
+        // 2.x: Actually execute the View and process the result set order.
+        $view->execute();
+
+        // Ensure the order of the result set from Views matches that of the
+        // search backend.
+        $result = array_fill_keys($this->search_result['result'], NULL);
+        foreach ($view->result as $row) {
+          $result[$row->{$view->base_field}] = $row;
+        }
+        $view->result = array_values(array_filter($result));
+      }
     }
   }
 }
