@@ -12,12 +12,8 @@ class searchlight_handler_filter_search extends views_handler_filter {
    * Override of query().
    */
   function query() {
-    if (views_api_version() == '2.0') {
-      $value = trim($this->value);
-    }
-    else {
-      $value = trim(current($this->value));
-    }
+    $value = is_array($this->value) ? reset($this->value) : $this->value;
+    $value = trim($value);
     $this->query->set_search_options($this->options);
     $this->query->set_search_query($value);
   }
