@@ -413,14 +413,32 @@ class SearchlightBackendSolr extends SearchlightBackend {
         // - Set the pager limit.
         if ($name === 'datasource') {
           $view->set_items_per_page($this->settings['item_limit']);
-          $view->query->pager->query();
+
+          // View 3.x-alpha3.
+          if (isset($view->query->pager)) {
+            $view->query->pager->query();
+          }
+          // View 3.x dev.
+          else if (isset($view->pager) && method_exists($view->pager, 'query')) {
+            $view->pager->query();
+          }
+
           $this->queryFresh($view->query);
         }
         // MVA view:
         // - add an additional WHERE condition against items retrieved by the datasource view.
         else if (!empty($items['datasource'])) {
           $view->set_items_per_page(0);
-          $view->query->pager->query();
+
+          // View 3.x-alpha3.
+          if (isset($view->query->pager)) {
+            $view->query->pager->query();
+          }
+          // View 3.x dev.
+          else if (isset($view->pager) && method_exists($view->pager, 'query')) {
+            $view->pager->query();
+          }
+
           $ids = implode(',', array_keys($items['datasource']));
           $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
         }
