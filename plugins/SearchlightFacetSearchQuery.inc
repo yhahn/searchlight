@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Facet plugin class that provides a facet corresponding to the current
+ * fulltext search query.
+ */
 class SearchlightFacetSearchQuery extends SearchlightFacet {
   /**
    * Override of query().
@@ -23,8 +27,9 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
   function theme($item, $delta) {
     switch ($delta) {
       case 'active':
+        $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('active', $this->name, $item['id']);
-        $item['link'] = l(t('remove'), $_GET['q'], $options);
+        $item['link'] = l(t('remove'), $path, $options);
         return theme('searchlight_facet_active', $this->field, $item);
     }
   }

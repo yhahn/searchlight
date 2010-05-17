@@ -4,8 +4,8 @@
  * Abstract class, defines interface for swappable search backends.
  */
 abstract class SearchlightBackend {
+  var $id;
   var $settings;
-  var $views;
 
   /**
    * Constructor. Unpack backend variable & populate default settings.

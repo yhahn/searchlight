@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Base Facet plugin class.
+ */
 class SearchlightFacet {
   var $name;
   var $field;
@@ -108,12 +111,14 @@ class SearchlightFacet {
   function theme($item, $delta) {
     switch ($delta) {
       case 'active':
+        $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('remove', $this->name, $item['id']);
-        $item['link'] = l(t('remove'), $_GET['q'], $options);
+        $item['link'] = l(t('remove'), $path, $options);
         return theme('searchlight_facet_active', $this->field, $item);
       case 'facets':
+        $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('add', $this->name, $item['id']);
-        $item['link'] = l($item['title'], $_GET['q'], $options);
+        $item['link'] = l($item['title'], $path, $options);
         return theme('searchlight_facet_link', $this->field, $item);
     }
   }

@@ -20,8 +20,8 @@ Requirements & dependencies
 ---------------------------
 - PHP 5.2 or greater
 - Drupal 6.x or equivalent core (e.g. Pressflow)
-- CTools 1.3 or later
-- Views 2.x (a relatively recent release) or 3.x-alpha3
+- CTools 1.3 or greater
+- Views 2.x (a relatively recent release) or 3.x
 - PURL 1.x
 - Drush 3.0
 - One of the Search backend services (e.g. Apache Solr or Sphinx)

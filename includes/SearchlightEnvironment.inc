@@ -57,12 +57,10 @@ class SearchlightEnvironment {
       $this->datasource = NULL;
 
       // Build the view if none was explicitly provided.
-      if (!isset($view)) {
-        $view = searchlight_build_view($this->view_display);
-      }
+      $view = isset($view) ? $view : searchlight_build_view($this->view_display);
 
-      // Check that the view matches the environment view and init.
-      if ($view && "{$view->name}:{$view->current_display}" === $this->view_display) {
+      // Create a reference to the view and init plugins.
+      if ($view) {
         $this->view = $view;
         $this->query = $view->query;
         $this->datasource = $view->query->datasource;
@@ -286,6 +284,16 @@ class SearchlightEnvironment {
     else if ($datasource = $this->getDatasource()) {
       return (isset($datasource->fields[$name]) && in_array($datasource->fields[$name]['usage'], array('attribute', 'multivalue'), TRUE));
     }
+  }
+
+  /**
+   * Get the URL path for this environment.
+   */
+  function getURLPath() {
+    if ($this->initView()) {
+      return $this->view->get_url();
+    }
+    return $_GET['q'];
   }
 
   /**
