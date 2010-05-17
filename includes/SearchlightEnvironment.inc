@@ -57,12 +57,10 @@ class SearchlightEnvironment {
       $this->datasource = NULL;
 
       // Build the view if none was explicitly provided.
-      if (!isset($view)) {
-        $view = searchlight_build_view($this->view_display);
-      }
+      $view = isset($view) ? $view : searchlight_build_view($this->view_display);
 
-      // Check that the view matches the environment view and init.
-      if ($view && "{$view->name}:{$view->current_display}" === $this->view_display) {
+      // Create a reference to the view and init plugins.
+      if ($view) {
         $this->view = $view;
         $this->query = $view->query;
         $this->datasource = $view->query->datasource;

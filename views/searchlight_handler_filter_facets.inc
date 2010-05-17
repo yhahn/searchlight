@@ -13,7 +13,7 @@ class searchlight_handler_filter_facets extends views_handler_filter {
    */
   function query() {
     if (!empty($this->query->searchlight) && $environment = searchlight_environment_active(NULL, $this->view->name, $this->view->current_display)) {
-      if ($environment->initView($this->view)) {
+      if ($environment->initView($this->view, TRUE)) {
         $environment->query($this->query);
       }
     }
