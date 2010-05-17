@@ -370,6 +370,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     file_put_contents($lock_file, 1);
     if (file_check_directory($file_path, TRUE)) {
       if ($this->drushGenerateMergedConfig()) {
+        if (file_exists("{$file_path}/searchd.pid")) {
+          $pid = file_get_contents("{$file_path}/searchd.pid");
+          if ((int) $pid) {
+            // stop the daemon first
+            drush_op('drush_shell_exec', 'searchd --stop -c ' . $this->drushGetConfigFile());
+          }
+        }
+
+        // start the daemon
         drush_op('drush_shell_exec', 'searchd -c ' . $this->drushGetConfigFile());
       }
     }
@@ -476,7 +485,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($sphinx_conf) {
         $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
         if ($sphinx_conf === $existing) {
-          return drush_log("{$conf_file}/sphinx.conf is unchanged.", 'success');
+          return drush_log("{$conf_file} is unchanged.", 'success');
         }
         else {
           file_put_contents($conf_file, $sphinx_conf);
