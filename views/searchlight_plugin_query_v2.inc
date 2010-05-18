@@ -152,7 +152,7 @@ class searchlight_plugin_query extends views_query {
     // to allow facet queries to run.
     if (empty($this->fields) || (!empty($this->search_options['hideEmpty']) && empty($this->search_query))) {
       $this->abort = TRUE;
-      $this->clear_fields();
+      parent::add_where(0, "FALSE");
     }
 
     // Views pager initialization.
@@ -202,6 +202,9 @@ class searchlight_plugin_query extends views_query {
       $view->build_info['count_query'] = "SELECT FALSE";
       $view->build_info['query_args'] = $this->get_where_args();
       $view->built = TRUE;
+    }
+    elseif (!empty($this->search_query)) {
+      parent::add_where(0, "FALSE");
     }
   }
 
