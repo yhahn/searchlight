@@ -349,7 +349,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // load the previous file 
       $old_config = (file_exists($conf_file)) ? file_get_contents($conf_file) : '';
 
-      if (!$old_config !== $string) {
+      if ($old_config != $string) {
         file_put_contents($conf_file, $string);
         return drush_log(dt("Regenerated the Sphinx configuration file"), 'success');
       }
@@ -443,13 +443,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
       variable_set('searchlight_sphinx_last', time());
       drush_log('Indexing complete.', 'success');
+      if ($changed === TRUE) {
+        return $this->drushSearchd();
+      }
     }
     else {
       return drush_log("An error ocurred while indexing.", 'error');
-    }
-
-    if ($changed) {
-      return $this->drushSearchd();
     }
   }
 
