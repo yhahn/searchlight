@@ -214,4 +214,17 @@ abstract class SearchlightBackend {
    */
   function drushConf() {
   }
+
+  /**
+   * Execute functionality on a drush cron run.
+   */
+  function drushCron() {
+  }
+
+  /**
+   * Initiate site when installed by Aegir backend.
+   */
+  function drushAegirInstall() {
+  }
+
 }

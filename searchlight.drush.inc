@@ -50,3 +50,19 @@ function drush_searchlight_searchd() {
   $backend = searchlight_get_backend();
   $backend->drushSearchd();
 }
+
+/**
+ * After a succesfully new site installed in aegir.
+ */
+function drush_searchlight_post_provision_install($url) {
+  $backend = searchlight_get_backend();
+  $backend->drushAegirInstall();
+}
+
+/**
+ * After cron has been run succesfully.
+ */
+function drush_searchlight_post_core_cron() {
+  $backend = searchlight_get_backend();
+  $backend->drushCron();
+}
