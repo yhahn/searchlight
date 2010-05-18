@@ -628,6 +628,7 @@ function searchlight_datasource_save($datasource) {
   else {
     drupal_write_record('searchlight_datasource', $datasource);
   }
+  variable_set('searchlight_config_changed', true);
   searchlight_datasource_load(NULL, TRUE);
   searchlight_invalidate_cache();
   searchlight_invalidate_index($datasource->base_table);

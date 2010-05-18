@@ -324,32 +324,38 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf_path = $this->drushGetConfigPath();
     $conf_file = $this->drushGetConfigFile();
 
-    $files = array();
-    $files[] = $conf_path . '/sphinx.conf';
+    if (file_check_directory($conf_path, TRUE)) {
+      $files = array();
 
-    $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..') , 0, false, 'name');
+      // rerieve list of possible configuration file matches.
+      $files[] = $conf_path . '/sphinx.conf';
 
-    foreach ($matches as $name => $file) {
-      $files[] = $file->filename;
-    }
+      $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..') , 0, false, 'name');
 
-    $string = '';
-    if (sizeof($files)) {
-      foreach ($files as $filename) {
-        if (file_exists($filename) && is_readable($filename)) {
-          $string .= "\n" . file_get_contents($filename);
+      foreach ($matches as $name => $file) {
+        $files[] = $file->filename;
+      }
+
+      $string = '';
+      if (sizeof($files)) {
+        foreach ($files as $filename) {
+          if (file_exists($filename) && is_readable($filename)) {
+            // concatenate contents of valid configuration file.
+            $string .= "\n" . file_get_contents($filename);
+          }
         }
       }
-    }
 
-    $old_config = file_get_contents($conf_file);
+      // load the previous file 
+      $old_config = (file_exists($conf_file)) ? file_get_contents($conf_file) : '';
 
-    if (!$old_config !== $string) {
-      file_put_contents($conf_file, $string);
-      return drush_log(dt("Regenerated the Sphinx configuration file"), 'success');
-    }
-    else {
-      drush_log(dt("Sphinx configuration file is up to date"), 'success');
+      if (!$old_config !== $string) {
+        file_put_contents($conf_file, $string);
+        return drush_log(dt("Regenerated the Sphinx configuration file"), 'success');
+      }
+      else {
+        drush_log(dt("Sphinx configuration file is up to date"), 'success');
+      }
     }
     return false;
   }
@@ -357,33 +363,35 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of drushSearchd().
    */
-  function drushSearchd() {
+  function drushSearchd($command = 'start') {
     $file_path = $this->drushGetConfigPath() . '/log';
 
     $lock_file = "{$file_path}/searchd.lock";
-    if (file_exists($lock_file)) {
-      $lock = file_get_contents($lock_file);
-      if ((int) $lock === 1) {
+    if (file_check_directory($file_path, TRUE)) {
+      $lock = file_exists($lock_file) ? file_get_contents($lock_file) : 0;
+
+      if ((int) $lock == 1) {
         return drush_log('Search demon is already being restarted', 'error');
       }
-    }
-    file_put_contents($lock_file, 1);
-    if (file_check_directory($file_path, TRUE)) {
-      if ($this->drushGenerateMergedConfig()) {
-        if (file_exists("{$file_path}/searchd.pid")) {
-          $pid = file_get_contents("{$file_path}/searchd.pid");
-          if ((int) $pid) {
-            // stop the daemon first
-            drush_op('drush_shell_exec', 'searchd --stop -c ' . $this->drushGetConfigFile());
-          }
+
+      file_put_contents($lock_file, '1');
+      if (file_check_directory($file_path, TRUE)) {
+        $pid_file = "{$file_path}/searchd.pid";
+        $pid = file_exists($pid_file) ? file_get_contents($pid_file) : '';
+
+        if ((int) $pid) {
+          // stop the daemon first
+          drush_op('drush_shell_exec', 'searchd --stop -c ' . $this->drushGetConfigFile());
         }
 
-        // start the daemon
-        drush_op('drush_shell_exec', 'searchd -c ' . $this->drushGetConfigFile());
+        if ($command != 'stop') {
+          // start the daemon
+          drush_op('drush_shell_exec', 'searchd -c ' . $this->drushGetConfigFile());
+        }
       }
+      file_put_contents($lock_file, '0');
+      return drush_log('Search daemon started.', 'success');
     }
-    file_put_contents($lock_file, 0);
-    return drush_log('Search daemon started.', 'success');
   }
 
   /**
@@ -391,6 +399,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushIndex() {
     // Create the sphinx directory if it doesn't exist.
+    $changed = $this->drushGenerateMergedConfig();
     $file_path = $this->drushGetConfigPath() . '/indexes';
     if (file_check_directory($file_path, TRUE)) {
       // Determine if we should update deltas only.
@@ -433,43 +442,56 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       drupal_flush_all_caches();
       db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
       variable_set('searchlight_sphinx_last', time());
-      return drush_log('Indexing complete.', 'success');
+      drush_log('Indexing complete.', 'success');
     }
-    return drush_log("An error ocurred while indexing.", 'error');
+    else {
+      return drush_log("An error ocurred while indexing.", 'error');
+    }
+
+    if ($changed) {
+      return $this->drushSearchd();
+    }
   }
 
   /**
    * Override of drushConf().
    */
   function drushConf() {
-   $file_path = $this->drushGetConfigPath();
-   $conf_path = $file_path .'/index.d';
-   if (drush_get_option('sl-sphinx-base-conf', TRUE)) {
-     $this->drushBaseConf();
-   }
+     if (!variable_get('searchlight_config_changed', true)) {
+       return drush_log('Sphinx configuration not changed', 'success');
+     }
+     else {
+       variable_set('searchlight_config_changed', false);
+     }
 
-   if (file_check_directory($conf_path, TRUE)) {
-      // Collect configuration arrays for each datasource.
-      foreach (searchlight_get_datasource() as $datasource) {
-        $source = $this->sphinxDatasourceConf($datasource);
+     $file_path = $this->drushGetConfigPath();
+     $conf_path = $file_path .'/index.d';
+     if (drush_get_option('sl-sphinx-base-conf', TRUE)) {
+       $this->drushBaseConf();
+     }
 
-        // Add delta index.
-        if (!empty($this->settings['delta_ttl'])) {
-          $source = $this->sphinxDatasourceConf($source, TRUE);
+     if (file_check_directory($conf_path, TRUE)) {
+        // Collect configuration arrays for each datasource.
+        foreach (searchlight_get_datasource() as $datasource) {
+          $source = $this->sphinxDatasourceConf($datasource);
+
+          // Add delta index.
+          if (!empty($this->settings['delta_ttl'])) {
+            $source = $this->sphinxDatasourceConf($source, TRUE);
+          }
+
+          $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
+
+          // Generate configuration file from datasource.
+          $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
+          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+          if ($sphinx_conf !== $existing) {
+            file_put_contents($conf_file, $sphinx_conf);
+            drush_log("{$conf_file} was written successfully.", 'success');
+          }
         }
 
-        $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
-
-        // Generate configuration file from datasource.
-        $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
-        $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
-        if ($sphinx_conf !== $existing) {
-          file_put_contents($conf_file, $sphinx_conf);
-          drush_log("{$conf_file} was written successfully.", 'success');
-        }
-      }
-
-      return drush_log("Sphinx configuration files were written", 'success');
+        return drush_log("Sphinx configuration files were written", 'success');
     }
     return drush_log("Sphinx configuration files could not be written.", 'error');
   }
