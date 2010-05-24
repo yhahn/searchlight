@@ -456,41 +456,41 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of drushConf().
    */
   function drushConf() {
-     if (!variable_get('searchlight_config_changed', true)) {
-       return drush_log('Sphinx configuration not changed', 'success');
-     }
-     else {
-       variable_set('searchlight_config_changed', false);
-     }
+    $file_path = $this->drushGetConfigPath();
+    $conf_path = $file_path .'/index.d';
 
-     $file_path = $this->drushGetConfigPath();
-     $conf_path = $file_path .'/index.d';
-     if (drush_get_option('sl-sphinx-base-conf', TRUE)) {
-       $this->drushBaseConf();
-     }
+    if (!variable_get('searchlight_config_changed', TRUE) && file_check_directory($conf_path, TRUE)) {
+      return drush_log('Sphinx configuration not changed', 'success');
+    }
+    else {
+      variable_set('searchlight_config_changed', FALSE);
+    }
 
-     if (file_check_directory($conf_path, TRUE)) {
-        // Collect configuration arrays for each datasource.
-        foreach (searchlight_get_datasource() as $datasource) {
-          $source = $this->sphinxDatasourceConf($datasource);
+    if (file_check_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
+      $this->drushBaseConf();
+    }
 
-          // Add delta index.
-          if (!empty($this->settings['delta_ttl'])) {
-            $source = $this->sphinxDatasourceConf($source, TRUE);
-          }
+    if (file_check_directory($conf_path, TRUE)) {
+      // Collect configuration arrays for each datasource.
+      foreach (searchlight_get_datasource() as $datasource) {
+        $source = $this->sphinxDatasourceConf($datasource);
 
-          $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
-
-          // Generate configuration file from datasource.
-          $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
-          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
-          if ($sphinx_conf !== $existing) {
-            file_put_contents($conf_file, $sphinx_conf);
-            drush_log("{$conf_file} was written successfully.", 'success');
-          }
+        // Add delta index.
+        if (!empty($this->settings['delta_ttl'])) {
+          $source = $this->sphinxDatasourceConf($source, TRUE);
         }
 
-        return drush_log("Sphinx configuration files were written", 'success');
+        $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
+
+        // Generate configuration file from datasource.
+        $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
+        $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+        if ($sphinx_conf !== $existing) {
+          file_put_contents($conf_file, $sphinx_conf);
+          drush_log("{$conf_file} was written successfully.", 'success');
+        }
+      }
+      return drush_log("Sphinx configuration files were written", 'success');
     }
     return drush_log("Sphinx configuration files could not be written.", 'error');
   }
