@@ -13,8 +13,12 @@ class searchlight_plugin_query extends views_query {
   var $search_query;
   var $searchlight;
 
+  /**
+   * Overrides.
+   */
   function construct() {}
   function set_definition() {}
+  function searchlight_plugin_query($base_table = 'node', $base_field = 'nid') {}
 
   function init_pager($view) {
     $this->pager = new searchlight_plugin_pager($view);
