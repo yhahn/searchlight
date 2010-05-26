@@ -382,15 +382,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         if ((int) $pid) {
           // stop the daemon first
           drush_op('drush_shell_exec', 'searchd --stop -c ' . $this->drushGetConfigFile());
+          drush_log('Search daemon stopped.', 'success');
         }
 
         if ($command != 'stop') {
           // start the daemon
           drush_op('drush_shell_exec', 'searchd -c ' . $this->drushGetConfigFile());
+          drush_log('Search daemon started.', 'success');
         }
       }
       file_put_contents($lock_file, '0');
-      return drush_log('Search daemon started.', 'success');
+      return;
     }
   }
 
