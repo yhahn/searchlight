@@ -72,10 +72,7 @@ class searchlight_plugin_query extends views_query {
             // simply grab as many as there have been placeholders specified.
             $argnum = substr_count($clause, '%');
             if ($argnum && count($where_args) >= $argnum) {
-              while ($argnum > 0) {
-                $args[] = array_shift($where_args);
-                $argnum--;
-              }
+              $args = array_slice($where_args, 0, $argnum);
             }
             // Otherwise, groan, breath deeply & try to retrieve arguments from
             // the query.
