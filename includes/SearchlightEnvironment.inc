@@ -258,6 +258,7 @@ class SearchlightEnvironment {
     switch ($form_state['clicked_button']['#id']) {
       case 'edit-view-display-update':
         $this->view_display = $form_state['values']['view_display']['view_display'];
+        searchlight_environment_save($this);
         break;
       case 'edit-save':
         $this->facets = $form_state['values']['facets'];
@@ -270,6 +271,9 @@ class SearchlightEnvironment {
         }
 
         $this->options = $form_state['values']['options'];
+
+        searchlight_environment_save($this);
+        drupal_set_message(t('Environment @environment saved.', array('@environment' => $this->name)));
         break;
     }
   }

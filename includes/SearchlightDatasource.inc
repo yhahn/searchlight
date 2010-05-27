@@ -427,12 +427,13 @@ class SearchlightDatasource {
   function optionsSubmit($form, &$form_state) {
     switch ($form_state['clicked_button']['#id']) {
       case 'edit-index-invalidate':
-        // Do nothing. searchlight_datasource_save() will call
-        // searchlight_invalidate_index() for us.
+        searchlight_datasource_save($this);
+        drupal_set_message(t('The index for this datasource needs to be rebuilt.'));
         break;
       case 'edit-fields-new-add':
         list($table, $field) = explode('.', $form_state['values']['fields']['new']['field']);
         $this->addField($table, $field);
+        searchlight_datasource_save($this, TRUE);
         break;
       case 'edit-fields-remove':
         foreach ($form_state['values']['fields']['fields'] as $name => $values) {
@@ -440,9 +441,11 @@ class SearchlightDatasource {
             $this->removeField(NULL, NULL, $name);
           }
         }
+        searchlight_datasource_save($this, TRUE);
         break;
       case 'edit-multivalues-new-add':
         $this->addMultivalue($form_state['values']['multivalues']['new']['field']);
+        searchlight_datasource_save($this, TRUE);
         break;
       case 'edit-multivalues-remove':
         foreach ($form_state['values']['multivalues']['fields'] as $name => $values) {
@@ -450,6 +453,7 @@ class SearchlightDatasource {
             $this->removeMultivalue($name);
           }
         }
+        searchlight_datasource_save($this, TRUE);
         break;
       case 'edit-save':
         // Save additional metadata from fields, multivalues.
@@ -465,6 +469,10 @@ class SearchlightDatasource {
         }
         // Save options.
         $this->options = $form_state['values']['options'];
+
+        // Save the datasource.
+        searchlight_datasource_save($this);
+        drupal_set_message(t('Datasource @datasource saved. The index for this datasource needs to be rebuilt.', array('@datasource' => $this->name)));
         break;
     }
   }

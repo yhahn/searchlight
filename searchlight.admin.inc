@@ -109,8 +109,6 @@ function searchlight_admin_environment_edit($form_state, $environment) {
 function searchlight_admin_environment_edit_submit(&$form, $form_state) {
   if (!empty($form['#environment'])) {
     $form['#environment']->optionsSubmit($form, $form_state);
-    searchlight_environment_save($form['#environment']);
-    drupal_set_message(t('Environment @environment saved.', array('@environment' => $form['#environment']->name)));
   }
 }
 
@@ -255,8 +253,6 @@ function searchlight_admin_datasource_edit($form_state, $datasource) {
 function searchlight_admin_datasource_edit_submit(&$form, $form_state) {
   if (!empty($form['#datasource'])) {
     $form['#datasource']->optionsSubmit($form, $form_state);
-    searchlight_datasource_save($form['#datasource']);
-    drupal_set_message(t('Datasource @datasource saved. The index for this datasource needs to be rebuilt.', array('@datasource' => $form['#datasource']->name)));
   }
 }
 
@@ -271,7 +267,6 @@ function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
   if ($form) {
     $datasource = searchlight_datasource_load($form['#datasource_name']);
     $datasource->optionsSubmit($form, $form_state);
-    searchlight_datasource_save($datasource);
 
     $form['#datasource'] = $datasource;
     $datasource->optionsForm($form, $form_state);

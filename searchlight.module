@@ -622,11 +622,14 @@ function searchlight_datasource_load($name = NULL, $reset = FALSE) {
  *
  * @param $datasource
  *   The datasource object to be saved.
+ * @param $editing
+ *   Boolean flag for whether this datasource is still being edited. Allows for
+ *   quick saves without invalidating the datasource index repeatedly.
  *
  * @return
  *   Returns true on success, false on failure.
  */
-function searchlight_datasource_save($datasource) {
+function searchlight_datasource_save($datasource, $editing = FALSE) {
   $existing = searchlight_datasource_load($datasource->name, TRUE);
   if ($existing && ($existing->export_type & EXPORT_IN_DATABASE)) {
     drupal_write_record('searchlight_datasource', $datasource, 'name');
@@ -634,10 +637,12 @@ function searchlight_datasource_save($datasource) {
   else {
     drupal_write_record('searchlight_datasource', $datasource);
   }
-  variable_set('searchlight_config_changed', true);
+  variable_set('searchlight_config_changed', TRUE);
   searchlight_datasource_load(NULL, TRUE);
-  searchlight_invalidate_cache();
-  searchlight_invalidate_index($datasource->base_table);
+
+  if (!$editing) {
+    searchlight_invalidate_index($datasource->base_table);
+  }
   return TRUE;
 }
 
