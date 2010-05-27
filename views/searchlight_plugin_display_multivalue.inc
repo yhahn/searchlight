@@ -72,7 +72,7 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
 
     $fields = array();
     foreach ($handlers as $handler) {
-      if ($handler->real_field !== $handler->view->base_field) {
+      if (!empty($handler->relationship) || $handler->real_field !== $handler->view->base_field) {
         $fields[$handler->field_alias] = array(
           'label' => $handler->ui_name() . " ({$handler->real_field})",
           'datatype' => $this->get_datatype($handler, $handler->table, $handler->real_field),
@@ -91,7 +91,7 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
             $table = isset($info['table']) ? $info['table'] : $table;
             $field = $info['field'];
           }
-          if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+          if (!empty($handler->relationship) || $field !== $handler->view->base_field || $table !== $handler->view->base_table) {
             $fields[$handler->aliases[$field]] = array(
               'label' => $handler->ui_name() . " ({$field})",
               'datatype' => $this->get_datatype($handler, $table, $field),
@@ -141,6 +141,16 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
   }
 
   /**
+   * Override of option_definition().
+   */
+  function option_definition () {
+    $options = parent::option_definition();
+    $options[$this->my_name()]['field'] = array('default' => NULL);
+    $options[$this->my_name()]['label_field'] = array('default' => NULL);
+    return $options;
+  }
+
+  /**
    * Provide the default form for setting options.
    */
   function options_form(&$form, &$form_state) {
@@ -168,6 +178,20 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
           '#default_value' => isset($options['label_field']) ? $options['label_field'] : NULL,
         );
         $form[$this->my_name()] = $subform;
+        break;
+    }
+  }
+
+  /**
+   * Perform any necessary changes to the form values prior to storage.
+   * There is no need for this function to actually store the data.
+   */
+  function options_submit(&$form, &$form_state) {
+    // It is very important to call the parent function here:
+    parent::options_submit($form, $form_state);
+    switch ($form_state['section']) {
+      case $this->my_name():
+        $this->set_option($form_state['section'], $form_state['values'][$form_state['section']]);
         break;
     }
   }
