@@ -142,12 +142,10 @@ function searchlight_menu() {
  * Implementation of hook_menu_alter().
  */
 function searchlight_menu_alter(&$items) {
-  if (module_exists('search')) {
-    $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
-    $items['admin/settings/search']['title'] = 'Search';
-    $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
-    unset($items['admin/settings/search']['weight']);
-  }
+  $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
+  $items['admin/settings/search']['title'] = 'Search';
+  $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
+  unset($items['admin/settings/search']['weight']);
 }
 
 /**
