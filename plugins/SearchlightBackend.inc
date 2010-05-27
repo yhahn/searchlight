@@ -200,7 +200,7 @@ abstract class SearchlightBackend {
   /**
    * Start a search backend daemon process through drush.
    */
-  function drushSearchd() {
+  function drushSearchd($command = 'start') {
   }
 
   /**
