@@ -191,16 +191,25 @@ function searchlight_nodeapi($node, $op) {
  * Implementation of hook_comment().
  */
 function searchlight_comment(&$a1, $op) {
+  $update_node = FALSE;
   switch ($op) {
     case 'insert':
       db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0);
+      $update_node = TRUE;
       break;
     case 'update':
       db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']);
+      $update_node = TRUE;
       break;
     case 'delete':
       db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']);
+      $update_node = TRUE;
       break;
+  }
+  if ($update_node) {
+    // Mark the parent node as needing an update. Changes in node comments
+    // can affect the node as well (e.g. node_comment_statistics).
+    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $a1['nid']);
   }
 }
 
