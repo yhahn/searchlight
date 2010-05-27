@@ -46,9 +46,9 @@ function drush_searchlight_index() {
 /**
  * Start or stop the search daemon.
  */
-function drush_searchlight_searchd() {
+function drush_searchlight_searchd($command = 'start') {
   $backend = searchlight_get_backend();
-  $backend->drushSearchd();
+  $backend->drushSearchd($command);
 }
 
 /**
