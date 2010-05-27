@@ -5,6 +5,7 @@ class searchlight_plugin_query extends views_query {
   var $client;
   var $datasource;
   var $datasource_id;
+  var $search_buildmode;
   var $search_facets;
   var $search_filter;
   var $search_options;
@@ -37,6 +38,7 @@ class searchlight_plugin_query extends views_query {
     $this->backend = $backend;
     $this->client = $backend->initClient($this->datasource);
 
+    $this->search_buildmode = NULL;
     $this->search_facets = array();
     $this->search_filter = array();
     $this->search_options = array();
@@ -54,6 +56,9 @@ class searchlight_plugin_query extends views_query {
   function add_where($group, $clause) {
     $where_args = func_get_args();
     $where_args = $this->get_args($where_args);
+
+    // Call the parent method to add the filter SQL side.
+    parent::add_where($group, $clause, $where_args);
 
     $split = preg_split('/[ ]([<>=!]*)|(IN)|(NOT IN)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
     if (count($split) >= 2) {
@@ -93,13 +98,12 @@ class searchlight_plugin_query extends views_query {
         }
       }
     }
-
-    // If no backend-based filter was added, call the parent method to add
-    // the filter SQL side.
-    parent::add_where($group, $clause, $where_args);
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
+    // Call the parent method to add the orderby SQL side.
+    parent::add_orderby($table, $field, $order, $alias, $params);
+
     if ($field === 'searchlight_weight') {
       $this->search_sort[] = array('field' => 'searchlight_weight', 'order' => $order); // "@weight {$order}";
     }
@@ -130,6 +134,27 @@ class searchlight_plugin_query extends views_query {
     $this->search_facets[] = array('field' => $name, 'limit' => $limit) + $options;
   }
 
+  /**
+   * Set the Search build mode behavior.
+   *
+   * @param string $mode
+   *   One of the following modes:
+   *   'default': Build the Search for facets, etc. but use the View's default
+   *              result set.
+   *   'search':  Build the Search for facets, etc. and use the search backend
+   *              to generate the result set.
+   *   'empty':   Build the Search for facets, etc. but blank this View's
+   *              result set.
+   * @param boolean $force
+   *   Force the mode specified. Otherwise, will only set the build mode if no
+   *   other mode has been set yet.
+   */
+  function set_search_buildmode($mode = 'default', $force = FALSE) {
+    if (!isset($this->search_buildmode) || $force) {
+      $this->search_buildmode = $mode;
+    }
+  }
+
   function set_search_options($options) {
     $this->search_options = $options;
   }
@@ -151,18 +176,17 @@ class searchlight_plugin_query extends views_query {
   }
 
   function build(&$view) {
-    $this->abort = FALSE;
+    $this->set_search_buildmode();
 
     // Fail the rest of the build entirely if the hideEmpty option is true and
     // there is no search query available. We don't exit right here in order
     // to allow facet queries to run.
-    if (empty($this->fields) || (!empty($this->search_options['hideEmpty']) && empty($this->search_query))) {
-      $this->abort = TRUE;
+    if (empty($this->fields) || $this->search_buildmode === 'empty') {
       parent::add_where(0, "FALSE");
     }
 
     // Views pager initialization.
-    if (!$this->abort) {
+    if ($this->search_buildmode === 'search') {
       $this->init_pager($view);
       if ($this->pager->use_pager()) {
         $this->pager->set_current_page($view->current_page);
@@ -199,23 +223,24 @@ class searchlight_plugin_query extends views_query {
     // Build facets.
     $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
 
-    if ($this->search_result) {
-      // @TODO: do this with placeholders, args.
-      $ids = implode(',', $this->search_result['result']);
-      parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$ids})");
+    if ($this->search_buildmode === 'search') {
+      if ($this->search_result) {
+        $placeholders = db_placeholders($this->search_result['result']);
+        parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$placeholders})", $this->search_result['result']);
 
-      $view->build_info['query'] = $this->query();
-      $view->build_info['count_query'] = "SELECT FALSE";
-      $view->build_info['query_args'] = $this->get_where_args();
-      $view->built = TRUE;
-    }
-    elseif (!empty($this->search_query)) {
-      parent::add_where(0, "FALSE");
+        $view->build_info['query'] = $this->query();
+        $view->build_info['count_query'] = "SELECT FALSE";
+        $view->build_info['query_args'] = $this->get_where_args();
+        $view->built = TRUE;
+      }
+      elseif (!empty($this->search_query)) {
+        parent::add_where(0, "FALSE");
+      }
     }
   }
 
   function execute(&$view) {
-    if (empty($this->abort)) {
+    if ($this->search_buildmode === 'search') {
       // Store values prior to execute().
       $offset = $this->offset;
       $limit = $this->limit;

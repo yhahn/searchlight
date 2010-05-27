@@ -83,7 +83,7 @@ class SearchlightEnvironment {
   function query(&$query) {
     // If any facets are active treat it as though the result set is not empty.
     if ($this->getFacets(TRUE)) {
-      $query->search_options['hideEmpty'] = FALSE;
+      $query->set_search_buildmode('search', TRUE);
     }
     foreach ($this->plugins as $name => $plugin) {
       $plugin->query($query);
