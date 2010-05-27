@@ -14,6 +14,13 @@ class searchlight_handler_filter_search extends views_handler_filter {
   function query() {
     $value = is_array($this->value) ? reset($this->value) : $this->value;
     $value = trim($value);
+
+    // If we are replacing a core search filter the 'operator' option may be
+    // set. Infer the value of 'hideEmpty' from this.
+    if (!empty($this->options['operator'])) {
+      $this->options['hideEmpty'] = $this->options['operator'] === 'required';
+    }
+
     $this->query->set_search_options($this->options);
     $this->query->set_search_query($value);
   }
