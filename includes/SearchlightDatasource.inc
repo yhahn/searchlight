@@ -130,7 +130,11 @@ class SearchlightDatasource {
         return isset($map[$column_type]) ? $map[$column_type] : FALSE;
       }
     }
-    return FALSE;
+    // Handle a list of known function/calculation fields.
+    $map = array(
+      'node_comment_statistics.last_updated' => 'timestamp',
+    );
+    return isset($map["{$table}.{$field}"]) ? $map["{$table}.{$field}"] : FALSE;
   }
 
   /**

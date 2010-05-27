@@ -121,6 +121,11 @@ class searchlight_plugin_query extends views_query {
           }
         }
       }
+      // If no table was specified or found, this is probably a function.
+      // Use the alias directly if it is available.
+      else if (empty($table) && isset($this->datasource->fields[$alias])) {
+        $this->search_sort[] = array('field' => $alias, 'order' => $order); // "{$name} {$order}";
+      }
     }
   }
 
