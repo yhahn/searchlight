@@ -124,14 +124,17 @@ function searchlight_views_init_query(&$view) {
     }
   }
 
-  // Create and initialize the query object.
-  $views_data = views_fetch_data($view->base_table);
-  $view->base_field = $views_data['table']['base']['field'];
-  if (!empty($views_data['table']['base']['database'])) {
-    $view->base_database = $views_data['table']['base']['database'];
-  }
+  // Create and initialize the query object. If no backend is present, leave
+  // the view alone.
+  if ($backend = searchlight_get_backend()) {
+    $views_data = views_fetch_data($view->base_table);
+    $view->base_field = $views_data['table']['base']['field'];
+    if (!empty($views_data['table']['base']['database'])) {
+      $view->base_database = $views_data['table']['base']['database'];
+    }
 
-  $view->query = searchlight_get_query($view->base_table, $view->base_field);
+    $view->query = searchlight_get_query($view->base_table, $view->base_field);
+  }
 }
 
 /**

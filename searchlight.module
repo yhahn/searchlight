@@ -5,6 +5,17 @@ include_once('includes/SearchlightDatasource.inc');
 include_once('includes/SearchlightEnvironment.inc');
 
 /**
+ * Implementation of hook_init().
+ * Forcibly disable core search indexing if present.
+ */
+function searchlight_init() {
+  if (module_exists('search')) {
+    global $conf;
+    $conf['search_cron_limit'] = 0;
+  }
+}
+
+/**
  * Implementation of hook_menu().
  */
 function searchlight_menu() {
@@ -16,7 +27,7 @@ function searchlight_menu() {
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
-    'type' => module_exists('search') ? MENU_LOCAL_TASK : MENU_DEFAULT_LOCAL_TASK,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
   $items['admin/settings/search/datasource/list/%searchlight_datasource'] = array(
@@ -132,11 +143,6 @@ function searchlight_menu() {
  */
 function searchlight_menu_alter(&$items) {
   if (module_exists('search')) {
-    $items['admin/settings/search/core'] = $items['admin/settings/search'];
-    $items['admin/settings/search/core']['title'] = 'Core';
-    $items['admin/settings/search/core']['type'] = MENU_DEFAULT_LOCAL_TASK;
-  }
-  else {
     $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
     $items['admin/settings/search']['title'] = 'Search';
     $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
@@ -846,14 +852,15 @@ function searchlight_invalidate_index($base_table = NULL) {
     $datasources = searchlight_get_datasource();
     db_query("TRUNCATE {searchlight_search}");
   }
-  $backend = searchlight_get_backend();
-  foreach ($datasources as $datasource) {
-    // Let the backend respond to a rebuild index command.
-    $backend->invalidateIndex($datasource);
+  if ($backend = searchlight_get_backend()) {
+    foreach ($datasources as $datasource) {
+      // Let the backend respond to a rebuild index command.
+      $backend->invalidateIndex($datasource);
 
-    db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
-    $views_data = views_fetch_data($datasource->base_table);
-    $base_field = $views_data['table']['base']['field'];
-    db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '". $datasource->base_table ."', ". $base_field .", 0 FROM {". $datasource->base_table ."}");
+      db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
+      $views_data = views_fetch_data($datasource->base_table);
+      $base_field = $views_data['table']['base']['field'];
+      db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '". $datasource->base_table ."', ". $base_field .", 0 FROM {". $datasource->base_table ."}");
+    }
   }
 }
