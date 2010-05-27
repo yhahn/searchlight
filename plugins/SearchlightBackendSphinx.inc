@@ -159,13 +159,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function invalidateIndex($datasource) {
     variable_del('searchlight_sphinx_last');
-    $views_data = views_fetch_data($datasource->base_table);
-    $base_field = $views_data['table']['base']['field'];
 
     $delete = array();
-    $result = db_query("SELECT " . $base_field . " FROM {" . $datasource->base_table . "}");
+    $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
     while ($row = db_fetch_object($result)) {
-      $delete[$row->{$base_field}] = array(1);
+      $delete[$row->{$datasource->base_field}] = array(1);
     }
 
     $client = $this->initClient($datasource);
