@@ -272,4 +272,58 @@ function searchlight_views_default_views_alter(&$views) {
     }
     $views[$view->name] = $view;
   }
+
+  //
+  // Organic Groups ===========================================================
+  //
+  if (module_exists('og_views')) {
+    $view = new view;
+    $view->name = 'searchlight_og_ancestry';
+    $view->tag = 'searchlight';
+    $view->base_table = 'node';
+    $view->api_version = 3.0-alpha1;
+    $handler = $view->new_display('default', 'Default', 'default');
+
+    /* Display: Vocabulary */
+    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups', 'searchlight_multivalue_og');
+    $handler->override_option('arguments', array());
+    $handler->override_option('sorts', array());
+    $handler->override_option('relationships', array(
+      'group_nid' => array(
+        'required' => 1,
+        'id' => 'group_nid',
+        'table' => 'og_ancestry',
+        'field' => 'group_nid',
+        'relationship' => 'none',
+      ),
+    ));
+    $handler->override_option('fields', array(
+      'nid' => array(
+        'id' => 'nid',
+        'table' => 'node',
+        'field' => 'nid',
+        'relationship' => 'none',
+      ),
+      'nid_1' => array(
+        'id' => 'nid_1',
+        'table' => 'node',
+        'field' => 'nid',
+        'relationship' => 'group_nid',
+      ),
+      'title' => array(
+        'id' => 'title',
+        'table' => 'node',
+        'field' => 'title',
+        'relationship' => 'group_nid',
+      ),
+    ));
+    $handler->override_option('searchlight_multivalue', array(
+      'field' => 'node_og_ancestry_nid',
+      'label_field' => 'node_og_ancestry_title',
+      'override' => array(
+        'label' => 'Organic Groups',
+      ),
+    ));
+    $views[$view->name] = $view;
+  }
 }
