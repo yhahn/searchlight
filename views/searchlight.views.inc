@@ -106,6 +106,18 @@ function searchlight_views_data_alter(&$data) {
       'help' => t('Node access fields for indexing by Searchlight search backends.'),
     );
   }
+  // If Searchlight buddy system is off, replace core search handlers.
+  if (module_exists('search') && !variable_get('searchlight_buddysystem', FALSE)) {
+    $data['search_index']['score']['sort'] = $data['searchlight']['search']['sort'];
+    $data['search_index']['keys']['filter'] = $data['searchlight']['search']['filter'];
+
+    // Remove unsupported tables.
+    unset($data['search_index']['score']['field']);
+    unset($data['search_dataset']);
+    unset($data['search_total']);
+    unset($data['search_node_links_from']);
+    unset($data['search_node_links_to']);
+  }
 }
 
 /**

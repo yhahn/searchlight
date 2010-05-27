@@ -369,6 +369,20 @@ function searchlight_admin_backend($form_state) {
 
   $form = array();
 
+  // If core search is enabled, determine whether or not to play nice with it.
+  if (module_exists('search')) {
+    $form['searchlight_buddysystem'] = array(
+      '#type' => 'select',
+      '#title' => t('Core search compatibility'),
+      '#description' => t('Determine how Searchlight should interact with core search if it is enabled.'),
+      '#options' => array(
+        FALSE => t('Replace core search'),
+        TRUE => t('Work parallel to core search'),
+      ),
+      '#default_value' => variable_get('searchlight_buddysystem', FALSE),
+    );
+  }
+
   // Backend selection.
   $form['backend'] = array(
     '#tree' => FALSE,

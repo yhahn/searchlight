@@ -9,7 +9,7 @@ include_once('includes/SearchlightEnvironment.inc');
  * Forcibly disable core search indexing if present.
  */
 function searchlight_init() {
-  if (module_exists('search')) {
+  if (module_exists('search') && !variable_get('searchlight_buddysystem', FALSE)) {
     global $conf;
     $conf['search_cron_limit'] = 0;
   }
