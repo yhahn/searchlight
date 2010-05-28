@@ -20,6 +20,9 @@ class searchlight_plugin_query extends views_plugin_query_default {
   function init($base_table = 'node', $base_field = 'nid', $backend) {
     parent::init($base_table, $base_field);
 
+    // Init the fields array on behalf of the parent.
+    $this->fields = isset($this->fields) ? $this->fields : array();
+
     $this->datasource = searchlight_get_datasource($base_table);
     $this->datasource->init();
     $this->datasource_id = $this->datasource->id;
@@ -184,11 +187,13 @@ class searchlight_plugin_query extends views_plugin_query_default {
       else if (method_exists($view, 'init_pager')) {
         $view->init_pager();
       }
-      if ($this->pager->use_pager()) {
-        $this->pager->set_current_page($view->current_page);
+      if (!empty($this->pager)) {
+        if ($this->pager->use_pager()) {
+          $this->pager->set_current_page($view->current_page);
+        }
+        // Let the pager modify the query to add limits.
+        $this->pager->query();
       }
-      // Let the pager modify the query to add limits.
-      $this->pager->query();
     }
 
     // Views query token replacements.
