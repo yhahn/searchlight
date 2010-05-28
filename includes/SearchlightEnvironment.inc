@@ -199,7 +199,7 @@ class SearchlightEnvironment {
     $form['view_display']['view_display'] = array(
       '#title' => t('View'),
       '#type' => 'select',
-      '#default_value' => $this->view,
+      '#default_value' => $this->view_display,
       '#options' => searchlight_admin_environment_view_displays(),
     );
     $form['view_display']['update'] = array(
