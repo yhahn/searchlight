@@ -108,7 +108,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       // Use table field info to retrieve datasource field name and add sort.
       if (isset($table, $field)) {
         foreach ($this->datasource->fields as $name => $info) {
-          if ($info['table'] === $table && $info['field'] === $field) {
+          if ($info['table'] === $table && $info['field'] === $field && $info['usage'] !== 'content') {
             $this->search_sort[] = array('field' => $name, 'order' => $order); // "{$name} {$order}";
             break;
           }
@@ -116,8 +116,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
       }
       // If no table was specified or found, this is probably a function.
       // Use the alias directly if it is available.
-      else if (empty($table) && isset($this->datasource->fields[$alias])) {
-        $this->search_sort[] = array('field' => $alias, 'order' => $order); // "{$name} {$order}";
+      else if (empty($table) && isset($this->datasource->fields[$alias]) && $this->datasource->fields[$alias]['usage'] !== 'content') {
+        $this->search_sort[] = array('field' => $alias, 'order' => $order);
       }
     }
   }
