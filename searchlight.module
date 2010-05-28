@@ -742,7 +742,11 @@ function searchlight_environment_active($environment = NULL, $view = NULL, $disp
   // static cached as multiple may be active on the same page.
   else if (isset($view, $display)) {
     foreach (searchlight_environment_load() as $environment) {
+      list($environment_view, $environment_display) = explode(':', $environment->view_display);
       if ($environment->view_display === "{$view}:{$display}") {
+        return $environment;
+      }
+      else if ($environment_view === $view) {
         return $environment;
       }
     }
