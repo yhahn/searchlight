@@ -6,11 +6,11 @@
 function _searchlight_basic_views_default_views() {
   $views = array();
 
-  // Exported view: searchlight_search
+  // Exported view: search_node
   $view = new view;
-  $view->name = 'searchlight_search';
+  $view->name = 'search_node';
   $view->description = 'Basic search.';
-  $view->tag = 'searchlight';
+  $view->tag = 'search';
   $view->view_php = '';
   $view->base_table = 'node';
   $view->is_cacheable = FALSE;

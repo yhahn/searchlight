@@ -23,7 +23,7 @@ function _searchlight_basic_searchlight_default_datasources() {
   $searchlight_datasource = new SearchlightDatasource;
   $searchlight_datasource->disabled = FALSE; /* Edit this to true to make a default searchlight_datasource disabled initially */
   $searchlight_datasource->api_version = 1;
-  $searchlight_datasource->name = 'searchlight_node';
+  $searchlight_datasource->name = 'search_node';
   $searchlight_datasource->base_table = 'node';
   $searchlight_datasource->fields = array(
     'node_title' => array(
@@ -88,7 +88,7 @@ function _searchlight_basic_searchlight_default_datasources() {
     'node_access' => 1,
   );
 
-  $export['searchlight_node'] = $searchlight_datasource;
+  $export['search_node'] = $searchlight_datasource;
   return $export;
 }
 
@@ -100,8 +100,8 @@ function _searchlight_basic_searchlight_default_environments() {
   $searchlight_environment = new SearchlightEnvironment;
   $searchlight_environment->disabled = FALSE; /* Edit this to true to make a default searchlight_environment disabled initially */
   $searchlight_environment->api_version = 1;
-  $searchlight_environment->name = 'searchlight_search';
-  $searchlight_environment->view_display = 'searchlight_search:page_1';
+  $searchlight_environment->name = 'search_node';
+  $searchlight_environment->view_display = 'search_node:page_1';
   $searchlight_environment->facets = array(
     'node_status' => array(
       'enabled' => 0,
@@ -147,6 +147,6 @@ function _searchlight_basic_searchlight_default_environments() {
     'facets_label' => 'Search facets',
   );
 
-  $export['searchlight_search'] = $searchlight_environment;
+  $export['search_node'] = $searchlight_environment;
   return $export;
 }
