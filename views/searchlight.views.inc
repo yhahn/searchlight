@@ -304,16 +304,11 @@ function searchlight_views_default_views_alter(&$views) {
         'field' => 'nid',
         'relationship' => 'none',
       ),
-      'nid_1' => array(
-        'id' => 'nid_1',
-        'table' => 'node',
-        'field' => 'nid',
-        'relationship' => 'group_nid',
-      ),
       'title' => array(
         'id' => 'title',
         'table' => 'node',
         'field' => 'title',
+        'label' => 'Groups',
         'relationship' => 'group_nid',
       ),
     ));
