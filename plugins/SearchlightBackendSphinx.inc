@@ -622,7 +622,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
       // Assume serial ids on the base table and step by 1000.
-      $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table}";
+      $conf['conf']['sql_query_range'] = "SELECT MIN({$view->base_field}), MAX({$view->base_field}) FROM {$view->base_table} WHERE {$view->base_field} > 0";
       $conf['conf']['sql_query_range'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_range']));
       $conf['conf']['sql_range_step'] = 1000;
       $conf['conf']['sql_ranged_throttle'] = 0;
