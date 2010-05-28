@@ -12,30 +12,32 @@ class searchlight_handler_filter_search extends views_handler_filter {
    * Override of query().
    */
   function query() {
-    $value = is_array($this->value) ? reset($this->value) : $this->value;
-    $value = trim($value);
+    if (!empty($this->query->searchlight)) {
+      $value = is_array($this->value) ? reset($this->value) : $this->value;
+      $value = trim($value);
 
-    // There is a search query.
-    if (!empty($value)) {
-      $this->query->set_search_buildmode('search');
-    }
-    // There is no search query.
-    else {
-      // If we are replacing a core search filter the 'operator' option may be
-      // set. Use this to determine buildmode.
-      if (!empty($this->options['operator']) && in_array($this->options['operator'], array('required', 'optional'))) {
-        if ($this->options['operator'] === 'required') {
+      // There is a search query.
+      if (!empty($value)) {
+        $this->query->set_search_buildmode('search');
+      }
+      // There is no search query.
+      else {
+        // If we are replacing a core search filter the 'operator' option may be
+        // set. Use this to determine buildmode.
+        if (!empty($this->options['operator']) && in_array($this->options['operator'], array('required', 'optional'))) {
+          if ($this->options['operator'] === 'required') {
+            $this->query->set_search_buildmode('empty');
+          }
+        }
+        // Check the hideEmpty option and check whether to blank the resultset.
+        elseif ($this->options['hideEmpty']) {
           $this->query->set_search_buildmode('empty');
         }
       }
-      // Check the hideEmpty option and check whether to blank the resultset.
-      elseif ($this->options['hideEmpty']) {
-        $this->query->set_search_buildmode('empty');
-      }
-    }
 
-    $this->query->set_search_options($this->options);
-    $this->query->set_search_query($value);
+      $this->query->set_search_options($this->options);
+      $this->query->set_search_query($value);
+    }
   }
 
   /**

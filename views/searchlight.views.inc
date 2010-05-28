@@ -145,7 +145,10 @@ function searchlight_views_init_query(&$view) {
       $view->base_database = $views_data['table']['base']['database'];
     }
 
-    $view->query = searchlight_get_query($view->base_table, $view->base_field);
+    // Check that an active datasource can be found for this base table.
+    if (searchlight_get_datasource($view->base_table)) {
+      $view->query = searchlight_get_query($view->base_table, $view->base_field);
+    }
   }
 }
 

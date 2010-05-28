@@ -12,11 +12,13 @@ class searchlight_handler_argument_search extends views_handler_argument {
    * Override of query().
    */
   function query() {
-    $value = is_array($this->value) ? reset($this->value) : $this->value;
-    $value = trim($value);
-    if ($this->argument_validated && !empty($value)) {
-      $this->query->set_search_options($this->options);
-      $this->query->set_search_query($value);
+    if (!empty($this->query->searchlight)) {
+      $value = is_array($this->value) ? reset($this->value) : $this->value;
+      $value = trim($value);
+      if ($this->argument_validated && !empty($value)) {
+        $this->query->set_search_options($this->options);
+        $this->query->set_search_query($value);
+      }
     }
   }
 
