@@ -83,10 +83,14 @@ class searchlight_plugin_query extends views_query {
             // the query.
             else {
               $matches = array();
-              preg_match_all('/\w+|\d+/', $possible_args, $matches);
+              preg_match_all('/[A-Z*_]*|\w+|\d+/', $possible_args, $matches);
               if (!empty($matches)) {
                 foreach ($matches as $match) {
-                  $args = array_merge($args, $match);
+                  foreach ($match as $chunk) {
+                    if ($chunk !== '') {
+                      $args[] = $chunk;
+                    }
+                  }
                 }
               }
             }
