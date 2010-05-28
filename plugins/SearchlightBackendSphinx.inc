@@ -231,6 +231,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           case 'IN':
             $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
             break;
+          case '<>':
           case 'NOT IN':
             $this->sphinxSetFilter($client, $datasource, $field, $args, TRUE);
             break;
