@@ -106,6 +106,15 @@ function searchlight_views_data_alter(&$data) {
       'help' => t('Node access fields for indexing by Searchlight search backends.'),
     );
   }
+
+  // OG UID field handler. Needed to allow filtering directly against OG UID.
+  if (module_exists('og_views')) {
+    $data['og_uid']['nid']['field'] = array(
+      'title' => t('Group ID'),
+      'handler' => 'views_handler_field'
+    );
+  }
+
   // If Searchlight buddy system is off, replace core search handlers.
   if (module_exists('search') && !variable_get('searchlight_buddysystem', FALSE)) {
     $data['search_index']['score']['sort'] = $data['searchlight']['search']['sort'];
@@ -364,6 +373,33 @@ function searchlight_views_default_views_alter(&$views) {
       'label_field' => 'node_og_uid_title',
       'override' => array(
         'label' => 'Organic Groups',
+      ),
+    ));
+
+    /* Display: User's groups */
+    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups (filter)', 'searchlight_multivalue_og_uid');
+    $handler->override_option('arguments', array());
+    $handler->override_option('sorts', array());
+    $handler->override_option('relationships', array());
+    $handler->override_option('fields', array(
+      'uid' => array(
+        'id' => 'uid',
+        'table' => 'users',
+        'field' => 'uid',
+        'relationship' => 'none',
+      ),
+      'nid' => array(
+        'id' => 'nid',
+        'table' => 'og_uid',
+        'field' => 'nid',
+        'label' => 'Groups',
+      ),
+    ));
+    $handler->override_option('searchlight_multivalue', array(
+      'field' => 'og_uid_nid',
+      'label_field' => 'og_uid_nid',
+      'override' => array(
+        'label' => 'Organic Groups (nid)',
       ),
     ));
     $views[$view->name] = $view;
