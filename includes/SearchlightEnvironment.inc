@@ -36,8 +36,8 @@ class SearchlightEnvironment {
   }
 
   /**
-   * Activate this environment using the values found (and parsed) from a PURL
-   * modifier. See searchlight_environment_init().
+   * Activate this environment using the values found (and parsed) from the
+   * Searchlight facet querystring. See searchlight_environment_init().
    */
   function initValues($values) {
     $this->active_values = $values;
@@ -327,33 +327,31 @@ class SearchlightEnvironment {
         break;
     }
 
+    $key = variable_get('searchlight_facet_key', 'sl');
+    $query = $_GET;
     $modifier = searchlight_environment_pack($modifier);
     if (!empty($modifier)) {
-      $options['purl'] = array('provider' => 'searchlight', 'id' => $modifier);
+      $query[$key] = $modifier;
     }
-    else {
-      $options['purl'] = array('remove' => array('searchlight'));
+    elseif (isset($query[$key])) {
+      unset($query[$key]);
     }
 
     $exclude = array('q', 'page');
-    $method = variable_get('purl_method_searchlight', 'path');
-    $key = variable_get('purl_method_searchlight_key', FALSE);
-    if ($method === 'querystring') {
-      // If we've been asked to retain all facets, we need to exclude all
-      // query strings **except** the facet query string.
-      if ($op === 'active') {
-        $exclude = drupal_map_assoc(array_keys($_GET));
-        if (isset($exclude[$key])) {
-          unset($exclude[$key]);
-        }
-      }
-      // If there is no modifier we want to exclude the facet query string
-      // (forces query string to be dropped).
-      else if (empty($modifier)) {
-        $exclude[] = $key;
+    // If we've been asked to retain all facets, we need to exclude all
+    // query strings **except** the facet query string.
+    if ($op === 'active') {
+      $exclude = drupal_map_assoc(array_keys($_GET));
+      if (isset($exclude[$key])) {
+        unset($exclude[$key]);
       }
     }
-    $options['query'] = drupal_query_string_encode($_GET, $exclude);
+    // If there is no modifier we want to exclude the facet query string
+    // (forces query string to be dropped).
+    else if (empty($modifier)) {
+      $exclude[] = $key;
+    }
+    $options['query'] = drupal_query_string_encode($query, $exclude);
 
     return $options;
   }

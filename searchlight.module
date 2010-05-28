@@ -212,19 +212,6 @@ function searchlight_comment(&$a1, $op) {
 }
 
 /**
- * Implementation of hook_purl_provider().
- */
-function searchlight_purl_provider() {
-  return array(
-    'searchlight' => array(
-      'name' => t('Searchlight facets'),
-      'description' => t('Sets one or more active facets.'),
-      'callback' => 'searchlight_environment_init',
-    ),
-  );
-}
-
-/**
  * Implementation of hook_theme().
  */
 function searchlight_theme() {
@@ -433,6 +420,18 @@ function searchlight_searchlight_registry() {
       ),
     ),
   );
+}
+
+/**
+ * Implementation of hook_form_alter() for 'views_exposed_form'.
+ * Ensure that Searchlight facet components are preserved when Views exposed
+ * filters are submitted.
+ */
+function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
+  $key = variable_get('searchlight_facet_key', 'sl');
+  if (!isset($form[$key]) && isset($_GET[$key])) {
+    $form[$key] = array('#type' => 'hidden', '#value' => $_GET[$key]);
+  }
 }
 
 /**
@@ -674,7 +673,7 @@ function searchlight_datasource_delete($datasource) {
 }
 
 /**
- * Environment PURL modifier packer.
+ * Environment facet querystring packer.
  */
 function searchlight_environment_pack($value) {
   $keyvals = array();
@@ -685,7 +684,7 @@ function searchlight_environment_pack($value) {
 }
 
 /**
- * Environment PURL modifier unpacker.
+ * Environment facet querystring unpacker.
  */
 function searchlight_environment_unpack($value) {
   $value = urldecode($value);
@@ -701,19 +700,26 @@ function searchlight_environment_unpack($value) {
 }
 
 /**
- * PURL environment init callback.
+ * Environment init.
  */
-function searchlight_environment_init($packed) {
-  $values = searchlight_environment_unpack($packed);
-  if (!empty($values['environment']) && $environment = searchlight_environment_load($values['environment'])) {
-    $environment->initValues($values);
-    searchlight_environment_active($environment);
+function searchlight_environment_init($packed = NULL) {
+  // Retrieve facet query string from $_GET if no input is provided.
+  if (!isset($packed)) {
+    $key = variable_get('searchlight_facet_key', 'sl');
+    $packed = isset($_GET[$key]) ? $_GET[$key] : NULL;
+  }
+  if (!empty($packed) && is_string($packed)) {
+    $values = searchlight_environment_unpack($packed);
+    if (!empty($values['environment']) && $environment = searchlight_environment_load($values['environment'])) {
+      $environment->initValues($values);
+      searchlight_environment_active($environment);
+    }
   }
 }
 
 /**
  * Static cache/lazy retrieval of the current active environment.
- * If an environment is active (via PURL modifier), return that environment.
+ * If an environment is already active , return that environment.
  * Otherwise, try to locate an environment "relevant" to the specified view
  * using the view name and display id.
  */

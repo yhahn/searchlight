@@ -1,7 +1,6 @@
 core = "6.x"
 dependencies[] = "ctools"
 dependencies[] = "views"
-dependencies[] = "purl"
 description = "Views-driven search API with pluggable search backends."
 features[ctools][] = "searchlight_datasource"
 features[ctools][] = "searchlight_environment"
