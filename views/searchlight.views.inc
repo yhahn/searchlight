@@ -287,7 +287,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->api_version = 3.0-alpha1;
     $handler = $view->new_display('default', 'Default', 'default');
 
-    /* Display: Vocabulary */
+    /* Display: Node's groups */
     $handler = $view->new_display('searchlight_multivalue', 'Organic Groups', 'searchlight_multivalue_og');
     $handler->override_option('arguments', array());
     $handler->override_option('sorts', array());
@@ -318,6 +318,50 @@ function searchlight_views_default_views_alter(&$views) {
     $handler->override_option('searchlight_multivalue', array(
       'field' => 'node_og_ancestry_nid',
       'label_field' => 'node_og_ancestry_title',
+      'override' => array(
+        'label' => 'Organic Groups',
+      ),
+    ));
+    $views[$view->name] = $view;
+
+    $view = new view;
+    $view->name = 'searchlight_og_uid';
+    $view->tag = 'searchlight';
+    $view->base_table = 'users';
+    $view->api_version = 3.0-alpha1;
+    $handler = $view->new_display('default', 'Default', 'default');
+
+    /* Display: User's groups */
+    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups', 'searchlight_multivalue_og');
+    $handler->override_option('arguments', array());
+    $handler->override_option('sorts', array());
+    $handler->override_option('relationships', array(
+      'nid' => array(
+        'required' => 1,
+        'id' => 'nid',
+        'table' => 'og_uid',
+        'field' => 'nid',
+        'relationship' => 'none',
+      ),
+    ));
+    $handler->override_option('fields', array(
+      'uid' => array(
+        'id' => 'uid',
+        'table' => 'users',
+        'field' => 'uid',
+        'relationship' => 'none',
+      ),
+      'title' => array(
+        'id' => 'title',
+        'table' => 'node',
+        'field' => 'title',
+        'label' => 'Groups',
+        'relationship' => 'nid',
+      ),
+    ));
+    $handler->override_option('searchlight_multivalue', array(
+      'field' => 'node_og_uid_nid',
+      'label_field' => 'node_og_uid_title',
       'override' => array(
         'label' => 'Organic Groups',
       ),
