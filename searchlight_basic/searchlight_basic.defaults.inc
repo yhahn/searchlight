@@ -1,9 +1,24 @@
 <?php
 
 /**
+ * Helper to implementation of hook_ctools_plugin_api().
+ */
+function _searchlight_basic_ctools_plugin_api() {
+  $args = func_get_args();
+  $module = array_shift($args);
+  $api = array_shift($args);
+  if ($module == "searchlight" && $api == "datasource") {
+    return array("version" => 1);
+  }
+  else if ($module == "searchlight" && $api == "environment") {
+    return array("version" => 1);
+  }
+}
+
+/**
  * Helper to implementation of hook_searchlight_default_datasources().
  */
-function _searchlight_searchlight_default_datasources() {
+function _searchlight_basic_searchlight_default_datasources() {
   $export = array();
   $searchlight_datasource = new SearchlightDatasource;
   $searchlight_datasource->disabled = FALSE; /* Edit this to true to make a default searchlight_datasource disabled initially */
@@ -80,7 +95,7 @@ function _searchlight_searchlight_default_datasources() {
 /**
  * Helper to implementation of hook_searchlight_default_environments().
  */
-function _searchlight_searchlight_default_environments() {
+function _searchlight_basic_searchlight_default_environments() {
   $export = array();
   $searchlight_environment = new SearchlightEnvironment;
   $searchlight_environment->disabled = FALSE; /* Edit this to true to make a default searchlight_environment disabled initially */

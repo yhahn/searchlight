@@ -3,7 +3,7 @@
 /**
  * Helper to implementation of hook_views_default_views().
  */
-function _searchlight_views_default_views() {
+function _searchlight_basic_views_default_views() {
   $views = array();
 
   // Exported view: searchlight_search

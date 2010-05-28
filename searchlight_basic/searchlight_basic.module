@@ -1,0 +1,3 @@
+<?php
+
+include_once('searchlight_basic.features.inc');

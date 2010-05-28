@@ -1,0 +1,8 @@
+core = "6.x"
+dependencies[] = "searchlight"
+description = "Basic default configuration for Searchlight indexing and views."
+features[ctools][] = "searchlight_datasource"
+features[ctools][] = "searchlight_environment"
+features[views][] = "searchlight_search"
+name = "Searchlight basic"
+package = "Search"

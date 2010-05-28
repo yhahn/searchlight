@@ -1,6 +1,5 @@
 <?php
 
-include_once('searchlight.features.inc');
 include_once('includes/SearchlightDatasource.inc');
 include_once('includes/SearchlightEnvironment.inc');
 
