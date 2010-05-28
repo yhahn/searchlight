@@ -23,7 +23,7 @@ class searchlight_handler_filter_search extends views_handler_filter {
     else {
       // If we are replacing a core search filter the 'operator' option may be
       // set. Use this to determine buildmode.
-      if (!empty($this->options['operator'])) {
+      if (!empty($this->options['operator']) && in_array($this->options['operator'], array('required', 'optional'))) {
         if ($this->options['operator'] === 'required') {
           $this->query->set_search_buildmode('empty');
         }
