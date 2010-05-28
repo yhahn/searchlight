@@ -220,6 +220,11 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
 
       // If active datasource settings have changed a rebuild is necessary.
       if ($current != $datasource) {
+        // Invalidate configuration, cache, and index.
+        variable_set('searchlight_config_changed', TRUE);
+        searchlight_invalidate_cache();
+        searchlight_invalidate_index($base_table);
+
         drupal_set_message(t('Active datasource settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
       }
     }
@@ -417,7 +422,12 @@ function searchlight_admin_backend_submit(&$form, &$form_state) {
   if ($current != $form_state['values']['searchlight_backend']) {
     // Switch backends. This must occur *before* we invalidate the index.
     variable_set('searchlight_backend', $form_state['values']['searchlight_backend']);
+
+    // Invalidate configuration, cache, and index.
+    variable_set('searchlight_config_changed', TRUE);
+    searchlight_invalidate_cache();
     searchlight_invalidate_index();
+
     drupal_set_message(t('Searchlight backend settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
   }
 }

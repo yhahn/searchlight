@@ -644,10 +644,12 @@ function searchlight_datasource_save($datasource, $editing = FALSE) {
   else {
     drupal_write_record('searchlight_datasource', $datasource);
   }
-  variable_set('searchlight_config_changed', TRUE);
   searchlight_datasource_load(NULL, TRUE);
 
   if (!$editing) {
+    // Invalidate configuration, cache, and index.
+    variable_set('searchlight_config_changed', TRUE);
+    searchlight_invalidate_cache();
     searchlight_invalidate_index($datasource->base_table);
   }
   return TRUE;
