@@ -160,8 +160,17 @@ class SearchlightFacet {
     // retrieve any secondary label field values.
     if ($this->field['usage'] === 'multivalue') {
       $ids = array_keys($items);
-      $query = views_get_plugin('query', 'views_query');
-      $query->init($this->field['table'], $this->field['field']);
+
+      // Views 2.x
+      if (views_api_version() == '2.0') {
+        views_include('query');
+        $query = new views_query($this->field['table'], $this->field['field']);
+      }
+      // Views 3.x
+      else {
+        $query = views_get_plugin('query', 'views_query');
+        $query->init($this->field['table'], $this->field['field']);
+      }
 
       // Add WHERE condition on item ids.
       $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
