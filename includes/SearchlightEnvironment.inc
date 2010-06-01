@@ -23,7 +23,6 @@ class SearchlightEnvironment {
     $this->facets = !empty($this->facets) ? $this->facets : array();
     $this->options = !empty($this->options) ? $this->options : array();
     $this->options = $this->options + array(
-      'active_label' => t('Active search'),
       'facets_label' => t('Search facets'),
     );
 
@@ -93,17 +92,19 @@ class SearchlightEnvironment {
   /**
    * Generate a set of renderable facet items.
    */
-  function render($delta = 'active') {
+  function render($deltas = array('active', 'facets')) {
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
-      if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
-        // Theme each item
-        $items = array();
-        foreach ($render as $item) {
-          $items[] = $plugin->theme($item, $delta);
+      foreach ($deltas as $delta) {
+        if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
+          // Theme each item
+          $items = array();
+          foreach ($render as $item) {
+            $items[] = $plugin->theme($item, $delta);
+          }
+          // Generate a label/items array suitable for theme('searchlight_facet')
+          $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items, 'delta' => $delta);
         }
-        // Generate a label/items array suitable for theme('searchlight_facet')
-        $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items);
       }
     }
     return $rendered;
@@ -124,14 +125,15 @@ class SearchlightEnvironment {
    * Build a block suitable for return by hook_block('view').
    */
   function getBlock($delta) {
-    if ($this->initView()) {
+    if ($delta === 'facets' && $this->initView()) {
       $output = '';
-      foreach ($this->render($delta) as $rendered) {
-        $output .= theme('searchlight_facet', $rendered, $delta);
+      foreach ($this->render() as $rendered) {
+        $output .= theme('searchlight_facet', $rendered);
       }
       if (!empty($output)) {
+        $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";
         return array(
-          'subject' => filter_xss_admin($this->options["{$delta}_label"]),
+          'subject' => filter_xss_admin($this->options['facets_label']),
           'content' => $output,
         );
       }
@@ -180,12 +182,6 @@ class SearchlightEnvironment {
     $form['#environment'] = $this;
 
     $form['options']['#tree'] = TRUE;
-    $form['options']['active_label'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Active search label'),
-      '#description' => t('Subject for the active search block in this environment.'),
-      '#default_value' => $this->options['active_label'],
-    );
     $form['options']['facets_label'] = array(
       '#type' => 'textfield',
       '#title' => t('Facets label'),

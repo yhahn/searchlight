@@ -154,14 +154,13 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op === 'list') {
     $list = array();
     foreach (searchlight_environment_load() as $environment) {
-      $list['active_'. $environment->name] = array('info' => t('@name: Active search', array('@name' => $environment->name)));
       $list['facets_'. $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
     }
     return $list;
   }
   else if ($op === 'view' && strpos($delta, '_') !== FALSE) {
     list($delta, $name) = explode('_', $delta, 2);
-    if (in_array($delta, array('active', 'facets'), TRUE) && $environment = searchlight_environment_load($name)) {
+    if (in_array($delta, array('facets'), TRUE) && $environment = searchlight_environment_load($name)) {
       return $environment->getBlock($delta);
     }
   }
@@ -430,6 +429,32 @@ function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
   $key = variable_get('searchlight_facet_key', 'sl');
   if (!isset($form[$key]) && isset($_GET[$key])) {
     $form[$key] = array('#type' => 'hidden', '#value' => $_GET[$key]);
+  }
+}
+
+/**
+ * Implementation of hook_ajax_data_alter().
+ *
+ * This hook is called by Views (and some other modules) when returning AJAX
+ * data to the client. It provides an event for other modules to hook into to
+ * alter the AJAX data returned and register additional *javascript* callbacks
+ * to be used once the AJAX response is received.
+ */
+function searchlight_ajax_data_alter(&$object, $type, $metadata) {
+  if ($type === 'views') {
+    $view = $metadata;
+    // If this is a searchlight view with AJAX, add a callback for updating any
+    // associated facet blocks.
+    if (isset($view->query) && !empty($view->query->searchlight)) {
+      $environment = searchlight_environment_active(NULL, $view->name, $view->current_display);
+      if ($environment) {
+        $block = $environment->getBlock('facets');
+        $object->searchlightData = array(".searchlight-environment-{$environment->name}" => $block['content']);
+
+        // Add searchlight replace callback.
+        $object->__callbacks[] = '$().drupalSearchlight.replace';
+      }
+    }
   }
 }
 

@@ -156,6 +156,9 @@ function searchlight_views_init_query(&$view) {
 
     // Check that an active datasource can be found for this base table.
     if (searchlight_get_datasource($view->base_table)) {
+      // Add Searchlight JS.
+      drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.js');
+
       $view->query = searchlight_get_query($view->base_table, $view->base_field);
     }
   }

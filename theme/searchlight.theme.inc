@@ -67,8 +67,8 @@ function theme_searchlight_plugin_display_datasource($form) {
 /**
  * Theme function for a facet.
  */
-function theme_searchlight_facet($facet, $delta) {
-  return theme('item_list', $facet['items'], $facet['label'], 'ul', array('class' => 'searchlight-facet-'. $delta));
+function theme_searchlight_facet($facet) {
+  return theme('item_list', $facet['items'], $facet['label'], 'ul', array('class' => 'searchlight-facet-'. $facet['delta']));
 }
 
 /**
