@@ -460,12 +460,24 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $file_path = $this->drushGetConfigPath();
     $conf_path = $file_path .'/index.d';
 
-    if (!variable_get('searchlight_config_changed', TRUE) && file_check_directory($conf_path, TRUE)) {
-      return drush_log('Sphinx configuration not changed', 'success');
-    }
-    else {
-      variable_set('searchlight_config_changed', FALSE);
-    }
+    // @TODO: Revisit configuration file generation. Need to handle:
+    //
+    // 1. If the datasource configuration has changed due to a site-driven
+    //    event (eg. edit form), we can use the 'searchlight_config_changed'
+    //    variable as a sign that files need rewriting.
+    // 2. If the site has been migrated (eg. through Aegir) and the database
+    //    name has changed, we need to rewrite config files. This case is NOT
+    //    handled by the variable.
+    // 3. If the site's code has changed and datasources are in the default
+    //    state, we need to rewrite config files. This case is NOT handled by
+    //    the variable.
+    //
+    // if (!variable_get('searchlight_config_changed', TRUE) && file_check_directory($conf_path, TRUE)) {
+    //   return drush_log('Sphinx configuration not changed', 'success');
+    // }
+    // else {
+    //   variable_set('searchlight_config_changed', FALSE);
+    // }
 
     if (file_check_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
       $this->drushBaseConf();
