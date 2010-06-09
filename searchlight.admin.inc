@@ -383,6 +383,14 @@ function searchlight_admin_backend($form_state) {
     );
   }
 
+  $form['searchlight_global_search'] = array(
+    '#type' => 'select',
+    '#title' => t('Global search'),
+    '#description' => t('Choose a View to power the global search block.'),
+    '#options' => array(FALSE => '<'. t("Don't replace global search") .'>') + searchlight_admin_global_search_views(),
+    '#default_value' => variable_get('searchlight_global_search', FALSE),
+  );
+
   // Backend selection.
   $form['backend'] = array(
     '#tree' => FALSE,
@@ -430,4 +438,36 @@ function searchlight_admin_backend_submit(&$form, &$form_state) {
 
     drupal_set_message(t('Searchlight backend settings have changed. Please rebuild your configuration and search index.'), 'warning', FALSE);
   }
+}
+
+/**
+ * Retrieve an array of Views that can be used as the destination for a global
+ * search block. Keyed by View path + search filter key.
+ */
+function searchlight_admin_global_search_views() {
+  // Gather all views that have the active facets filter.
+  $views = views_get_all_views();
+  $usable = array();
+  foreach ($views as $view) {
+    foreach ($view->display as $display) {
+      if ($display->display_plugin === 'page') {
+        $view->set_display($display->id);
+        $filters = $view->display_handler->get_option('filters');
+        if (!empty($filters)) {
+          foreach ($filters as $filter) {
+            if (!empty($filter['exposed']) && !empty($filter['expose']['identifier'])) {
+              if (
+                ($filter['table'] === 'searchlight' && $filter['field'] === 'search') ||
+                ($filter['table'] === 'search' && $filter['field'] === 'keys')
+              ) {
+                $path = $view->get_url();
+                $usable[$view->base_table]["{$path}:{$filter['expose']['identifier']}"] = "{$view->name}: {$display->display_title}";
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return $usable;
 }

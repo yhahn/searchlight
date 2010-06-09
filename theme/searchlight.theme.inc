@@ -44,6 +44,20 @@ function template_preprocess_searchlight_solr_schema(&$vars) {
 }
 
 /**
+ * Theme function for searchlight global search form.
+ * As this is a GET form, FormAPI related data can be excluded.
+ */
+function theme_searchlight_search_form($form) {
+  $output = '';
+  foreach (element_children($form) as $key) {
+    if (!in_array($key, array('form_build_id', 'form_token', 'form_id'))) {
+      $output .= drupal_render($form[$key]);
+    }
+  }
+  return $output;
+}
+
+/**
  * Theme function for searchlight datasource display form.
  */
 function theme_searchlight_plugin_display_datasource($form) {
