@@ -577,7 +577,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $this->solrWriteFiles($file_path, $files);
     }
     else {
-      return drush_log("/{$filepath} could not be written to.", 'error');
+      return drush_log("/{$file_path} could not be written to.", 'error');
     }
   }
 
