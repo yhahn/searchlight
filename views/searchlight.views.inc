@@ -68,6 +68,7 @@ function searchlight_views_handlers() {
       'searchlight_handler_filter_facets' => array('parent' => 'views_handler_filter'),
       'searchlight_handler_sort_search' => array('parent' => 'views_handler_sort'),
       'searchlight_handler_field_node_access' => array('parent' => 'views_handler_field'),
+      'searchlight_handler_field_facet_link' => array('parent' => 'views_handler_field'),
     ),
   );
 }
@@ -92,6 +93,11 @@ function searchlight_views_data() {
     'title' => t('Active facets'),
     'help' => t('Filter results by active Searchlight facets.'),
     'filter' => array('handler' => 'searchlight_handler_filter_facets'),
+  );
+  $data['searchlight']['facet_link'] = array(
+    'title' => t('Facet URL'),
+    'help' => t('Generate a facet URL that can be used as a Views render token.'),
+    'field' => array('handler' => 'searchlight_handler_field_facet_link'),
   );
   return $data;
 }
