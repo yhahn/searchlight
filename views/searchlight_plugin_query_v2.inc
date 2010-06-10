@@ -268,12 +268,25 @@ class searchlight_plugin_query extends views_query {
         $view->execute();
 
         // Ensure the order of the result set from Views matches that of the
-        // search backend.
-        $result = array_fill_keys($this->search_result['result'], NULL);
-        foreach ($view->result as $row) {
-          $result[$row->{$view->base_field}] = $row;
+        // search backend. Don't attempt to do this for aggregate queries.
+        if (empty($this->has_aggregate)) {
+          $sortmap = array();
+          $positions = array_flip(array_values($this->search_result['result']));
+          $i = count($positions);
+          foreach ($view->result as $num => $row) {
+            $key = $row->{$view->base_field};
+            // If in search results use its position in the resultset.
+            if (isset($positions[$key])) {
+              $sortmap[$num] = $positions[$key];
+            }
+            // If not, move to the end of the stack.
+            else {
+              $sortmap[$num] = $i;
+              $i++;
+            }
+          }
+          array_multisort($sortmap, $view->result);
         }
-        $view->result = array_values(array_filter($result));
       }
     }
   }
