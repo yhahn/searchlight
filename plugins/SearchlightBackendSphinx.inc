@@ -380,7 +380,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
         if ((int) $pid) {
           // stop the daemon first
-          drush_op('drush_shell_exec', 'searchd --stop -c ' . $this->drushGetConfigFile());
+          drush_op('drush_shell_exec', 'searchd --nodetach --stop -c ' . $this->drushGetConfigFile());
           drush_log('Search daemon stopped.', 'success');
         }
 
