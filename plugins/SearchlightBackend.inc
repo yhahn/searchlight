@@ -222,9 +222,14 @@ abstract class SearchlightBackend {
   }
 
   /**
-   * Initiate site when installed by Aegir backend.
+   * When a new site is installed via Aegir.
    */
   function drushAegirInstall() {
   }
 
+  /**
+   * When a site is migrated via Aegir.
+   */
+  function drushAegirDeploy() {
+  }
 }
