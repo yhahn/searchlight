@@ -74,15 +74,22 @@ Once Searchlight is installed you can select the backend you would like to use
 on `admin/settings/search/backend`. Any additional settings for your backend
 (ports, ttl, etc.) can be configured here.
 
+To get started quickly, a `searchlight_basic` module is available. It has a
+simple datasource configuration and search view configured to use Searchlight.
+Enable this module if you are testing Searchlight out for the first time. You
+can leave this module disabled if you plan on configuring your own datasource
+and views.
+
 
 4. Configure the datasource(s) for your website
 -----------------------------------------------
 Searchlight allows you to define what content on your site will be indexed.
-Searchlight provides a default and very basic `node` table datasource called
-`searchlight_node`. If you would like to index content beyond basic node
-properties you should edit the existing datasource or create a new one at
-`admin/settings/search/datasource`. You can also create new datasources for
-indexing other base tables like users or comments.
+Searchlight basic (if you chose to enable it above) provides a default and very
+basic `node` table datasource called `searchlight_node`. If you would like to
+index content beyond basic node properties you should edit the existing
+datasource or create a new one at `admin/settings/search/datasource`. You can
+also create new datasources for indexing other base tables like users or
+comments.
 
 
 5. Generate configuration files for your search service
@@ -115,7 +122,9 @@ For Solr, you must start the search service before indexing:
     $ drush searchlight-index
 
 You will probably want to set up a periodic cron job to schedule the indexing
-of your content regularly. To do this add the `drush searchlight-index` command
+of your content regularly. These commands are run on the `drush cron` command
+so using drush to run your Drupal site's cron tasks is recommended. To do this
+add the `drush --root=/path/to/my/site --uri=http://mysite.com cron` command
 to your crontab.
 
 
@@ -124,6 +133,16 @@ to your crontab.
 Searchlight provides a default view at `search/` with an exposed filter that
 you can use to test that your search is working. You can also build your own
 Views using the Searchlight filter/argument.
+
+
+Multisite deployment with Aegir
+-------------------------------
+Searchlight can be deployed on an Aegir-hosted multisite configuration. To do
+so, you must copy the `searchlight_provision.drush.inc` into the `.drush`
+directory of your aegir user. This is usually at `/var/aegir/.drush` but may
+vary based on the setup of Aegir on your server. This drush command file
+provides post-install and post-deploy hooks for provision that ensure the
+search service is restarted when a site is installed or migrated.
 
 
 [1]: http://www.sphinxsearch.com/downloads.html
