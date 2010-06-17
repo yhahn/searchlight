@@ -544,8 +544,20 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function drushAegirInstall() {
     $conf_path = drush_set_option('sl-sphinx-conf-path', drush_get_option('config_path', '/var/aegir') . '/sphinx', 'site');
 
-    drush_backend_invoke('searchlight-conf', array('sl-sphinx-conf-path' => $conf_path));
-    drush_backend_invoke('searchlight-index', array('sl-sphinx-conf-path' => $conf_path));
+    $datasources = searchlight_datasource_load(NULL, TRUE);
+    $this->drushConf();
+    $this->drushIndex();
+
+    // Drush backend invoke is not usable before drushrc.php is written.
+    // drush_backend_invoke('searchlight-conf', array('sl-sphinx-conf-path' => $conf_path));
+    // drush_backend_invoke('searchlight-index', array('sl-sphinx-conf-path' => $conf_path));
+  }
+
+  /**
+   * When a site is migrated via Aegir.
+   */
+  function drushAegirDeploy() {
+    $this->drushAegirInstall();
   }
 
   /**
