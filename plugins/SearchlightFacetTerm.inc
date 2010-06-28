@@ -188,13 +188,37 @@ class SearchlightFacetTerm extends SearchlightFacet {
    */
   function getDeepCount($tid, $raw) {
     $count = isset($raw[$tid]['count']) ? $raw[$tid]['count'] : 0;
-    $children = taxonomy_get_children($tid);
-    $children = array_intersect_key($raw, $children);
-    if (!empty($children)) {
-      foreach (array_keys($children) as $tid) {
-        $count = $count + $this->getDeepCount($tid, $raw);
+    if ($this->options['count_method'] === 'deep') {
+      $children = taxonomy_get_children($tid);
+      $children = array_intersect_key($raw, $children);
+      if (!empty($children)) {
+        foreach (array_keys($children) as $tid) {
+          $count = $count + $this->getDeepCount($tid, $raw);
+        }
       }
     }
     return $count;
+  }
+
+  /**
+   * Provide default values for options.
+   */
+  function optionsDefault() {
+    $options = parent::optionsDefault();
+    $options['deep_count'] = 'yes';
+    return $options;
+  }
+
+  /**
+   * Provide an options form to be exposed in the Environment editor.
+   */
+  function extendedForm(&$form, $form_state) {
+    parent::extendedForm($form, $form_state);
+    $form['count_method'] = array(
+      '#title' => t('Count mode'),
+      '#type' => 'select',
+      '#options' => array('shallow' => t('Shallow'), 'deep' => t('Deep')),
+      '#default_value' => $this->options['count_method'],
+    );
   }
 }
