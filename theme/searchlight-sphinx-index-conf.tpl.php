@@ -14,6 +14,8 @@ sql_port = <?php print $datasource['conf']['sql_port'] ?>
 sql_sock = <?php print $datasource['conf']['sql_sock'] ?>
 <?php endif; ?>
 
+sql_query_pre = \
+  <?php print $datasource['conf']['sql_query_pre'] ?>
 sql_query = \
   <?php print $datasource['conf']['sql_query'] ?>
 sql_query_info = \

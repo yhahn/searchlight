@@ -15,6 +15,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       'port' => 9312,
       'delta_ttl' => 0,
       'sql_sock' => '',
+      'index' => array(
+        'morphology' => 'stem_en',
+        'charset_table' => NULL,
+        'ngram_len' => NULL,
+        'ngram_chars' => NULL,
+      ),
     );
   }
 
@@ -42,6 +48,45 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#type' => 'textfield',
       '#default_value' => $this->settings['delta_ttl'],
       '#size' => 6,
+    );
+    $form['index'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Index settings'),
+      '#description' => t('Advanced configuration options for Sphinx. Use these options to enable CJK or other character set handling for Sphinx. Otherwise, you can leave these blank.')
+    );
+    $form['index']['morphology'] = array(
+      '#title' => t('Morphology'),
+      '#description' => t('Morphology processors to apply. See !link', array(
+        '!link' => l(t('Sphinx: morphology'), 'http://www.sphinxsearch.com/docs/current.html#conf-morphology')
+      )),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['index']['morphology'],
+    );
+    $form['index']['charset_table'] = array(
+      '#title' => t('Character set table'),
+      '#description' => t('Character set table. See !link and !charset for a variety of options', array(
+        '!link' => l(t('Sphinx: charset_table'), 'http://www.sphinxsearch.com/docs/current.html#conf-charset-table'),
+        '!charset' => l(t('Unicode character set tables'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables'),
+      )),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['index']['charset_table'],
+    );
+    $form['index']['ngram_len'] = array(
+      '#title' => t('N-gram length'),
+      '#description' => t('Set n-gram length to 1 for basic CJK support. See !link', array(
+        '!link' => l(t('Sphinx: ngram_len'), 'http://www.sphinxsearch.com/docs/current.html#ngram_len'),
+      )),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['index']['ngram_len'],
+    );
+    $form['index']['ngram_chars'] = array(
+      '#title' => t('N-gram characters list'),
+      '#description' => t('N-gram characters list for basic CJK support. See !link and !charset for CJK support', array(
+        '!link' => l(t('Sphinx: ngram_chars'), 'http://www.sphinxsearch.com/docs/current.html#ngram_chars'),
+        '!charset' => l(t('CJK n-gram characters'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables#cjk_ngram_characters')
+      )),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['index']['ngram_chars'],
     );
     return $form;
   }
@@ -618,8 +663,23 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf['index']['path'] = $this->drushGetConfigPath() . '/indexes/' . $datasource_id;
     $conf['index']['docinfo'] = 'extern';
     $conf['index']['mlock'] = 0;
-    $conf['index']['morphology'] = 'stem_en';
-    $conf['index']['min_word_len'] = 1;
+
+    // Morphology settings.
+    if (!empty($this->settings['index']['morphology'])) {
+      $conf['index']['morphology'] = $this->settings['index']['morphology'];
+    }
+    // Charactsets, CJK handling, etc.
+    if (!empty($this->settings['index']['charset_table'])) {
+      $conf['index']['charset_table'] = $this->settings['index']['charset_table'];
+    }
+    if (!empty($this->settings['index']['ngram_len'])) {
+      $conf['index']['ngram_len'] = $this->settings['index']['ngram_len'];
+    }
+    if (!empty($this->settings['index']['ngram_chars'])) {
+      $conf['index']['ngram_chars'] = $this->settings['index']['ngram_chars'];
+    }
+
+    // Assume UTF-8, character stripping for now.
     $conf['index']['charset_type'] = 'utf-8';
     $conf['index']['html_strip'] = 0;
 
@@ -627,6 +687,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $datasource->init();
     $datasource->view->build();
     if ($view = $datasource->view) {
+      // Force utf8 when indexing.
+      $conf['conf']['sql_query_pre'] = "SET NAMES utf8";
+
       $sql_query = drupal_clone($view->query);
       $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
       $sql_query->add_field(NULL, '0', 'searchlight_deleted');
