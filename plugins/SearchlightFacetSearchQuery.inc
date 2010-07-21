@@ -6,6 +6,20 @@
  */
 class SearchlightFacetSearchQuery extends SearchlightFacet {
   /**
+   * Override of construct().
+   */
+  function construct($environment, $field, $value, $options) {
+    $this->name = 'search_query';
+    $this->field = $field;
+    $this->value = $value;
+    $this->options = $options + $this->optionsDefault();
+    $this->environment = $environment;
+
+    $this->view = NULL;
+    $this->handler = NULL;
+  }
+
+  /**
    * Override of query().
    */
   function query(&$query) { }

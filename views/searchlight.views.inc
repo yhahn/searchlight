@@ -171,9 +171,11 @@ function searchlight_views_init_query(&$view) {
 }
 
 /**
- * Implementation of hook_views_default_views_alter().
+ * Implementation of hook_views_default_views().
  */
-function searchlight_views_default_views_alter(&$views) {
+function searchlight_views_default_views() {
+  $views = array();
+
   //
   // Node access ==============================================================
   //
@@ -193,7 +195,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_node_access';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
     foreach ($realms as $realm) {
       $handler = $view->new_display('searchlight_multivalue', $realm, "searchlight_{$realm}");
@@ -232,7 +234,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_term_data';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
     foreach (taxonomy_get_vocabularies() as $vocab) {
       $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
@@ -302,7 +304,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_og_ancestry';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
 
     /* Display: Node's groups */
@@ -346,7 +348,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_og_uid';
     $view->tag = 'searchlight';
     $view->base_table = 'users';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
 
     /* Display: User's groups */
@@ -413,4 +415,6 @@ function searchlight_views_default_views_alter(&$views) {
     ));
     $views[$view->name] = $view;
   }
+
+  return $views;
 }

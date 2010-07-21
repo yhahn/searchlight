@@ -573,14 +573,18 @@ function searchlight_get_backend($id = NULL, $reset = FALSE) {
  */
 function searchlight_get_facet($datasource, $name) {
   // Build array of suggestion plugin registry names.
-  $field = $datasource->fields[$name];
   $suggestions = array();
+  $field = isset($datasource->fields[$name]) ? $datasource->fields[$name] : NULL;
   // Allow facets to be defined by table/field.
-  $suggestions[] = "{$field['table']}_{$field['field']}";
+  if ($field) {
+    $suggestions[] = "{$field['table']}_{$field['field']}";
+  }
   // Allow facets to be defined by alias.
   $suggestions[] = $name;
   // Allow facets to be defined by datatype.
-  $suggestions[] = "datatype_{$field['datatype']}";
+  if ($field) {
+    $suggestions[] = "datatype_{$field['datatype']}";
+  }
   // Fallback to default plugin.
   $suggestions[] = 'default';
 

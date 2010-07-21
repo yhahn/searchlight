@@ -193,7 +193,7 @@ class searchlight_plugin_query extends views_query {
     if ($this->search_buildmode === 'search') {
       $this->init_pager($view);
       if (!empty($this->pager)) {
-        if ($this->pager->use_pager()) {
+        if ($this->pager->use_pager() && isset($view->current_page)) {
           $this->pager->set_current_page($view->current_page);
         }
         // Let the pager modify the query to add limits.
