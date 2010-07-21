@@ -340,6 +340,8 @@ function searchlight_views_default_views() {
       'label_field' => 'node_og_ancestry_title',
       'override' => array(
         'label' => 'Organic Groups',
+        'table' => 'og_ancestry',
+        'name' => 'group_nid',
       ),
     ));
     $views[$view->name] = $view;
