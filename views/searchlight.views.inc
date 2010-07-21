@@ -386,6 +386,8 @@ function searchlight_views_default_views() {
       'label_field' => 'node_og_uid_title',
       'override' => array(
         'label' => 'Organic Groups',
+        'table' => 'og_uid',
+        'name' => 'nid',
       ),
     ));
 
