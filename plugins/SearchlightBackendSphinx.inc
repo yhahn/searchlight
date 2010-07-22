@@ -627,7 +627,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
       }
     }
-    return $client->SetFilter($attribute, $ordinals, $exclude);
+    return !empty($ordinals) ? $client->SetFilter($attribute, $ordinals, $exclude) : FALSE;
   }
 
   /**
