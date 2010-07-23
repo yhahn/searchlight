@@ -811,7 +811,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     if (is_numeric($value)) {
-      return array_search($value, $this->ordinals[$datasource_id][$attribute_name]);
+      return isset($this->ordinals[$datasource_id][$attribute_name]) ? array_search($value, $this->ordinals[$datasource_id][$attribute_name]) : FALSE;
     }
     else {
       return isset($this->ordinals[$datasource_id][$attribute_name][$value]) ? $this->ordinals[$datasource_id][$attribute_name][$value] : FALSE;
