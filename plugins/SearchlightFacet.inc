@@ -232,7 +232,7 @@ class SearchlightFacet {
       '#title' => t('Items to show'),
       '#type' => 'select',
       '#default_value' => $this->options['items'],
-      '#options' => drupal_map_assoc(range(1, 20)),
+      '#options' => drupal_map_assoc(range(1, 20)) + array(0 => t('Show all')),
     );
   }
 

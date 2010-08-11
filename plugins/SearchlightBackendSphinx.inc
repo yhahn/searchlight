@@ -163,7 +163,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
 
       // Set result limit.
-      $client->SetLimits(0, (int) $limit);
+      if (!empty($limit)) {
+        $client->SetLimits(0, (int) $limit);
+      }
       $client->AddQuery($query, $this->sphinxGetIndex($datasource));
     }
 
