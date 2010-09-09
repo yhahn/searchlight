@@ -212,7 +212,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $date_facets = array();
 
     foreach ($facets as $facet) {
-      $options["f.{$facet['field']}.facet.limit"] = $facet['limit'];
+      if (!empty($facet['limit'])) {
+        $options["f.{$facet['field']}.facet.limit"] = $facet['limit'];
+      }
 
       $field = $datasource->fields[$facet['field']];
       switch ($field['datatype']) {

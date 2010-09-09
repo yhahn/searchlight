@@ -66,8 +66,9 @@ class SearchlightEnvironment {
         $this->plugins = array();
 
         foreach ($this->getFacets() as $name => $facet) {
+          $field = isset($this->datasource->fields[$name]) ? $this->datasource->fields[$name] : array();
           $plugin = searchlight_get_facet($this->datasource, $name);
-          $plugin->construct($this, $this->datasource->fields[$name], $this->getValue($name), $this->facets[$name]);
+          $plugin->construct($this, $field, $this->getValue($name), $this->facets[$name]);
           $this->plugins[$name] = $plugin;
         }
       }

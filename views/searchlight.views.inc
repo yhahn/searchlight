@@ -171,9 +171,11 @@ function searchlight_views_init_query(&$view) {
 }
 
 /**
- * Implementation of hook_views_default_views_alter().
+ * Implementation of hook_views_default_views().
  */
-function searchlight_views_default_views_alter(&$views) {
+function searchlight_views_default_views() {
+  $views = array();
+
   //
   // Node access ==============================================================
   //
@@ -193,7 +195,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_node_access';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
     foreach ($realms as $realm) {
       $handler = $view->new_display('searchlight_multivalue', $realm, "searchlight_{$realm}");
@@ -232,7 +234,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_term_data';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
     foreach (taxonomy_get_vocabularies() as $vocab) {
       $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
@@ -295,6 +297,91 @@ function searchlight_views_default_views_alter(&$views) {
   }
 
   //
+  // Content profile ==========================================================
+  //
+  if (module_exists('content_profile')) {
+    $view = new view;
+    $view->name = 'searchlight_content_profile';
+    $view->tag = 'searchlight';
+    $view->base_table = 'users';
+    $view->api_version = '3.0-alpha1';
+    $handler = $view->new_display('default', 'Default', 'default');
+    foreach(array_keys(content_profile_get_types()) as $profile_type) {
+      foreach (taxonomy_get_vocabularies() as $vocab) {
+        if (isset($vocab->nodes[$profile_type])) {
+          $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
+          $identifier = strtr($identifier, ' -:', '___');
+
+          /* Display: Vocabulary */
+          $handler = $view->new_display('searchlight_multivalue', "{$profile_type}: {$vocab->name}", "searchlight_multivalue_{$profile_type}_{$identifier}");
+          $handler->override_option('arguments', array());
+          $handler->override_option('sorts', array());
+          $handler->override_option('relationships', array(
+            'content_profile_rel' => array(
+              'required' => 1,
+              'type' => $profile_type,
+              'id' => 'content_profile_rel',
+              'table' => 'users',
+              'field' => 'content_profile_rel',
+              'relationship' => 'none',
+            ),
+          ));
+          $handler->override_option('fields', array(
+            'uid' => array(
+              'id' => 'uid',
+              'table' => 'users',
+              'field' => 'uid',
+              'relationship' => 'none',
+            ),
+            'name' => array(
+              'id' => 'name',
+              'table' => 'term_data',
+              'field' => 'name',
+              'relationship' => 'content_profile_rel',
+              'label' => $vocab->name,
+            ),
+          ));
+
+          // If Views can handle the Taxonomy vocab module field for supporting
+          // exportable vocabularies, use it.
+          $data = views_fetch_data('vocabulary');
+          if (isset($data['module']) && !is_numeric($identifier)) {
+            $handler->override_option('filters', array(
+              'module' => array(
+                'id' => 'module',
+                'table' => 'vocabulary',
+                'field' => 'module',
+                'value' => array($vocab->module => $vocab->module),
+                'relationship' => 'content_profile_rel',
+              ),
+            ));
+          }
+          else {
+            $handler->override_option('filters', array(
+              'vid' => array(
+                'id' => 'vid',
+                'table' => 'term_data',
+                'field' => 'vid',
+                'value' => array($vocab->vid => $vocab->vid),
+                'relationship' => 'content_profile_rel',
+              ),
+            ));
+          }
+          $handler->override_option('searchlight_multivalue', array(
+            'field' => 'node_users__term_data_tid',
+            'label_field' => 'node_users__term_data_name',
+            'override' => array(
+              'name' => "term_data_tid_{$profile_type}_{$identifier}",
+              'label' => $vocab->name,
+            ),
+          ));
+        }
+      }
+    }
+    $views[$view->name] = $view;
+  }
+
+  //
   // Organic Groups ===========================================================
   //
   if (module_exists('og_views')) {
@@ -302,7 +389,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_og_ancestry';
     $view->tag = 'searchlight';
     $view->base_table = 'node';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
 
     /* Display: Node's groups */
@@ -338,6 +425,8 @@ function searchlight_views_default_views_alter(&$views) {
       'label_field' => 'node_og_ancestry_title',
       'override' => array(
         'label' => 'Organic Groups',
+        'table' => 'og_ancestry',
+        'name' => 'group_nid',
       ),
     ));
     $views[$view->name] = $view;
@@ -346,7 +435,7 @@ function searchlight_views_default_views_alter(&$views) {
     $view->name = 'searchlight_og_uid';
     $view->tag = 'searchlight';
     $view->base_table = 'users';
-    $view->api_version = 3.0-alpha1;
+    $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
 
     /* Display: User's groups */
@@ -382,6 +471,8 @@ function searchlight_views_default_views_alter(&$views) {
       'label_field' => 'node_og_uid_title',
       'override' => array(
         'label' => 'Organic Groups',
+        'table' => 'og_uid',
+        'name' => 'nid',
       ),
     ));
 
@@ -413,4 +504,6 @@ function searchlight_views_default_views_alter(&$views) {
     ));
     $views[$view->name] = $view;
   }
+
+  return $views;
 }

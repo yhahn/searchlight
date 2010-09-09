@@ -73,10 +73,13 @@ abstract class SearchlightBackend {
       '#type' => 'textfield',
       '#title' => t('Value'),
       '#size' => 30,
-      '#default_value' => $this->value,
+      '#default_value' => $handler->value,
     );
-    if (!empty($form_state['exposed']) && !isset($form_state['input'][$identifier])) {
-      $form_state['input'][$identifier] = $this->value;
+    if (isset($handler->options['expose']['identifier'])) {
+      $identifier = $handler->options['expose']['identifier'];
+      if (!empty($form_state['exposed']) && !isset($form_state['input'][$identifier])) {
+        $form_state['input'][$identifier] = $handler->value;
+      }
     }
   }
 

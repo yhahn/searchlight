@@ -46,7 +46,7 @@ class SearchlightDatasource {
     views_include('view');
     $this->view = new view;
     $this->view->base_table = $this->base_table;
-    $this->view->api_version = 3.0-alpha1;
+    $this->view->api_version = '3.0-alpha1';
     $this->view->new_display('default', 'Default', 'default');
     $this->view->set_display('default');
     return $this;
