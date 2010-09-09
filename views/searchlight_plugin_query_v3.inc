@@ -52,7 +52,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
     // Call the parent method to add the filter SQL side.
     parent::add_where($group, $clause, $where_args);
 
-    $split = preg_split('/[ ]([<>=!]*)|(IN)|(NOT IN)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+    $split = preg_split('/[ ]([<>=!]*)|(\sIN\s)|(\sIS\s)|(\sNOT IN\s)|(\sIS NOT\s)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
     if (count($split) >= 2) {
       $field = explode('.', trim(array_shift($split)));
       $operator = strtoupper(trim(array_shift($split)));
@@ -61,7 +61,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
         $table = $field[0];
         $field = $field[1];
         foreach ($this->datasource->fields as $name => $info) {
-          if ($info['table'] === $table && ($info['name'] === $field || $info['field'] === $field)) {
+          if ($name === "{$table}_{$field}") {
             // Get the arguments for this where clause.
             $args = array();
 
@@ -70,6 +70,15 @@ class searchlight_plugin_query extends views_plugin_query_default {
             $argnum = substr_count($clause, '%');
             if ($argnum && count($where_args) >= $argnum) {
               $args = array_slice($where_args, 0, $argnum);
+            }
+            // We may be working with a NULL check...
+            elseif ($operator == 'IS' && $possible_args == 'NULL') {
+              $operator = 'IN';
+              $args[] = 0; // This may only work with numeric fields...
+            }
+            elseif ($operator == 'IS NOT' && $possible_args == 'NULL') {
+              $operator = 'IN';
+              $args[] = 1; // This may only work with numeric fields...
             }
             // Otherwise, groan, breath deeply & try to retrieve arguments from
             // the query.
@@ -112,7 +121,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       // Use table field info to retrieve datasource field name and add sort.
       if (isset($table, $field)) {
         foreach ($this->datasource->fields as $name => $info) {
-          if ($info['table'] === $table && $info['field'] === $field && $info['usage'] !== 'content') {
+          if ($name === "{$table}_{$field}" && $info['usage'] !== 'content') {
             $this->search_sort[] = array('field' => $name, 'order' => $order); // "{$name} {$order}";
             break;
           }
