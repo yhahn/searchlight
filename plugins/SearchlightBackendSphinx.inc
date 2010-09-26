@@ -114,6 +114,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         SPH_MATCH_ALL => t('Match all query words'),
         SPH_MATCH_ANY => t('Match any of the query words'),
         SPH_MATCH_PHRASE => t('Match the exact phrase'),
+        SPH_MATCH_EXTENDED2 => t('Matches a Sphinx extended query'),
       ),
       '#default_value' => $handler->options['matchMode'],
     );
