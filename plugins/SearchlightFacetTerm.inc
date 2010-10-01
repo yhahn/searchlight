@@ -12,7 +12,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
   function construct($environment, $field, $value, $options) {
     parent::construct($environment, $field, $value, $options);
 
-    $this->term = taxonomy_get_term($this->value);
+    $this->term = taxonomy_term_load($this->value);
 
     // Attempt to parse the vocab from the field name.
     $identifier = trim(array_pop(explode('term_data_tid_', $this->name)));
@@ -20,7 +20,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
       $vid = $identifier;
     }
     else {
-      $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module = '%s' LIMIT 1", $identifier));
+      $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module = :module LIMIT 1", array(':module' => $identifier))->fetchField();
     }
     $this->vocab = taxonomy_vocabulary_load($vid);
     if (!empty($this->vocab->hierarchy)) {
@@ -85,6 +85,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
         // If the item is deeper than the current depth it should be an option
         // for further faceting drill-down.
         if ($term_item->depth > $term_current->depth) {
+          // TODO Please change this theme call to use an associative array for the $variables parameter.
           return parent::theme($item, 'facets');
         }
         // Otherwise, broaden the search by either linking to a parent term
@@ -105,6 +106,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
       }
       return '';
     }
+    // TODO Please change this theme call to use an associative array for the $variables parameter.
     return parent::theme($item, $delta);
   }
 
@@ -183,7 +185,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
    * Simple renderer for term names.
    */
   function getName($tid) {
-    if ($term = taxonomy_get_term($tid)) {
+    if ($term = taxonomy_term_load($tid)) {
       return $term->name;
     }
     return NULL;

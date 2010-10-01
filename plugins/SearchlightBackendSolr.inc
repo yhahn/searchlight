@@ -357,7 +357,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     $file_path = conf_path() . '/solr';
     $solr_home = drush_locate_root() . '/' . conf_path() . '/solr';
     $log_dir = $solr_home . '/log';
-    if (file_check_directory($log_dir, TRUE)) {
+    if (file_prepare_directory($log_dir, TRUE)) {
       $opts .= '-Dsolr.solr.home=' . $solr_home . ' ';
       $opts .= '-Djetty.logs=' . $log_dir . ' ';
       $opts .= '-Djetty.home=' . $this->settings['jar_path'] . ' ';
@@ -519,6 +519,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
         $args = $ids;
         array_unshift($args, $datasource->base_table);
+        // TODO Please convert this statement to the D7 database API syntax.
         db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
                   AND id IN (" . rtrim(str_repeat('%d,', count($ids)), ',') . ")", $args);
 
@@ -529,7 +530,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
 
       // Deletion.
-      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => -1, ':type' => $datasource->base_table));
       $delete = array();
       while ($row = db_fetch_object($result)) {
         $delete[] = $row->id;
@@ -542,11 +543,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
 
         // Once updates are complete, remove the Drupal-side records.
-        db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+        // TODO Please review the conversion of this statement to the D7 database API syntax.
+        /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
+        db_delete('searchlight_search')
+  ->condition('status', -1)
+  ->condition('type', $datasource->base_table)
+  ->execute();
 
         drush_log(dt('@datasource: Deletion completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($delete))), 'success');
       }
-      variable_set('searchlight_solr_last', time());
+      variable_set('searchlight_solr_last', REQUEST_TIME);
     }
   }
 
@@ -556,22 +562,22 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function drushConf() {
     $file_path = conf_path() . '/solr';
-    if (file_check_directory($file_path, TRUE)) {
+    if (file_prepare_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $cores = array();
       foreach (searchlight_get_datasource() as $datasource) {
         $datasource->init();
         $cores[] = $datasource->id;
         $core_path = $file_path . '/' . $datasource->id;
-        if (!file_check_directory($core_path, TRUE)) {
+        if (!file_prepare_directory($core_path, TRUE)) {
           return drush_log("/{$core_path} could not be written to.", 'error');
         }
         $core_path .= '/conf';
-        if (file_check_directory($core_path, TRUE)) {
+        if (file_prepare_directory($core_path, TRUE)) {
           // Generate configuration file from datasources.
           $schema = $this->solrDatasourceConf($datasource);
           $files = array(
-            'schema.xml' => theme('searchlight_solr_schema', $schema),
+            'schema.xml' => theme('searchlight_solr_schema', array('datasource' => $schema)),
             'solrconfig.xml' => theme('searchlight_solr_config'),
           );
           $this->solrWriteFiles($core_path, $files);
@@ -581,7 +587,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         }
       }
       // Generate top level config.
-      $files = array('solr.xml' => theme('searchlight_solr_cores', $cores));
+      $files = array('solr.xml' => theme('searchlight_solr_cores', array('cores' => $cores)));
       $this->solrWriteFiles($file_path, $files);
     }
     else {

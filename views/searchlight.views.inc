@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implementation of hook_views_query_alter().
+ * Implements hook_views_query_alter().
  * Provides backwards-compatibility events for Views 2.x.
  */
 function searchlight_views_query_alter(&$view, &$query) {
@@ -13,13 +13,13 @@ function searchlight_views_query_alter(&$view, &$query) {
 }
 
 /**
- * Implementation of hook_views_plugins().
+ * Implements hook_views_plugins().
  */
 function searchlight_views_plugins() {
   return array(
     'query' => array(
       'searchlight' => array(
-        'file' => (views_api_version() == '2.0') ? 'searchlight_plugin_query_v2.inc' : 'searchlight_plugin_query_v3.inc',
+        'file' => 'searchlight_plugin_query_v3.inc',
         'path' => drupal_get_path('module', 'searchlight') . '/views',
         'title' => t('Searchlight'),
         'help' => t('Searchlight query plugin.'),
@@ -57,7 +57,7 @@ function searchlight_views_plugins() {
 }
 
 /**
- * Implementation of hook_views_handlers().
+ * Implements hook_views_handlers().
  */
 function searchlight_views_handlers() {
   return array(
@@ -74,7 +74,7 @@ function searchlight_views_handlers() {
 }
 
 /**
- * Implementation of hook_views_data().
+ * Implements hook_views_data().
  */
 function searchlight_views_data() {
   $data = array();
@@ -103,7 +103,7 @@ function searchlight_views_data() {
 }
 
 /**
- * Implementation of hook_views_data_alter().
+ * Implements hook_views_data_alter().
  */
 function searchlight_views_data_alter(&$data) {
   if (!empty($data['node_access']['nid']) && empty($data['node_access']['nid']['field'])) {
@@ -171,7 +171,7 @@ function searchlight_views_init_query(&$view) {
 }
 
 /**
- * Implementation of hook_views_default_views().
+ * Implements hook_views_default_views().
  */
 function searchlight_views_default_views() {
   $views = array();
@@ -181,7 +181,7 @@ function searchlight_views_default_views() {
   //
   $realms = array();
   $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
-  while ($row = db_fetch_object($result)) {
+  foreach ($result as $row) {
     $realms[$row->realm] = $row->realm;
   }
   // Allow modules to declare their realms in an alter hook. This allows
@@ -254,7 +254,7 @@ function searchlight_views_default_views() {
         ),
         'name' => array(
           'id' => 'name',
-          'table' => 'term_data',
+          'table' => 'taxonomy_term_data',
           'field' => 'name',
           'relationship' => 'none',
           'label' => $vocab->name,
@@ -263,12 +263,12 @@ function searchlight_views_default_views() {
 
       // If Views can handle the Taxonomy vocab module field for supporting
       // exportable vocabularies, use it.
-      $data = views_fetch_data('vocabulary');
+      $data = views_fetch_data('taxonomy_vocabulary');
       if (isset($data['module']) && !is_numeric($identifier)) {
         $handler->override_option('filters', array(
           'module' => array(
             'id' => 'module',
-            'table' => 'vocabulary',
+            'table' => 'taxonomy_vocabulary',
             'field' => 'module',
             'value' => array($vocab->module => $vocab->module),
           ),
@@ -278,7 +278,7 @@ function searchlight_views_default_views() {
         $handler->override_option('filters', array(
           'vid' => array(
             'id' => 'vid',
-            'table' => 'term_data',
+            'table' => 'taxonomy_term_data',
             'field' => 'vid',
             'value' => array($vocab->vid => $vocab->vid),
           ),
@@ -335,7 +335,7 @@ function searchlight_views_default_views() {
             ),
             'name' => array(
               'id' => 'name',
-              'table' => 'term_data',
+              'table' => 'taxonomy_term_data',
               'field' => 'name',
               'relationship' => 'content_profile_rel',
               'label' => $vocab->name,
@@ -344,12 +344,12 @@ function searchlight_views_default_views() {
 
           // If Views can handle the Taxonomy vocab module field for supporting
           // exportable vocabularies, use it.
-          $data = views_fetch_data('vocabulary');
+          $data = views_fetch_data('taxonomy_vocabulary');
           if (isset($data['module']) && !is_numeric($identifier)) {
             $handler->override_option('filters', array(
               'module' => array(
                 'id' => 'module',
-                'table' => 'vocabulary',
+                'table' => 'taxonomy_vocabulary',
                 'field' => 'module',
                 'value' => array($vocab->module => $vocab->module),
                 'relationship' => 'content_profile_rel',
@@ -360,7 +360,7 @@ function searchlight_views_default_views() {
             $handler->override_option('filters', array(
               'vid' => array(
                 'id' => 'vid',
-                'table' => 'term_data',
+                'table' => 'taxonomy_term_data',
                 'field' => 'vid',
                 'value' => array($vocab->vid => $vocab->vid),
                 'relationship' => 'content_profile_rel',

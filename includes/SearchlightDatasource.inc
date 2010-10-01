@@ -231,7 +231,7 @@ class SearchlightDatasource {
     $form['#datasource'] = $this;
 
     // Calculations of indexing percentage.
-    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = '%s' GROUP BY status", $this->base_table);
+    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = :type GROUP BY status", array(':type' => $this->base_table));
     $items_indexed = 0;
     $items_total = 0;
     while ($row = db_fetch_object($result)) {
@@ -284,7 +284,7 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-fields-new-add/fields',
+        'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-new-add/fields',
         'wrapper' => 'datasource-fields',
         'method' => 'replace',
       ),
@@ -297,7 +297,7 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-fields-remove/fields',
+          'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-remove/fields',
           'wrapper' => 'datasource-fields',
           'method' => 'replace',
         ),
@@ -366,7 +366,7 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-new-add/multivalues',
+        'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-new-add/multivalues',
         'wrapper' => 'datasource-multivalues',
         'method' => 'replace',
       ),
@@ -379,7 +379,7 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-remove/multivalues',
+          'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-remove/multivalues',
           'wrapper' => 'datasource-multivalues',
           'method' => 'replace',
         ),

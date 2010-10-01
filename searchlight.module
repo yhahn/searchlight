@@ -1,10 +1,10 @@
 <?php
 
-include_once('includes/SearchlightDatasource.inc');
-include_once('includes/SearchlightEnvironment.inc');
+include_once 'includes/SearchlightDatasource.inc';
+include_once 'includes/SearchlightEnvironment.inc';
 
 /**
- * Implementation of hook_init().
+ * Implements hook_init().
  * Forcibly disable core search indexing if present.
  */
 function searchlight_init() {
@@ -15,11 +15,11 @@ function searchlight_init() {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function searchlight_menu() {
   $items = array();
-  $items['admin/settings/search/datasource'] = array(
+  $items['admin/config/search/settings/datasource'] = array(
     'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource'),
@@ -29,7 +29,7 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource'] = array(
+  $items['admin/config/search/settings/datasource/list/%searchlight_datasource'] = array(
     'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource_edit', 5),
@@ -39,7 +39,7 @@ function searchlight_menu() {
     'type' => MENU_CALLBACK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/edit'] = array(
+  $items['admin/config/search/settings/datasource/list/%searchlight_datasource/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource_edit', 5),
@@ -49,7 +49,7 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/delete'] = array(
+  $items['admin/config/search/settings/datasource/list/%searchlight_datasource/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
@@ -58,7 +58,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/revert'] = array(
+  $items['admin/config/search/settings/datasource/list/%searchlight_datasource/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
@@ -67,7 +67,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/datasource/ahah/%/%'] = array(
+  $items['admin/config/search/settings/datasource/ahah/%/%'] = array(
     'page callback' => 'searchlight_admin_datasource_ahah',
     'page arguments' => array(5, 6),
     'access callback' => 'user_access',
@@ -76,7 +76,7 @@ function searchlight_menu() {
     'type' => MENU_CALLBACK,
   );
 
-  $items['admin/settings/search/environment'] = array(
+  $items['admin/config/search/settings/environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment'),
@@ -86,7 +86,7 @@ function searchlight_menu() {
     'type' => MENU_LOCAL_TASK,
     'weight' => -5,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment'] = array(
+  $items['admin/config/search/settings/environment/list/%searchlight_environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment_edit', 5),
@@ -96,7 +96,7 @@ function searchlight_menu() {
     'type' => MENU_CALLBACK,
     'weight' => -10,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/edit'] = array(
+  $items['admin/config/search/settings/environment/list/%searchlight_environment/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment_edit', 5),
@@ -106,7 +106,7 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/delete'] = array(
+  $items['admin/config/search/settings/environment/list/%searchlight_environment/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
@@ -115,7 +115,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/revert'] = array(
+  $items['admin/config/search/settings/environment/list/%searchlight_environment/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
@@ -125,7 +125,7 @@ function searchlight_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
-  $items['admin/settings/search/backend'] = array(
+  $items['admin/config/search/settings/backend'] = array(
     'title' => 'Backend',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_backend'),
@@ -138,27 +138,33 @@ function searchlight_menu() {
 }
 
 /**
- * Implementation of hook_menu_alter().
+ * Implements hook_menu_alter().
  */
 function searchlight_menu_alter(&$items) {
-  $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
-  $items['admin/settings/search']['title'] = 'Search';
-  $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
-  unset($items['admin/settings/search']['weight']);
+  $items['admin/config/search/settings'] = $items['admin/config/search/settings/datasource'];
+  $items['admin/config/search/settings']['title'] = 'Search';
+  $items['admin/config/search/settings']['type'] = MENU_NORMAL_ITEM;
+  unset($items['admin/config/search/settings']['weight']);
 }
 
 /**
- * Implementation of hook_block().
+ * Implements hook_block_info().
  */
-function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
-  if ($op === 'list') {
+function searchlight_block_info() {
+  if (TRUE) {
     $list = array();
     foreach (searchlight_environment_load() as $environment) {
       $list['facets_' . $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
     }
     return $list;
   }
-  else if ($op === 'view' && strpos($delta, '_') !== FALSE) {
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function searchlight_block_view($delta) {
+  if (TRUE && strpos($delta, '_') !== FALSE) {
     list($delta, $name) = explode('_', $delta, 2);
     if (in_array($delta, array('facets'), TRUE) && $environment = searchlight_environment_load($name)) {
       return $environment->getBlock($delta);
@@ -167,50 +173,127 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
 }
 
 /**
- * Implementation of hook_nodeapi().
+ * Implements hook_block().
  */
-function searchlight_nodeapi($node, $op) {
-  switch ($op) {
-    case 'insert':
-      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
-      break;
-    case 'update':
-      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
-      break;
-    case 'delete':
-      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid);
-      break;
-  }
+function searchlight_block_OLD($op = 'list', $delta = 0, $edit = array()) { }
+
+/**
+ * Implements hook_node_insert().
+ */
+function searchlight_node_insert($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0) */
+  $id = db_insert('searchlight_search')
+  ->fields(array(
+    'type' => 'node',
+    'id' => $node->nid,
+    'status' => 0,
+  ))
+  ->execute();
 }
 
 /**
- * Implementation of hook_comment().
+ * Implements hook_node_update().
  */
-function searchlight_comment(&$a1, $op) {
+function searchlight_node_update($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid) */
+  db_update('searchlight_search')
+  ->fields(array(
+    'status' => 0,
+  ))
+  ->condition('type', 'node' and id)
+  ->execute();
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function searchlight_node_delete($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid) */
+  db_update('searchlight_search')
+  ->fields(array(
+    'status' => -1,
+  ))
+  ->condition('type', 'node' and id)
+  ->execute();
+}
+
+/**
+ * Implements hook_nodeapi().
+ */
+function searchlight_nodeapi_OLD($node, $op) { }
+
+/**
+ * Implements hook_comment_insert().
+ */
+function searchlight_comment_insert($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0) */
+  $id = db_insert('searchlight_search')
+  ->fields(array(
+    'type' => 'comments',
+    'id' => $a1['cid'],
+    'status' => 0,
+  ))
+  ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_comment_update().
+ */
+function searchlight_comment_update($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']) */
+  db_update('searchlight_search')
+  ->fields(array(
+    'status' => 0,
+  ))
+  ->condition('type', 'comments')
+  ->condition('id', $a1['cid'])
+  ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_comment_delete().
+ */
+function searchlight_comment_delete($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']) */
+  db_update('searchlight_search')
+  ->fields(array(
+    'status' => -1,
+  ))
+  ->condition('type', 'comments' and id)
+  ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_comment().
+ */
+function searchlight_comment_OLD(&$a1, $op) {
+  // TODO Remaining code in this function needs to be moved to the appropriate new hook function.
   $update_node = FALSE;
-  switch ($op) {
-    case 'insert':
-      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0);
-      $update_node = TRUE;
-      break;
-    case 'update':
-      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']);
-      $update_node = TRUE;
-      break;
-    case 'delete':
-      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']);
-      $update_node = TRUE;
-      break;
-  }
   if ($update_node) {
     // Mark the parent node as needing an update. Changes in node comments
     // can affect the node as well (e.g. node_comment_statistics).
-    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $a1['nid']);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $a1['nid']) */
+    db_update('searchlight_search')
+  ->fields(array(
+      'status' => 0,
+    ))
+  ->condition('type', 'node' and id)
+  ->execute();
   }
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  */
 function searchlight_theme() {
   return array(
@@ -220,19 +303,19 @@ function searchlight_theme() {
     ),
     'searchlight_sphinx_conf' => array(
       'template' => 'searchlight-sphinx-conf',
-      'arguments' => array('searchd' => array()),
+      'variables' => array('searchd' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_sphinx_index_conf' => array(
       'template' => 'searchlight-sphinx-index-conf',
-      'arguments' => array('datasource' => array()),
+      'variables' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_solr_schema' => array(
       'template' => 'searchlight-solr-schema',
-      'arguments' => array('datasource' => array()),
+      'variables' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -244,12 +327,12 @@ function searchlight_theme() {
     ),
     'searchlight_solr_cores' => array(
       'template' => 'searchlight-solr-cores',
-      'arguments' => array('cores' => array()),
+      'variables' => array('cores' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_plugin_display_datasource' => array(
-      'arguments' => array('form' => array()),
+      'render element' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -271,18 +354,18 @@ function searchlight_theme() {
     ),
     'searchlight_admin_datasource' => array(
       'template' => 'searchlight-admin-datasource',
-      'arguments' => array('form' => array()),
+      'render element' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource_fields' => array(
-      'arguments' => array('form' => array()),
+      'render element' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_environment' => array(
       'template' => 'searchlight-admin-environment',
-      'arguments' => array('form' => array()),
+      'render element' => array('form' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -332,13 +415,13 @@ function searchlight_search_form(&$form_state) {
     '#name' => '', // prevent from showing up in $_GET.
     '#type' => 'submit',
     '#value' => t('Search'),
-    '#id' => form_clean_id('edit-submit-searchlight-search-form'),
+    '#id' => drupal_clean_css_identifier('edit-submit-searchlight-search-form'),
   );
   return $form;
 }
 
 /**
- * Implementation of hook_views_api().
+ * Implements hook_views_api().
  */
 function searchlight_views_api() {
   return array(
@@ -348,7 +431,7 @@ function searchlight_views_api() {
 }
 
 /**
- * Implementation of hook_ctools_plugin_api().
+ * Implements hook_ctools_plugin_api().
  */
 function searchlight_ctools_plugin_api($module = NULL, $api = NULL) {
   if ($module === 'searchlight') {
@@ -364,17 +447,21 @@ function searchlight_ctools_plugin_api($module = NULL, $api = NULL) {
 }
 
 /**
- * Implementation of hook_ctools_plugin_plugins().
+ * Implements hook_ctools_plugin_plugins().
  */
-function searchlight_ctools_plugin_plugins() {
+function searchlight_ctools_plugin_type() {
   return array(
-    'cache' => TRUE,
-    'use hooks' => TRUE,
+    'plugins' => array(
+      'cache' => TRUE,
+      'use hooks' => TRUE,
+      'classes' => array('handler'),
+    ),
   );
 }
 
+
 /**
- * Implementation of hook_searchlight_plugins().
+ * Implements hook_searchlight_plugins().
  * This is a CTools plugin API hook.
  */
 function searchlight_searchlight_plugins() {
@@ -445,7 +532,7 @@ function searchlight_searchlight_plugins() {
 }
 
 /**
- * Implementation of hook_searchlight_registry().
+ * Implements hook_searchlight_registry().
  */
 function searchlight_searchlight_registry() {
   return array(
@@ -485,7 +572,7 @@ function searchlight_searchlight_registry() {
 }
 
 /**
- * Implementation of hook_form_alter() for 'views_exposed_form'.
+ * Implements hook_form_alter() for 'views_exposed_form'().
  * Ensure that Searchlight facet components are preserved when Views exposed
  * filters are submitted.
  */
@@ -500,7 +587,7 @@ function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
 }
 
 /**
- * Implementation of hook_ajax_data_alter().
+ * Implements hook_ajax_data_alter().
  *
  * This hook is called by Views (and some other modules) when returning AJAX
  * data to the client. It provides an event for other modules to hook into to
@@ -526,7 +613,7 @@ function searchlight_ajax_data_alter(&$object, $type, $metadata) {
 }
 
 /**
- * Implementation of hook_searchlight_node_access_realms_alter().
+ * Implements hook_searchlight_node_access_realms_alter().
  * Provide realms for commonly used node_access modules.
  */
 function searchlight_searchlight_node_access_realms_alter(&$realms) {
@@ -760,7 +847,11 @@ function searchlight_datasource_save($datasource, $editing = FALSE) {
  */
 function searchlight_datasource_delete($datasource) {
   if (isset($datasource->name) && ($datasource->export_type & EXPORT_IN_DATABASE)) {
-    db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name) */
+    db_delete('searchlight_datasource')
+  ->condition('name', $datasource->name)
+  ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }
@@ -923,7 +1014,11 @@ function searchlight_environment_save($environment) {
  */
 function searchlight_environment_delete($environment) {
   if (isset($environment->name) && ($environment->export_type & EXPORT_IN_DATABASE)) {
-    db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name) */
+    db_delete('searchlight_environment')
+  ->condition('name', $environment->name)
+  ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }
@@ -976,9 +1071,14 @@ function searchlight_invalidate_index($base_table = NULL) {
       // Let the backend respond to a rebuild index command.
       $backend->invalidateIndex($datasource);
 
-      db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table) */
+      db_delete('searchlight_search')
+  ->condition('type', $datasource->base_table)
+  ->execute();
       $views_data = views_fetch_data($datasource->base_table);
       $base_field = $views_data['table']['base']['field'];
+      // TODO Please convert this statement to the D7 database API syntax.
       db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '" . $datasource->base_table . "', " . $base_field . ", 0 FROM {" . $datasource->base_table . "}");
     }
   }

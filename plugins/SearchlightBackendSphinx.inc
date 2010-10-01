@@ -145,7 +145,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of facetBuild().
    */
   function facetBuild(&$client, $datasource, $query = '', $facets) {
-    $client = drupal_clone($client);
+    $client = clone $client;
     foreach ($facets as $facet) {
       $field = $datasource->fields[$facet['field']];
       $limit = $facet['limit'];
@@ -216,6 +216,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     variable_del('searchlight_sphinx_last');
 
     $delete = array();
+    // TODO Please convert this statement to the D7 database API syntax.
     $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
     while ($row = db_fetch_object($result)) {
       $delete[$row->{$datasource->base_field}] = array(1);
@@ -378,7 +379,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf_path = $this->drushGetConfigPath();
     $conf_file = $this->drushGetConfigFile();
 
-    if (file_check_directory($conf_path, TRUE)) {
+    if (file_prepare_directory($conf_path, TRUE)) {
       $files = array();
 
       // rerieve list of possible configuration file matches.
@@ -421,7 +422,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $file_path = $this->drushGetConfigPath() . '/log';
 
     $lock_file = "{$file_path}/searchd.lock";
-    if (file_check_directory($file_path, TRUE)) {
+    if (file_prepare_directory($file_path, TRUE)) {
       $lock = file_exists($lock_file) ? file_get_contents($lock_file) : 0;
 
       if ((int) $lock == 1) {
@@ -429,7 +430,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
 
       file_put_contents($lock_file, '1');
-      if (file_check_directory($file_path, TRUE)) {
+      if (file_prepare_directory($file_path, TRUE)) {
         $pid_file = "{$file_path}/searchd.pid";
         $pid = file_exists($pid_file) ? file_get_contents($pid_file) : '';
 
@@ -457,9 +458,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // Create the sphinx directory if it doesn't exist.
     $changed = $this->drushGenerateMergedConfig();
     $file_path = $this->drushGetConfigPath() . '/indexes';
-    if (file_check_directory($file_path, TRUE)) {
+    if (file_prepare_directory($file_path, TRUE)) {
       // Determine if we should update deltas only.
-      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > time();
+      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > REQUEST_TIME;
 
       // Build list of this site's indexes.
       $indexes = array();
@@ -480,7 +481,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Note that we must update both the main and delta indices.
       foreach (searchlight_get_datasource() as $datasource) {
         $delete = array();
-        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => -1, ':type' => $datasource->base_table));
         while ($row = db_fetch_object($result)) {
           $delete[$row->id] = array(1);
         }
@@ -490,14 +491,26 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
 
           // Once updates are complete, remove the Drupal-side records.
-          db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+          // TODO Please review the conversion of this statement to the D7 database API syntax.
+          /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
+          db_delete('searchlight_search')
+  ->condition('status', -1)
+  ->condition('type', $datasource->base_table)
+  ->execute();
         }
       }
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       cache_clear_all('searchlight', 'cache', TRUE);
-      db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
-      variable_set('searchlight_sphinx_last', time());
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0') */
+      db_update('searchlight_search')
+  ->fields(array(
+        'status' => 1,
+      ))
+  ->condition('status', 0)
+  ->execute();
+      variable_set('searchlight_sphinx_last', REQUEST_TIME);
       drush_log('Indexing complete.', 'success');
       if ($changed === TRUE) {
         return $this->drushSearchd();
@@ -534,11 +547,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     //   variable_set('searchlight_config_changed', FALSE);
     // }
 
-    if (file_check_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
+    if (file_prepare_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
       $this->drushBaseConf();
     }
 
-    if (file_check_directory($conf_path, TRUE)) {
+    if (file_prepare_directory($conf_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       foreach (searchlight_get_datasource() as $datasource) {
         $source = $this->sphinxDatasourceConf($datasource);
@@ -551,7 +564,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
 
         // Generate configuration file from datasource.
-        $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
+        $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
         $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
         if ($sphinx_conf !== $existing) {
           file_put_contents($conf_file, $sphinx_conf);
@@ -569,8 +582,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function drushBaseConf() {
     $file_path = $this->drushGetConfigPath();
     $conf_file = "{$file_path}/sphinx.conf";
-    if (file_check_directory($file_path, TRUE)) {
-      $sphinx_conf = theme('searchlight_sphinx_conf', $this->sphinxSearchdConf());
+    if (file_prepare_directory($file_path, TRUE)) {
+      $sphinx_conf = theme('searchlight_sphinx_conf', array('searchd' => $this->sphinxSearchdConf()));
       if ($sphinx_conf) {
         $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
         if ($sphinx_conf === $existing) {
@@ -703,7 +716,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Force utf8 when indexing.
       $conf['conf']['sql_query_pre'] = "SET NAMES utf8";
 
-      $sql_query = drupal_clone($view->query);
+      $sql_query = clone $view->query;
       $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" . ' BETWEEN $start AND $end');
       $sql_query->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
@@ -713,7 +726,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
       // Build the info query.
-      $sql_query_info = drupal_clone($view->query);
+      $sql_query_info = clone $view->query;
       $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id');
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
@@ -749,7 +762,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
         // Generate multivalue queries.
         else if ($field['usage'] === 'multivalue' && $mva_view = searchlight_build_view($field['view'])) {
-          $query = drupal_clone($mva_view->query);
+          $query = clone $mva_view->query;
           // Remove any fields that are not the id field or attribute field.
           foreach ($query->fields as $alias => $query_field) {
             if ($query_field['field'] === $mva_view->base_field && $query_field['table'] === $mva_view->base_table) {

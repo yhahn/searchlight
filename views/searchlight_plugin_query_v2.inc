@@ -19,6 +19,10 @@ class searchlight_plugin_query extends views_query {
    */
   function construct() { }
   function set_definition() { }
+  /**
+   * @todo Please document this function.
+   * @see http://drupal.org/node/1354
+   */
   function searchlight_plugin_query($base_table = 'node', $base_field = 'nid') { }
 
   function init_pager($view) {

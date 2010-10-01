@@ -3,7 +3,7 @@
 /**
  * Datasource management form.
  */
-function searchlight_admin_environment($form_state) {
+function searchlight_admin_environment($form, $form_state) {
   $form = array(
     '#theme' => 'searchlight_admin_list',
     '#objects' => array(searchlight_environment_load(NULL, TRUE)),
@@ -86,7 +86,7 @@ function searchlight_admin_environment_new(&$form, &$form_state) {
 /**
  * Edit form for environment.
  */
-function searchlight_admin_environment_edit($form_state, $environment) {
+function searchlight_admin_environment_edit($form, $form_state, $environment) {
   $form = array();
   $form['#environment'] = $environment;
   $form['#environment_name'] = $environment->name;
@@ -98,7 +98,7 @@ function searchlight_admin_environment_edit($form_state, $environment) {
   );
   $form['buttons']['cancel'] = array(
     '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/environment'),
+    '#value' => l(t('Cancel'), 'admin/config/search/settings/environment'),
   );
   return $form;
 }
@@ -115,7 +115,7 @@ function searchlight_admin_environment_edit_submit(&$form, $form_state) {
 /**
  * Datasource management form.
  */
-function searchlight_admin_datasource($form_state) {
+function searchlight_admin_datasource($form, $form_state) {
   views_include('admin');
   $base_tables = views_fetch_base_tables();
 
@@ -171,7 +171,7 @@ function searchlight_admin_datasource($form_state) {
   );
   $form['buttons']['cancel'] = array(
     '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/datastore'),
+    '#value' => l(t('Cancel'), 'admin/config/search/settings/datastore'),
   );
   return $form;
 }
@@ -234,7 +234,7 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
 /**
  * Edit form for datasource.
  */
-function searchlight_admin_datasource_edit($form_state, $datasource) {
+function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
   $form = array();
   $form['#datasource'] = $datasource;
   $form['#datasource_name'] = $datasource->name;
@@ -247,7 +247,7 @@ function searchlight_admin_datasource_edit($form_state, $datasource) {
   );
   $form['buttons']['cancel'] = array(
     '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/datastore'),
+    '#value' => l(t('Cancel'), 'admin/config/search/settings/datastore'),
   );
   return $form;
 }
@@ -282,10 +282,10 @@ function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
     $form['#post'] = array();
     $form = form_builder($form['form_id']['#value'], $form, $form_state);
     $output = drupal_render($form[$element]);
-    drupal_json(array('status' => TRUE, 'data' => $output));
+    drupal_json_output(array('status' => TRUE, 'data' => $output));
   }
   else {
-    drupal_json(array('status' => FALSE, 'data' => ''));
+    drupal_json_output(array('status' => FALSE, 'data' => ''));
   }
   exit();
 }
@@ -293,7 +293,7 @@ function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
 /**
  * Confirmation form for datasource actions.
  */
-function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
+function searchlight_admin_confirm($form, &$form_state, $type, $object, $op) {
   switch ($type) {
     case 'searchlight_datasource':
       $type_name = t('datasource');
@@ -335,7 +335,7 @@ function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
   }
   $form = confirm_form($form,
     t('Are you sure you want to !action the @type %title?', array('%title' => $object->name, '@type' => $type_name, '!action' => $action)),
-    'admin/settings/search',
+    'admin/config/search/settings',
     $message,
     drupal_ucfirst($action), t('Cancel')
   );
@@ -359,11 +359,11 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
           if ($form_state['values']['action'] === 'revert') {
             drupal_set_message(t('Datasource @datasource reverted. The index for this datasource needs to be rebuilt.', array('@datasource' => $object->name)));
           }
-          $form_state['redirect'] = 'admin/settings/search/datasource';
+          $form_state['redirect'] = 'admin/config/search/settings/datasource';
           break;
         case 'searchlight_environment':
           searchlight_environment_delete($object);
-          $form_state['redirect'] = 'admin/settings/search/environment';
+          $form_state['redirect'] = 'admin/config/search/settings/environment';
           break;
       }
       break;
@@ -373,7 +373,7 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
 /**
  * System settings form for Searchlight.
  */
-function searchlight_admin_backend($form_state) {
+function searchlight_admin_backend($form, $form_state) {
   drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.admin.js');
 
   $form = array();

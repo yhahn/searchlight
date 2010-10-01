@@ -1,4 +1,4 @@
-core = "6.x"
+core = 7.x
 dependencies[] = "searchlight"
 description = "Basic default configuration for Searchlight indexing and views."
 features[ctools][] = "searchlight_datasource"
@@ -8,3 +8,8 @@ features[searchlight_environment][] = "search_node"
 features[views][] = "search_node"
 name = "Searchlight basic"
 package = "Search"
+
+files[] = searchlight_basic.defaults.inc
+files[] = searchlight_basic.features.inc
+files[] = searchlight_basic.features.views.inc
+files[] = searchlight_basic.module

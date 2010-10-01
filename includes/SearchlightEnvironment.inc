@@ -97,7 +97,7 @@ class SearchlightEnvironment {
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
       foreach ($deltas as $delta) {
-        if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
+        if ($render = $plugin->render(clone $this->query, $delta)) {
           // Theme each item
           $items = array();
           foreach ($render as $item) {

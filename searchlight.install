@@ -1,12 +1,18 @@
 <?php
+/**
+ * @file
+ * Install, update and uninstall functions for the searchlight module.
+ *
+ */
+
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function searchlight_schema() {
   $schema = array();
   $schema['searchlight_datasource'] = array(
-    'description' => t('Storage for Searchlight datasource configuration.'),
+    'description' => 'Storage for Searchlight datasource configuration.',
     'export' => array(
       'key' => 'name',
       'object' => 'SearchlightDatasource',
@@ -53,7 +59,7 @@ function searchlight_schema() {
     'primary key' => array('name'),
   );
   $schema['searchlight_environment'] = array(
-    'description' => t('Storage for Searchlight environment configuration.'),
+    'description' => 'Storage for Searchlight environment configuration.',
     'export' => array(
       'key' => 'name',
       'object' => 'SearchlightEnvironment',
@@ -95,22 +101,22 @@ function searchlight_schema() {
     'primary key' => array('name'),
   );
   $schema['searchlight_search'] = array(
-    'description' => t('Stores a record of an items status in the index.'),
+    'description' => 'Stores a record of an items status in the index.',
     'fields' => array(
       'type' => array(
-        'description' => t('The type of item.'),
+        'description' => 'The type of item.',
         'type' => 'varchar',
         'length' => '128',
         'not null' => TRUE,
       ),
       'id' => array(
-        'description' => t('The primary identifier for an item.'),
+        'description' => 'The primary identifier for an item.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'status' => array(
-        'description' => t('Boolean indicating whether the item should be available in the index.'),
+        'description' => 'Boolean indicating whether the item should be available in the index.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -119,31 +125,37 @@ function searchlight_schema() {
     'indexes' => array(
       'status' => array('status'),
     ),
-    'primary key' => array('type, id'),
+    'primary key' => array('type', 'id'),
   );
   return $schema;
 }
 
 /**
- * Implementation of hook_enable().
+ * Implements hook_enable().
  */
 function searchlight_enable() {
   searchlight_invalidate_index();
 }
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function searchlight_install() {
-  drupal_install_schema('searchlight');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('searchlight')
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function searchlight_uninstall() {
   variable_del('searchlight_views');
   variable_del('searchlight_backend');
-  db_query("DELETE FROM {variable} WHERE name LIKE 'searchlight_backend_%'");
-  drupal_uninstall_schema('searchlight');
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {variable} WHERE name LIKE 'searchlight_backend_%'") */
+  db_delete('variable')
+  ->condition('name', 'searchlight_backend_%', 'LIKE')
+  ->execute();
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('searchlight')
 }
