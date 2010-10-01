@@ -61,7 +61,7 @@ function searchlight_views_plugins() {
  */
 function searchlight_views_handlers() {
   return array(
-    'info' => array('path' => drupal_get_path('module', 'searchlight') .'/views'),
+    'info' => array('path' => drupal_get_path('module', 'searchlight') . '/views'),
     'handlers' => array(
       'searchlight_handler_argument_search' => array('parent' => 'views_handler_argument'),
       'searchlight_handler_filter_search' => array('parent' => 'views_handler_filter'),
@@ -117,7 +117,7 @@ function searchlight_views_data_alter(&$data) {
   if (module_exists('og_views')) {
     $data['og_uid']['nid']['field'] = array(
       'title' => t('Group ID'),
-      'handler' => 'views_handler_field'
+      'handler' => 'views_handler_field',
     );
   }
 
@@ -163,7 +163,7 @@ function searchlight_views_init_query(&$view) {
     // Check that an active datasource can be found for this base table.
     if (searchlight_get_datasource($view->base_table)) {
       // Add Searchlight JS.
-      drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.js');
+      drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.js');
 
       $view->query = searchlight_get_query($view->base_table, $view->base_field);
     }
@@ -241,7 +241,7 @@ function searchlight_views_default_views() {
       $identifier = strtr($identifier, ' -:', '___');
 
       /* Display: Vocabulary */
-      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_'. $identifier);
+      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_' . $identifier);
       $handler->override_option('arguments', array());
       $handler->override_option('relationships', array());
       $handler->override_option('sorts', array());
@@ -288,7 +288,7 @@ function searchlight_views_default_views() {
         'field' => 'term_data_tid',
         'label_field' => 'term_data_name',
         'override' => array(
-          'name' => 'term_data_tid_'. $identifier,
+          'name' => 'term_data_tid_' . $identifier,
           'label' => $vocab->name,
         ),
       ));
@@ -306,7 +306,7 @@ function searchlight_views_default_views() {
     $view->base_table = 'users';
     $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
-    foreach(array_keys(content_profile_get_types()) as $profile_type) {
+    foreach (array_keys(content_profile_get_types()) as $profile_type) {
       foreach (taxonomy_get_vocabularies() as $vocab) {
         if (isset($vocab->nodes[$profile_type])) {
           $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;

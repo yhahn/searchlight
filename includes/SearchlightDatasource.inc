@@ -34,7 +34,7 @@ class SearchlightDatasource {
     global $db_url;
     $url = is_array($db_url) ? $db_url['default'] : $db_url;
     $url = parse_url($url);
-    $this->id = trim(urldecode($url['path']), '/') .'_'. $this->name;
+    $this->id = trim(urldecode($url['path']), '/') . '_' . $this->name;
     return $this;
   }
 
@@ -67,7 +67,7 @@ class SearchlightDatasource {
         'id' => $this->base_field,
         'table' => $this->base_table,
         'field' => $this->base_field,
-        'relationship' => 'none'
+        'relationship' => 'none',
       );
     }
     foreach ($this->getFields() as $name => $field) {
@@ -75,7 +75,7 @@ class SearchlightDatasource {
         'id' => $field['name'],
         'table' => $field['table'],
         'field' => $field['field'],
-        'relationship' => 'none'
+        'relationship' => 'none',
       );
     }
     $handler->override_option('fields', $fields);
@@ -116,11 +116,11 @@ class SearchlightDatasource {
       // column type is not enough information to determine the usage of the
       // field.
       $map = array(
-        'serial'  => 'int',
-        'int'     => 'int',
+        'serial' => 'int',
+        'int' => 'int',
         'varchar' => 'text',
-        'text'    => 'text',
-        'float'   => 'float',
+        'text' => 'text',
+        'float' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
@@ -257,7 +257,7 @@ class SearchlightDatasource {
 
     $form['help'] = array(
       '#type' => 'item',
-      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.')
+      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.'),
     );
 
     $form['fields'] = array(
@@ -332,7 +332,10 @@ class SearchlightDatasource {
       $default_usage = isset($this->fields[$name]['usage']) ? $this->fields[$name]['usage'] : $default_usage;
       $form['fields']['fields'][$name]['usage'] = array(
         '#type' => 'select',
-        '#options' => array( 'content' => t('Content'), 'attribute' => t('Attribute')),
+        '#options' => array(
+          'content' => t('Content'),
+          'attribute' => t('Attribute'),
+        ),
         '#default_value' => $default_usage,
       );
     }

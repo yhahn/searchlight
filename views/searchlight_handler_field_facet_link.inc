@@ -1,9 +1,11 @@
 <?php
 
 class searchlight_handler_field_facet_link extends views_handler_field {
-  function query() {}
+  function query() { }
 
-  function allow_advanced_render() { return FALSE; }
+  function allow_advanced_render() {
+    return FALSE;
+  }
 
   function option_definition() {
     $options = parent::option_definition();

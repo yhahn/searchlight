@@ -101,19 +101,19 @@ function searchlight_schema() {
         'description' => t('The type of item.'),
         'type' => 'varchar',
         'length' => '128',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'id' => array(
         'description' => t('The primary identifier for an item.'),
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'status' => array(
         'description' => t('Boolean indicating whether the item should be available in the index.'),
         'type' => 'int',
         'not null' => TRUE,
-        'default' => 0
+        'default' => 0,
       ),
     ),
     'indexes' => array(

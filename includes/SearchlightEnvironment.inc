@@ -104,7 +104,11 @@ class SearchlightEnvironment {
             $items[] = $plugin->theme($item, $delta);
           }
           // Generate a label/items array suitable for theme('searchlight_facet')
-          $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items, 'delta' => $delta);
+          $rendered[$name] = array(
+            'label' => $plugin->label($delta),
+            'items' => $items,
+            'delta' => $delta,
+          );
         }
       }
     }

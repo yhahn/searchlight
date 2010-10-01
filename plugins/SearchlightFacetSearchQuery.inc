@@ -56,9 +56,9 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
   function render($query, $delta) {
     if ($delta === 'active' && !empty($query->search_query)) {
       return array(array(
-        'id' => $query->search_query,
-        'title' => $query->search_query,
-      ));
+          'id' => $query->search_query,
+          'title' => $query->search_query,
+        ));
     }
     return array();
   }

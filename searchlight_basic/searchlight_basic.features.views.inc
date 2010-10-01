@@ -16,8 +16,8 @@ function _searchlight_basic_views_default_views() {
   $view->is_cacheable = FALSE;
   $view->api_version = '3.0-alpha1';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  
-/* Display: Defaults */
+
+  /* Display: Defaults */
   $handler = $view->new_display('default', 'Defaults', 'default');
   $handler->display->display_options['access']['type'] = 'none';
   $handler->display->display_options['cache']['type'] = 'none';
@@ -108,8 +108,8 @@ function _searchlight_basic_views_default_views() {
   $handler->display->display_options['filters']['facets']['id'] = 'facets';
   $handler->display->display_options['filters']['facets']['table'] = 'searchlight';
   $handler->display->display_options['filters']['facets']['field'] = 'facets';
-  
-/* Display: Page: search */
+
+  /* Display: Page: search */
   $handler = $view->new_display('page', 'Page: search', 'page_1');
   $handler->display->display_options['path'] = 'search';
 

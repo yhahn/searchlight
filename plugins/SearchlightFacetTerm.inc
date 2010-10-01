@@ -136,7 +136,11 @@ class SearchlightFacetTerm extends SearchlightFacet {
               foreach ($terms as $term) {
                 $count = $this->getDeepCount($term->tid, $raw);
                 if ($count) {
-                  $items[] = array('id' => $term->tid, 'title' => $term->name, 'count' => $count);
+                  $items[] = array(
+                    'id' => $term->tid,
+                    'title' => $term->name,
+                    'count' => $count,
+                  );
                 }
               }
             }
@@ -153,7 +157,11 @@ class SearchlightFacetTerm extends SearchlightFacet {
             foreach ($terms as $term) {
               $count = $this->getDeepCount($term->tid, $raw);
               if ($count) {
-                $items[] = array('id' => $term->tid, 'title' => $term->name, 'count' => $count, /*'link' => l($term->name, $_GET['q'], $options)*/);
+                $items[] = array(
+                  'id' => $term->tid,
+                  'title' => $term->name,
+                  'count' => $count, /*'link' => l($term->name, $_GET['q'], $options)*/
+                );
               }
             }
           }
@@ -217,7 +225,10 @@ class SearchlightFacetTerm extends SearchlightFacet {
     $form['count_method'] = array(
       '#title' => t('Count mode'),
       '#type' => 'select',
-      '#options' => array('shallow' => t('Shallow'), 'deep' => t('Deep')),
+      '#options' => array(
+        'shallow' => t('Shallow'),
+        'deep' => t('Deep'),
+      ),
       '#default_value' => $this->options['count_method'],
     );
   }

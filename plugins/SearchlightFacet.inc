@@ -173,7 +173,7 @@ class SearchlightFacet {
       }
 
       // Add WHERE condition on item ids.
-      $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
+      $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (" . db_placeholders($ids, 'int') . ")", $ids);
 
       // Add base field.
       $field_alias = $query->add_field($this->field['table'], $this->field['field']);
@@ -239,6 +239,5 @@ class SearchlightFacet {
   /**
    * Provide extended form elements for a facet in the Environment editor.
    */
-  function extendedForm(&$form, $form_state) {
-  }
+  function extendedForm(&$form, $form_state) { }
 }

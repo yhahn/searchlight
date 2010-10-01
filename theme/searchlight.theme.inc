@@ -25,11 +25,11 @@ function template_preprocess_searchlight_solr_schema(&$vars) {
   $defaults = array(
     'indexed' => 'true',
     'stored' => 'true',
-    'multiValued' => 'false'
+    'multiValued' => 'false',
   );
-  foreach($vars['datasource']['schema'] as $id => $field) {
+  foreach ($vars['datasource']['schema'] as $id => $field) {
     // Populate defaults.
-    foreach($defaults as $k => $v) {
+    foreach ($defaults as $k => $v) {
       if (!isset($field[$k])) {
         $vars['datasource']['schema'][$id][$k] = $v;
       }
@@ -82,7 +82,7 @@ function theme_searchlight_plugin_display_datasource($form) {
  * Theme function for a facet.
  */
 function theme_searchlight_facet($facet) {
-  return theme('item_list', $facet['items'], $facet['label'], 'ul', array('class' => 'searchlight-facet-'. $facet['delta']));
+  return theme('item_list', $facet['items'], $facet['label'], 'ul', array('class' => 'searchlight-facet-' . $facet['delta']));
 }
 
 /**
@@ -105,14 +105,18 @@ function theme_searchlight_facet_active($field, $item) {
  * Generates the main datasource admin page.
  */
 function theme_searchlight_admin_list($form) {
-  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
+  drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
 
   $rows = array();
 
   // Generate listing of existing objects
   foreach ($form['#objects'] as $group => $objects) {
     if (!empty($group)) {
-      $rows[] = array(array('data' => check_plain($group), 'colspan' => 4, 'header' => TRUE));
+      $rows[] = array(array(
+          'data' => check_plain($group),
+          'colspan' => 4,
+          'header' => TRUE,
+        ));
     }
     foreach ($objects as $object) {
       if ($object instanceof SearchlightDatasource) {
@@ -145,30 +149,45 @@ function theme_searchlight_admin_list($form) {
         );
       }
       else {
-        $row[] = array('data' => $object->name, 'class' => 'object-name');
+        $row[] = array(
+          'data' => $object->name,
+          'class' => 'object-name',
+        );
       }
-      $row[] = array('data' => $extra, 'class' => 'object-extra');
-      $row[] = array('data' => $storage, 'class' => 'object-storage');
+      $row[] = array(
+        'data' => $extra,
+        'class' => 'object-extra',
+      );
+      $row[] = array(
+        'data' => $storage,
+        'class' => 'object-storage',
+      );
 
       // Actions
       $links = array(
-        'edit'    => l(t('Edit'), "admin/settings/search/{$path}/list/{$object->name}"),
-        'delete'  => l(t('Delete'), "admin/settings/search/{$path}/list/{$object->name}/delete"),
-        'revert'  => l(t('Revert'), "admin/settings/search/{$path}/list/{$object->name}/revert"),
+        'edit' => l(t('Edit'), "admin/settings/search/{$path}/list/{$object->name}"),
+        'delete' => l(t('Delete'), "admin/settings/search/{$path}/list/{$object->name}/delete"),
+        'revert' => l(t('Revert'), "admin/settings/search/{$path}/list/{$object->name}/revert"),
       );
       foreach (array_keys($links) as $key) {
         if (!searchlight_task_access($object, $key)) {
           unset($links[$key]);
         }
       }
-      $row[] = array('data' => implode(' | ', $links), 'class' => 'object-links');
+      $row[] = array(
+        'data' => implode(' | ', $links),
+        'class' => 'object-links',
+      );
       $rows[] = $row;
     }
   }
   $row = array();
   foreach (element_children($form['new']) as $key) {
     if ($form['new'][$key]['#type'] === 'submit') {
-      $row[] = array('data' => drupal_render($form['new'][$key]), 'colspan' => 2);
+      $row[] = array(
+        'data' => drupal_render($form['new'][$key]),
+        'colspan' => 2,
+      );
     }
     else {
       $row[] = drupal_render($form['new'][$key]);
@@ -189,9 +208,16 @@ function theme_searchlight_admin_datasource_fields($form) {
 
   // New fields header.
   if (!empty($form['new'])) {
-    $rows[] = array(array('data' => t('Add field'), 'colspan' => 4, 'header' => TRUE));
+    $rows[] = array(array(
+        'data' => t('Add field'),
+        'colspan' => 4,
+        'header' => TRUE,
+      ));
     $rows[] = array(
-      array('data' => drupal_render($form['new']['field']), 'colspan' => 3),
+      array(
+        'data' => drupal_render($form['new']['field']),
+        'colspan' => 3,
+      ),
       array('data' => drupal_render($form['new']['add'])),
     );
   }
@@ -199,9 +225,18 @@ function theme_searchlight_admin_datasource_fields($form) {
   // Existing fields.
   $rows[] = array(
     theme('table_select_header_cell') + array('header' => TRUE),
-    array('data' => t('Field'), 'header' => TRUE),
-    array('data' => t('Datatype'), 'header' => TRUE),
-    array('data' => t('Usage'), 'header' => TRUE)
+    array(
+      'data' => t('Field'),
+      'header' => TRUE,
+    ),
+    array(
+      'data' => t('Datatype'),
+      'header' => TRUE,
+    ),
+    array(
+      'data' => t('Usage'),
+      'header' => TRUE,
+    ),
   );
   foreach (element_children($form['fields']) as $key) {
     if ($key !== 'new') {
@@ -215,12 +250,19 @@ function theme_searchlight_admin_datasource_fields($form) {
     }
   }
   if (!element_children($form['fields'])) {
-    $rows[] = array(array('data' => t('No fields found.'), 'colspan' => 4));
+    $rows[] = array(array(
+        'data' => t('No fields found.'),
+        'colspan' => 4,
+      ));
   }
 
   // Remove fields footer.
   if (!empty($form['remove'])) {
-    $rows[] = array(array('data' => drupal_render($form['remove']), 'colspan' => 4, 'header' => TRUE));
+    $rows[] = array(array(
+        'data' => drupal_render($form['remove']),
+        'colspan' => 4,
+        'header' => TRUE,
+      ));
   }
 
   $output = theme('table', array(), $rows, array(), $form['#title']);
@@ -232,8 +274,8 @@ function theme_searchlight_admin_datasource_fields($form) {
  * Preprocessor for theme('searchlight_admin_environment').
  */
 function template_preprocess_searchlight_admin_environment($vars) {
-  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.admin.js');
-  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
+  drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.admin.js');
+  drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
   drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
 
   // Basic environment info.
@@ -245,8 +287,14 @@ function template_preprocess_searchlight_admin_environment($vars) {
   $facets = '';
   $rows = array();
   $rows[] = array(
-    array('data' => drupal_render($vars['form']['view_display']['view_display']), 'colspan' => 3),
-    array('data' => drupal_render($vars['form']['view_display']['update']), 'colspan' => 3),
+    array(
+      'data' => drupal_render($vars['form']['view_display']['view_display']),
+      'colspan' => 3,
+    ),
+    array(
+      'data' => drupal_render($vars['form']['view_display']['update']),
+      'colspan' => 3,
+    ),
   );
 
   // Build facets table.
@@ -261,7 +309,10 @@ function template_preprocess_searchlight_admin_environment($vars) {
       // Handle element title as table header.
       if (empty($header_row[$cell])) {
         $header_cell = !empty($vars['form']['facets'][$key][$cell]['#title']) ? check_plain($vars['form']['facets'][$key][$cell]['#title']) : '';
-        $header_row[$cell] = array('data' => $header_cell, 'header' => TRUE);
+        $header_row[$cell] = array(
+          'data' => $header_cell,
+          'header' => TRUE,
+        );
       }
       if (isset($vars['form']['facets'][$key][$cell]['#title'])) {
         unset($vars['form']['facets'][$key][$cell]['#title']);
@@ -291,7 +342,10 @@ function template_preprocess_searchlight_admin_environment($vars) {
           break;
       }
     }
-    $facet_rows[] = array('data' => $row, 'class' => 'draggable');
+    $facet_rows[] = array(
+      'data' => $row,
+      'class' => 'draggable',
+    );
   }
 
   $rows[] = $header_row;
@@ -309,7 +363,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
  * Preprocessor for theme('searchlight_admin_datasource').
  */
 function template_preprocess_searchlight_admin_datasource($vars) {
-  drupal_add_css(drupal_get_path("module", "searchlight") ."/searchlight.admin.css");
+  drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
 
   $datasource = $vars['form']['#datasource'];
   $base_tables = views_fetch_base_tables();

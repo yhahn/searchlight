@@ -88,8 +88,7 @@ abstract class SearchlightBackend {
    *
    * @param $datasource
    */
-  function initClient($datasource) {
-  }
+  function initClient($datasource) { }
 
   /**
    * Execute a query using the search backend. Should return an array with the
@@ -99,38 +98,32 @@ abstract class SearchlightBackend {
    *   'total': Total number of non-paged results.
    *   'raw': The raw result object/array/data from the search client.
    */
-  function executeQuery(&$client, $datasource, $query = '') {
-  }
+  function executeQuery(&$client, $datasource, $query = '') { }
 
   /**
    * Set any custom options for the search backend.
    */
-  function setOptions(&$client, $datasource, $options) {
-  }
+  function setOptions(&$client, $datasource, $options) { }
 
   /**
    * Set a filter parameter for the search backend.
    */
-  function setFilter(&$client, $datasource, $filters) {
-  }
+  function setFilter(&$client, $datasource, $filters) { }
 
   /**
    * Set a sort parameter for the search backend.
    */
-  function setSort(&$client, $datasource, $sorts) {
-  }
+  function setSort(&$client, $datasource, $sorts) { }
 
   /**
    * Set a pager/limit parameter for the search backend.
    */
-  function setPager(&$client, $offset, $limit) {
-  }
+  function setPager(&$client, $offset, $limit) { }
 
   /**
    * Set node_access attribute filters.
    */
-  function setNodeAccess(&$client) {
-  }
+  function setNodeAccess(&$client) { }
 
   /**
    * Utility date methods =====================================================
@@ -193,8 +186,7 @@ abstract class SearchlightBackend {
   /**
    * Invalidate the search index associated with this datasource.
    */
-  function invalidateIndex($datasource) {
-  }
+  function invalidateIndex($datasource) { }
 
   /**
    * Drush methods ============================================================
@@ -203,36 +195,30 @@ abstract class SearchlightBackend {
   /**
    * Start a search backend daemon process through drush.
    */
-  function drushSearchd($command = 'start') {
-  }
+  function drushSearchd($command = 'start') { }
 
   /**
    * Start a search backend indexing process through drush.
    */
-  function drushIndex() {
-  }
+  function drushIndex() { }
 
   /**
    * Write search backend configuration files through drush.
    */
-  function drushConf() {
-  }
+  function drushConf() { }
 
   /**
    * Execute functionality on a drush cron run.
    */
-  function drushCron() {
-  }
+  function drushCron() { }
 
   /**
    * When a new site is installed via Aegir.
    */
-  function drushAegirInstall() {
-  }
+  function drushAegirInstall() { }
 
   /**
    * When a site is migrated via Aegir.
    */
-  function drushAegirDeploy() {
-  }
+  function drushAegirDeploy() { }
 }

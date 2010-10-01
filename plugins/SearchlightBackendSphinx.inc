@@ -52,12 +52,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $form['index'] = array(
       '#type' => 'fieldset',
       '#title' => t('Index settings'),
-      '#description' => t('Advanced configuration options for Sphinx. Use these options to enable CJK or other character set handling for Sphinx. Otherwise, you can leave these blank.')
+      '#description' => t('Advanced configuration options for Sphinx. Use these options to enable CJK or other character set handling for Sphinx. Otherwise, you can leave these blank.'),
     );
     $form['index']['morphology'] = array(
       '#title' => t('Morphology'),
       '#description' => t('Morphology processors to apply. See !link', array(
-        '!link' => l(t('Sphinx: morphology'), 'http://www.sphinxsearch.com/docs/current.html#conf-morphology')
+        '!link' => l(t('Sphinx: morphology'), 'http://www.sphinxsearch.com/docs/current.html#conf-morphology'),
       )),
       '#type' => 'textfield',
       '#default_value' => $this->settings['index']['morphology'],
@@ -83,7 +83,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#title' => t('N-gram characters list'),
       '#description' => t('N-gram characters list for basic CJK support. See !link and !charset for CJK support', array(
         '!link' => l(t('Sphinx: ngram_chars'), 'http://www.sphinxsearch.com/docs/current.html#ngram_chars'),
-        '!charset' => l(t('CJK n-gram characters'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables#cjk_ngram_characters')
+        '!charset' => l(t('CJK n-gram characters'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables#cjk_ngram_characters'),
       )),
       '#type' => 'textfield',
       '#default_value' => $this->settings['index']['ngram_chars'],
@@ -152,7 +152,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       switch ($field['datatype']) {
         case 'timestamp':
-          $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
+          $groupby = array(
+            'day' => SPH_GROUPBY_DAY,
+            'month' => SPH_GROUPBY_MONTH,
+            'year' => SPH_GROUPBY_YEAR,
+          );
           $granularity = !empty($facet['granularity']) ? $facet['granularity'] : 'month';
           $client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
           $client->SetArrayResult(FALSE);
@@ -192,7 +196,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
                 $id = $attr['@groupby'];
                 break;
             }
-            $built[$facet['field']][$id] = array('id' => $id, 'count' => $attr['@count']);
+            $built[$facet['field']][$id] = array(
+              'id' => $id,
+              'count' => $attr['@count'],
+            );
           }
         }
       }
@@ -216,7 +223,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     $client = $this->initClient($datasource);
     $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
-    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
+    $client->UpdateAttributes($datasource->id . '_delta', array('searchlight_deleted'), $delete);
   }
 
   /**
@@ -347,7 +354,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     }
   }
 
-  
+
   /**
    * Return a directory where the configuration files and indexes are stored.
    *
@@ -377,7 +384,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // rerieve list of possible configuration file matches.
       $files[] = $conf_path . '/sphinx.conf';
 
-      $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..') , 0, false, 'name');
+      $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..'), 0, false, 'name');
 
       foreach ($matches as $name => $file) {
         $files[] = $file->filename;
@@ -393,7 +400,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
       }
 
-      // load the previous file 
+      // load the previous file
       $old_config = (file_exists($conf_file)) ? file_get_contents($conf_file) : '';
 
       if ($old_config != $string) {
@@ -506,7 +513,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushConf() {
     $file_path = $this->drushGetConfigPath();
-    $conf_path = $file_path .'/index.d';
+    $conf_path = $file_path . '/index.d';
 
     // @TODO: Revisit configuration file generation. Need to handle:
     //
@@ -640,7 +647,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $datasource->init();
     $datasource_id = $delta ? $datasource->id . '_delta' : $datasource->id;
 
-    $conf = array('conf' => array(), 'index' => array());
+    $conf = array(
+      'conf' => array(),
+      'index' => array(),
+    );
 
     // Retrieve db info.
     global $db_url, $db_type;
@@ -694,7 +704,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query_pre'] = "SET NAMES utf8";
 
       $sql_query = drupal_clone($view->query);
-      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" . ' BETWEEN $start AND $end');
       $sql_query->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query);
@@ -704,7 +714,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Build the info query.
       $sql_query_info = drupal_clone($view->query);
-      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id');
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query_info);
@@ -721,9 +731,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Merge in attributes.
       $sql_attr = array();
       $sphinx_type = array(
-        'text'      => 'sql_attr_str2ordinal',
-        'int'       => 'sql_attr_uint',
-        'float'     => 'sql_attr_float',
+        'text' => 'sql_attr_str2ordinal',
+        'int' => 'sql_attr_uint',
+        'float' => 'sql_attr_float',
         'timestamp' => 'sql_attr_timestamp',
       );
 
@@ -767,8 +777,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-  * Get the Sphinx searchd settings.
-  */
+   * Get the Sphinx searchd settings.
+   */
   function sphinxSearchdConf() {
     $searchd = array();
     $searchd['log'] = $this->drushGetConfigPath() . '/log/searchd.log';

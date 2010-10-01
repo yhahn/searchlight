@@ -97,7 +97,11 @@ class searchlight_plugin_query extends views_plugin_query_default {
             }
 
             // Done.
-            $this->search_filter[] = array('field' => $name, 'operator' => $operator, 'args' => $args);
+            $this->search_filter[] = array(
+              'field' => $name,
+              'operator' => $operator,
+              'args' => $args,
+            );
             return;
           }
         }
@@ -110,7 +114,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
     parent::add_orderby($table, $field, $order, $alias, $params);
 
     if ($field === 'searchlight_weight') {
-      $this->search_sort[] = array('field' => 'searchlight_weight', 'order' => $order); // "@weight {$order}";
+      $this->search_sort[] = array(
+        'field' => 'searchlight_weight',
+        'order' => $order,
+      ); // "@weight {$order}";
     }
     else {
       // Field is aliased. Use query fields to retrieve actual table, field.
@@ -122,7 +129,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
       if (isset($table, $field)) {
         foreach ($this->datasource->fields as $name => $info) {
           if ($name === "{$table}_{$field}" && $info['usage'] !== 'content') {
-            $this->search_sort[] = array('field' => $name, 'order' => $order); // "{$name} {$order}";
+            $this->search_sort[] = array(
+              'field' => $name,
+              'order' => $order,
+            ); // "{$name} {$order}";
             break;
           }
         }
@@ -130,13 +140,19 @@ class searchlight_plugin_query extends views_plugin_query_default {
       // If no table was specified or found, this is probably a function.
       // Use the alias directly if it is available.
       else if (empty($table) && isset($this->datasource->fields[$alias]) && $this->datasource->fields[$alias]['usage'] !== 'content') {
-        $this->search_sort[] = array('field' => $alias, 'order' => $order);
+        $this->search_sort[] = array(
+          'field' => $alias,
+          'order' => $order,
+        );
       }
     }
   }
 
   function add_search_facet($name, $limit = 5, $options = array()) {
-    $this->search_facets[] = array('field' => $name, 'limit' => $limit) + $options;
+    $this->search_facets[] = array(
+      'field' => $name,
+      'limit' => $limit,
+    ) + $options;
   }
 
   /**

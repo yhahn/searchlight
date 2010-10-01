@@ -21,5 +21,7 @@ class searchlight_handler_filter_facets extends views_handler_filter {
     }
   }
 
-  function can_expose() { return FALSE; }
+  function can_expose() {
+    return FALSE;
+  }
 }

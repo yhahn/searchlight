@@ -154,7 +154,7 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op === 'list') {
     $list = array();
     foreach (searchlight_environment_load() as $environment) {
-      $list['facets_'. $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
+      $list['facets_' . $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
     }
     return $list;
   }
@@ -317,7 +317,10 @@ function searchlight_search_form(&$form_state) {
   $form['#id'] = 'searchlight-search-form';
 
   if (!variable_get('clean_url', FALSE)) {
-    $form['q'] = array('#type' => 'hidden', '#value' => $form_state['path']);
+    $form['q'] = array(
+      '#type' => 'hidden',
+      '#value' => $form_state['path'],
+    );
   }
 
   $form[$form_state['identifier']] = array(
@@ -378,14 +381,14 @@ function searchlight_searchlight_plugins() {
   return array(
     'SearchlightBackend' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackend.inc',
         'class' => 'SearchlightBackend',
       ),
     ),
     'SearchlightBackendSphinx' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackendSphinx.inc',
         'class' => 'SearchlightBackendSphinx',
         'parent' => 'SearchlightBackend',
@@ -393,7 +396,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightBackendSolr' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackendSolr.inc',
         'class' => 'SearchlightBackendSolr',
         'parent' => 'SearchlightBackend',
@@ -401,14 +404,14 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacet' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacet.inc',
         'class' => 'SearchlightFacet',
       ),
     ),
     'SearchlightFacetSearchQuery' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetSearchQuery.inc',
         'class' => 'SearchlightFacetSearchQuery',
         'parent' => 'SearchlightFacet',
@@ -416,7 +419,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetTerm' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetTerm.inc',
         'class' => 'SearchlightFacetTerm',
         'parent' => 'SearchlightFacet',
@@ -424,7 +427,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetDatatypeTimestamp' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetDatatypeTimestamp.inc',
         'class' => 'SearchlightFacetDatatypeTimestamp',
         'parent' => 'SearchlightFacet',
@@ -432,7 +435,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetLanguage' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetLanguage.inc',
         'class' => 'SearchlightFacetLanguage',
         'parent' => 'SearchlightFacet',
@@ -489,7 +492,10 @@ function searchlight_searchlight_registry() {
 function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
   $key = variable_get('searchlight_facet_key', 'sl');
   if (!isset($form[$key]) && isset($_GET[$key])) {
-    $form[$key] = array('#type' => 'hidden', '#value' => $_GET[$key]);
+    $form[$key] = array(
+      '#type' => 'hidden',
+      '#value' => $_GET[$key],
+    );
   }
 }
 
@@ -973,7 +979,7 @@ function searchlight_invalidate_index($base_table = NULL) {
       db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
       $views_data = views_fetch_data($datasource->base_table);
       $base_field = $views_data['table']['base']['field'];
-      db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '". $datasource->base_table ."', ". $base_field .", 0 FROM {". $datasource->base_table ."}");
+      db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '" . $datasource->base_table . "', " . $base_field . ", 0 FROM {" . $datasource->base_table . "}");
     }
   }
 }

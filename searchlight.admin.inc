@@ -76,7 +76,7 @@ function searchlight_admin_environment_validate_name($element, &$form_state) {
 function searchlight_admin_environment_new(&$form, &$form_state) {
   $environment = searchlight_environment_new($form_state['values']['name'], $form_state['values']['view_display']);
   if (searchlight_environment_save($environment)) {
-    drupal_set_message(t('Saved environment %name.', array('%name' =>  $environment->name)));
+    drupal_set_message(t('Saved environment %name.', array('%name' => $environment->name)));
   }
   else {
     drupal_set_message(t('Could not save environment %name.', array('%name' => $environment->name)), 'error');
@@ -201,7 +201,7 @@ function searchlight_admin_datasource_new_validate(&$form, &$form_state) {
 function searchlight_admin_datasource_new(&$form, &$form_state) {
   $datasource = searchlight_datasource_new($form_state['values']['name'], $form_state['values']['base_table']);
   if (searchlight_datasource_save($datasource)) {
-    drupal_set_message(t('Created datasource %name.', array('%name' =>  $datasource->name)));
+    drupal_set_message(t('Created datasource %name.', array('%name' => $datasource->name)));
   }
   else {
     drupal_set_message(t('Could not save datasource %name.', array('%name' => $datasource->name)), 'error');
@@ -215,7 +215,7 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
   foreach ($form_state['values']['active'] as $base_table => $datasource) {
     if (!empty($datasource)) {
       $current = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
-      variable_set('searchlight_datasource_'. $base_table, $datasource);
+      variable_set('searchlight_datasource_' . $base_table, $datasource);
       drupal_set_message(t('New active datasource settings have been saved.'), 'status', FALSE);
 
       // If active datasource settings have changed a rebuild is necessary.
@@ -303,9 +303,18 @@ function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
       break;
   }
   $form = array();
-  $form['type'] = array('#type' => 'value', '#value' => $type);
-  $form['object'] = array('#type' => 'value', '#value' => $object);
-  $form['action'] = array('#type' => 'value', '#value' => $op);
+  $form['type'] = array(
+    '#type' => 'value',
+    '#value' => $type,
+  );
+  $form['object'] = array(
+    '#type' => 'value',
+    '#value' => $object,
+  );
+  $form['action'] = array(
+    '#type' => 'value',
+    '#value' => $op,
+  );
   switch ($op) {
     case 'revert':
       $action = t('revert');
@@ -365,7 +374,7 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
  * System settings form for Searchlight.
  */
 function searchlight_admin_backend($form_state) {
-  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.admin.js');
+  drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.admin.js');
 
   $form = array();
 
@@ -387,7 +396,7 @@ function searchlight_admin_backend($form_state) {
     '#type' => 'select',
     '#title' => t('Global search'),
     '#description' => t('Choose a View to power the global search block.'),
-    '#options' => array(FALSE => '<'. t("Don't replace global search") .'>') + searchlight_admin_global_search_views(),
+    '#options' => array(FALSE => '<' . t("Don't replace global search") . '>') + searchlight_admin_global_search_views(),
     '#default_value' => variable_get('searchlight_global_search', FALSE),
   );
 
@@ -400,7 +409,7 @@ function searchlight_admin_backend($form_state) {
   );
   $form['backend']['searchlight_backend'] = array(
     '#type' => 'select',
-    '#options' => array(0 => '< '. t('Choose a backend') .' >'),
+    '#options' => array(0 => '< ' . t('Choose a backend') . ' >'),
     '#default_value' => variable_get('searchlight_backend', 'sphinx'),
     '#attributes' => array(
       'class' => 'searchlight-backend-select',

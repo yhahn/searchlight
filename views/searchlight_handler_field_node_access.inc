@@ -14,7 +14,10 @@ class searchlight_handler_field_node_access extends views_handler_field {
     while ($row = db_fetch_object($result)) {
       $options[$row->realm] = check_plain($row->realm);
     }
-    $form['realm'] = array('#type' => 'select', '#options' => $options);
+    $form['realm'] = array(
+      '#type' => 'select',
+      '#options' => $options,
+    );
   }
 
   function construct() {
@@ -42,5 +45,7 @@ class searchlight_handler_field_node_access extends views_handler_field {
     }
   }
 
-  function allow_advanced_render() { return FALSE; }
+  function allow_advanced_render() {
+    return FALSE;
+  }
 }

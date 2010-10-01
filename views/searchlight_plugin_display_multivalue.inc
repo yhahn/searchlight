@@ -43,11 +43,11 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
       // column type is not enough information to determine the usage of the
       // field.
       $map = array(
-        'serial'  => 'int',
-        'int'     => 'int',
+        'serial' => 'int',
+        'int' => 'int',
         'varchar' => 'text',
-        'text'    => 'text',
-        'float'   => 'float',
+        'text' => 'text',
+        'float' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
@@ -143,7 +143,7 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
   /**
    * Override of option_definition().
    */
-  function option_definition () {
+  function option_definition() {
     $options = parent::option_definition();
     $options[$this->my_name()]['field'] = array('default' => NULL);
     $options[$this->my_name()]['label_field'] = array('default' => NULL);
