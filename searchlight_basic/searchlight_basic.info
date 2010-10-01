@@ -9,6 +9,10 @@ features[views][] = "search_node"
 name = "Searchlight basic"
 package = "Search"
 
+
+
+
+
 files[] = searchlight_basic.defaults.inc
 files[] = searchlight_basic.features.inc
 files[] = searchlight_basic.features.views.inc

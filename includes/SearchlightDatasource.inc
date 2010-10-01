@@ -231,7 +231,7 @@ class SearchlightDatasource {
     $form['#datasource'] = $this;
 
     // Calculations of indexing percentage.
-    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = :type GROUP BY status", array(':type' => $this->base_table));
+    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = :type GROUP BY status", array(':type' => type, '' => array(':type' => $this->base_table)));
     $items_indexed = 0;
     $items_total = 0;
     while ($row = db_fetch_object($result)) {

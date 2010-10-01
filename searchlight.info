@@ -5,6 +5,7 @@ description = "Views-driven search API with pluggable search backends."
 name = "Searchlight"
 package = "Search"
 
+
 files[] = searchlight.admin.inc
 files[] = searchlight.drush.inc
 files[] = searchlight.install

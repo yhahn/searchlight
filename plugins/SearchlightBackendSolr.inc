@@ -520,6 +520,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $args = $ids;
         array_unshift($args, $datasource->base_table);
         // TODO Please convert this statement to the D7 database API syntax.
+        // TODO Please convert this statement to the D7 database API syntax.
         db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
                   AND id IN (" . rtrim(str_repeat('%d,', count($ids)), ',') . ")", $args);
 
@@ -530,7 +531,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
 
       // Deletion.
-      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => -1, ':type' => $datasource->base_table));
+      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => status, ':type' => type, '' => array(
+          ':status' => -1,
+          ':type' => $datasource->base_table,
+        )));
       $delete = array();
       while ($row = db_fetch_object($result)) {
         $delete[] = $row->id;

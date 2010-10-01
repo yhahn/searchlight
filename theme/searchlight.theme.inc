@@ -61,6 +61,7 @@ function theme_searchlight_search_form() {
  * Theme function for searchlight datasource display form.
  */
 function theme_searchlight_plugin_display_datasource($variables) {
+  $variables = $variables['form'];
   $form = $variables['form'];
   $output = '';
   $rows = array();
@@ -69,12 +70,15 @@ function theme_searchlight_plugin_display_datasource($variables) {
     $row[] = $form[$key]['#title'];
     foreach (element_children($form[$key]) as $cell) {
       if (isset($form[$key][$cell]['#type']) && !in_array($form[$key][$cell]['#type'], array('hidden', 'value'))) {
-        $row[] = drupal_render($form[$key][$cell]);
+        $row[] = drupal_render_children($form[$key][$cell]);
       }
     }
     $rows[] = $row;
   }
-  $output = theme('table', array('header' => array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''), 'rows' => $rows));
+  $output = theme('table', array('header' => array(
+      'header' => array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''),
+      'rows' => $rows,
+    )));
   $output .= drupal_render_children($form);
   return $output;
 }
@@ -83,7 +87,12 @@ function theme_searchlight_plugin_display_datasource($variables) {
  * Theme function for a facet.
  */
 function theme_searchlight_facet() {
-  return theme('item_list', array('items' => $facet['items'], 'title' => $facet['label'], 'type' => 'ul', 'attributes' => array('class' => 'searchlight-facet-' . $facet['delta'])));
+  return theme('item_list', array('items' => array(
+      'items' => $facet['items'],
+      'title' => $facet['label'],
+      'type' => 'ul',
+      'attributes' => array('class' => 'searchlight-facet-' . $facet['delta']),
+    )));
 }
 
 /**
@@ -105,8 +114,8 @@ function theme_searchlight_facet_active() {
 /**
  * Generates the main datasource admin page.
  */
-function theme_searchlight_admin_list($vars) {
-  print_r($vars);
+function theme_searchlight_admin_list($variables) {
+  $form = $variables['form'];
   drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
 
   $rows = array();
@@ -196,8 +205,12 @@ function theme_searchlight_admin_list($vars) {
     }
   }
   $rows[] = $row;
-  $output = theme('table', array('header' => array($name_label, $extra_label, t('Storage'), t('Operations')), 'rows' => $rows, 'attributes' => array('class' => 'object-admin')));
-  $output .= drupal_render($form);
+  $output = theme('table', array('header' => array(
+      'header' => array($name_label, $extra_label, t('Storage'), t('Operations')),
+      'rows' => $rows,
+      'attributes' => array('class' => 'object-admin'),
+    )));
+  $output .= drupal_render_children($form);
   return $output;
 }
 
@@ -205,6 +218,7 @@ function theme_searchlight_admin_list($vars) {
  * Theme function for searchlight datasource display form.
  */
 function theme_searchlight_admin_datasource_fields($variables) {
+  $variables = $variables['form'];
   $form = $variables['form'];
   $output = '';
   $rows = array();
@@ -226,6 +240,7 @@ function theme_searchlight_admin_datasource_fields($variables) {
   }
 
   // Existing fields.
+  // TODO Please change this theme call to use an associative array for the $variables parameter.
   // TODO Please change this theme call to use an associative array for the $variables parameter.
   $rows[] = array(
     theme('table_select_header_cell') + array('header' => TRUE),
@@ -263,13 +278,18 @@ function theme_searchlight_admin_datasource_fields($variables) {
   // Remove fields footer.
   if (!empty($form['remove'])) {
     $rows[] = array(array(
-        'data' => drupal_render($form['remove']),
+        'data' => drupal_render_children($form['remove']),
         'colspan' => 4,
         'header' => TRUE,
       ));
   }
 
-  $output = theme('table', array('header' => array(), 'rows' => $rows, 'attributes' => array(), 'caption' => $form['#title']));
+  $output = theme('table', array('header' => array(
+      'header' => array(),
+      'rows' => $rows,
+      'attributes' => array(),
+      'caption' => $form['#title'],
+    )));
   $output .= drupal_render_children($form);
   return $output;
 }
@@ -356,7 +376,11 @@ function template_preprocess_searchlight_admin_environment($vars) {
   $rows = array_merge($rows, $facet_rows);
 
   // Facet table.
-  $facets .= theme('table', array('header' => array(), 'rows' => $rows, 'attributes' => array('id' => 'searchlight-environment')));
+  $facets .= theme('table', array('header' => array(
+      'header' => array(),
+      'rows' => $rows,
+      'attributes' => array('id' => 'searchlight-environment'),
+    )));
   $vars['facets'] = $facets;
 
   // Per-facet settings.

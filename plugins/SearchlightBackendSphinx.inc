@@ -217,6 +217,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     $delete = array();
     // TODO Please convert this statement to the D7 database API syntax.
+    // TODO Please convert this statement to the D7 database API syntax.
     $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
     while ($row = db_fetch_object($result)) {
       $delete[$row->{$datasource->base_field}] = array(1);
@@ -481,7 +482,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Note that we must update both the main and delta indices.
       foreach (searchlight_get_datasource() as $datasource) {
         $delete = array();
-        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => -1, ':type' => $datasource->base_table));
+        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => status, ':type' => type, '' => array(
+            ':status' => -1,
+            ':type' => $datasource->base_table,
+          )));
         while ($row = db_fetch_object($result)) {
           $delete[$row->id] = array(1);
         }

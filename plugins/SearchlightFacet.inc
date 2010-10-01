@@ -182,6 +182,7 @@ class SearchlightFacet {
       $label_alias = $query->add_field($this->field['label_field']['table'], $this->field['label_field']['field']);
 
       // TODO Please convert this statement to the D7 database API syntax.
+      // TODO Please convert this statement to the D7 database API syntax.
       $result = db_query($query->query(), $ids);
       $rows = array();
       while ($row = db_fetch_object($result)) {
