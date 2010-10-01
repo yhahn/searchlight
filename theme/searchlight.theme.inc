@@ -105,7 +105,8 @@ function theme_searchlight_facet_active() {
 /**
  * Generates the main datasource admin page.
  */
-function theme_searchlight_admin_list() {
+function theme_searchlight_admin_list($vars) {
+  print_r($vars);
   drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
 
   $rows = array();

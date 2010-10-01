@@ -332,7 +332,7 @@ function searchlight_theme() {
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_plugin_display_datasource' => array(
-      'render element' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -350,22 +350,23 @@ function searchlight_theme() {
     ),
     'searchlight_admin_list' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'render element' => 'form',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource' => array(
       'template' => 'searchlight-admin-datasource',
-      'render element' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource_fields' => array(
-      'render element' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_environment' => array(
       'template' => 'searchlight-admin-environment',
-      'render element' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
