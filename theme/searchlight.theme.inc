@@ -91,7 +91,7 @@ function theme_searchlight_facet() {
       'items' => $facet['items'],
       'title' => $facet['label'],
       'type' => 'ul',
-      'attributes' => array('class' => 'searchlight-facet-' . $facet['delta']),
+      'attributes' => array('class' => array('searchlight-facet-' . $facet['delta'])),
     )));
 }
 
@@ -156,22 +156,22 @@ function theme_searchlight_admin_list($variables) {
       if ($type === 'datasource') {
         $row[] = array(
           'data' => drupal_render($form['active'][$object->base_table][$object->name]),
-          'class' => 'object-name',
+          'class' => array('object-name'),
         );
       }
       else {
         $row[] = array(
           'data' => $object->name,
-          'class' => 'object-name',
+          'class' => array('object-name'),
         );
       }
       $row[] = array(
         'data' => $extra,
-        'class' => 'object-extra',
+        'class' => array('object-extra'),
       );
       $row[] = array(
         'data' => $storage,
-        'class' => 'object-storage',
+        'class' => array('object-storage'),
       );
 
       // Actions
@@ -187,7 +187,7 @@ function theme_searchlight_admin_list($variables) {
       }
       $row[] = array(
         'data' => implode(' | ', $links),
-        'class' => 'object-links',
+        'class' => array('object-links'),
       );
       $rows[] = $row;
     }
@@ -205,11 +205,13 @@ function theme_searchlight_admin_list($variables) {
     }
   }
   $rows[] = $row;
-  $output = theme('table', array('header' => array(
-      'header' => array($name_label, $extra_label, t('Storage'), t('Operations')),
-      'rows' => $rows,
-      'attributes' => array('class' => 'object-admin'),
-    )));
+  $output = theme('table', array(
+    'header' => array($name_label, $extra_label, t('Storage'), t('Operations')),
+    'rows' => $rows,
+    'attributes' => array(
+      'class' => array('object-admin')
+    ),
+  ));
   $output .= drupal_render_children($form);
   return $output;
 }
@@ -352,7 +354,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
           $element_settings_id = "searchlight-facet-{$key}";
           if (!empty($element_settings)) {
             $element_settings_form = "<div class='environment-settings'>";
-            $element_settings_form .= l(t('Edit'), $_GET['q'], array('attributes' => array('class' => 'environment-settings-link'), 'fragment' => $element_settings_id));
+            $element_settings_form .= l(t('Edit'), $_GET['q'], array('attributes' => array('class' => array('environment-settings-link')), 'fragment' => $element_settings_id));
             $element_settings_form .= "<div class='environment-settings-form' id='{$element_settings_id}'>{$element_settings}</div>";
             $element_settings_form .= "</div>";
             $row[] = $element_settings_form;
@@ -368,7 +370,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
     }
     $facet_rows[] = array(
       'data' => $row,
-      'class' => 'draggable',
+      'class' => array('draggable'),
     );
   }
 

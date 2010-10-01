@@ -32,7 +32,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/datasource/list/%searchlight_datasource'] = array(
     'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_datasource_edit', 5),
+    'page arguments' => array('searchlight_admin_datasource_edit', 6),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
@@ -42,7 +42,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/datasource/list/%searchlight_datasource/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_datasource_edit', 5),
+    'page arguments' => array('searchlight_admin_datasource_edit', 6),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
@@ -52,7 +52,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/datasource/list/%searchlight_datasource/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'delete'),
     'file' => 'searchlight.admin.inc',
@@ -61,7 +61,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/datasource/list/%searchlight_datasource/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'revert'),
     'file' => 'searchlight.admin.inc',
@@ -69,7 +69,7 @@ function searchlight_menu() {
   );
   $items['admin/config/search/settings/datasource/ahah/%/%'] = array(
     'page callback' => 'searchlight_admin_datasource_ahah',
-    'page arguments' => array(5, 6),
+    'page arguments' => array(6, 7),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
@@ -89,7 +89,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/environment/list/%searchlight_environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_environment_edit', 5),
+    'page arguments' => array('searchlight_admin_environment_edit', 6),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
@@ -99,7 +99,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/environment/list/%searchlight_environment/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_environment_edit', 5),
+    'page arguments' => array('searchlight_admin_environment_edit', 6),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
@@ -109,7 +109,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/environment/list/%searchlight_environment/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'delete'),
     'file' => 'searchlight.admin.inc',
@@ -118,7 +118,7 @@ function searchlight_menu() {
   $items['admin/config/search/settings/environment/list/%searchlight_environment/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
+    'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
     'access arguments' => array(5, 'revert'),
     'file' => 'searchlight.admin.inc',

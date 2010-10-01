@@ -235,7 +235,6 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
  * Edit form for datasource.
  */
 function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
-  $form = array();
   $form['#datasource'] = $datasource;
   $form['#datasource_name'] = $datasource->name;
   $datasource->init();
