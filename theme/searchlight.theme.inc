@@ -220,7 +220,7 @@ function theme_searchlight_admin_list($variables) {
  * Theme function for searchlight datasource display form.
  */
 function theme_searchlight_admin_datasource_fields($variables) {
-  $variables = $variables['form'];
+//  $variables = $variables['form'];
   $form = $variables['form'];
   $output = '';
   $rows = array();
@@ -240,12 +240,10 @@ function theme_searchlight_admin_datasource_fields($variables) {
       array('data' => drupal_render($form['new']['add'])),
     );
   }
-
   // Existing fields.
   // TODO Please change this theme call to use an associative array for the $variables parameter.
   // TODO Please change this theme call to use an associative array for the $variables parameter.
   $rows[] = array(
-    theme('table_select_header_cell') + array('header' => TRUE),
     array(
       'data' => t('Field'),
       'header' => TRUE,
@@ -286,7 +284,7 @@ function theme_searchlight_admin_datasource_fields($variables) {
       ));
   }
 
-  $output = theme('table', array('header' => array(
+  $output = theme('table_select', array('header' => array(
       'header' => array(),
       'rows' => $rows,
       'attributes' => array(),
