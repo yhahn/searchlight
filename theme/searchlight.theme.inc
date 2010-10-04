@@ -224,6 +224,7 @@ function theme_searchlight_admin_datasource_fields($variables) {
   $form = $variables['form'];
   $output = '';
   $rows = array();
+  drupal_add_js('misc/tableselect.js');
 
   // New fields header.
   if (!empty($form['new'])) {
@@ -245,6 +246,10 @@ function theme_searchlight_admin_datasource_fields($variables) {
   // TODO Please change this theme call to use an associative array for the $variables parameter.
   $rows[] = array(
     array(
+      'class' => array('select-all'),
+      'header' => TRUE,
+    ),
+    array(
       'data' => t('Field'),
       'header' => TRUE,
     ),
@@ -261,7 +266,10 @@ function theme_searchlight_admin_datasource_fields($variables) {
     if ($key !== 'new') {
       $row = array();
       foreach (element_children($form['fields'][$key]) as $cell) {
-        if (isset($form['fields'][$key][$cell]['#type']) && !in_array($form['fields'][$key][$cell]['#type'], array('hidden', 'value'))) {
+        if (isset($form['fields'][$key][$cell]['#markup']) ||
+          (isset($form['fields'][$key][$cell]['#type']) &&
+          !in_array($form['fields'][$key][$cell]['#type'], array('hidden', 'value')))) {
+
           $row[] = drupal_render($form['fields'][$key][$cell]);
         }
       }
@@ -274,7 +282,6 @@ function theme_searchlight_admin_datasource_fields($variables) {
         'colspan' => 4,
       ));
   }
-
   // Remove fields footer.
   if (!empty($form['remove'])) {
     $rows[] = array(array(
@@ -284,13 +291,15 @@ function theme_searchlight_admin_datasource_fields($variables) {
       ));
   }
 
-  $output = theme('table_select', array('header' => array(
+  $output = theme('table', array(
       'header' => array(),
       'rows' => $rows,
       'attributes' => array(),
       'caption' => $form['#title'],
-    )));
+    ));
+
   $output .= drupal_render_children($form);
+
   return $output;
 }
 
@@ -390,7 +399,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
 /**
  * Preprocessor for theme('searchlight_admin_datasource').
  */
-function template_preprocess_searchlight_admin_datasource($vars) {
+function template_preprocess_searchlight_admin_datasource(&$vars) {
   drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
 
   $datasource = $vars['form']['#datasource'];

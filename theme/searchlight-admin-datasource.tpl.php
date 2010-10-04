@@ -18,5 +18,4 @@
   <?php print drupal_render($form['fields']) ?>
   <?php print drupal_render($form['multivalues']) ?>
   <?php print drupal_render($form['options']) ?>
-  <?php print drupal_render($form); ?>
 </div>

@@ -182,7 +182,6 @@ class SearchlightDatasource {
         }
       }
     }
-
     foreach ($usable as $view) {
       if ($view->name !== 'searchlight_node_access') {
         foreach ($view->display as $display) {
@@ -240,12 +239,10 @@ class SearchlightDatasource {
     }
     $form['index']['#tree'] = TRUE;
     $form['index']['percent'] = array(
-      '#type' => 'markup',
-      '#value' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
+      '#markup' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
     );
     $form['index']['counts'] = array(
-      '#type' => 'markup',
-      '#value' => t('@indexed of @total total', array(
+      '#markup' => t('@indexed of @total total', array(
         '@indexed' => $items_indexed,
         '@total' => $items_total,
       )),
@@ -303,7 +300,6 @@ class SearchlightDatasource {
         ),
       );
     }
-
     // Adjust existing fields
     $form['fields']['fields'] = array('#tree' => TRUE);
     foreach ($this->getFields() as $name => $info) {
@@ -317,14 +313,12 @@ class SearchlightDatasource {
 
       // Field label.
       $form['fields']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['fields']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       // Usage
@@ -385,7 +379,7 @@ class SearchlightDatasource {
         ),
       );
     }
-
+    $form['multivalues']['fields'] = array();
     foreach ($this->getMultivalues() as $name => $info) {
       $form['multivalues']['fields'][$name] = array();
 
@@ -397,19 +391,16 @@ class SearchlightDatasource {
 
       // Field label.
       $form['multivalues']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['multivalues']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       $form['multivalues']['fields'][$name]['usage'] = array(
-        '#type' => 'markup',
-        '#value' => t('Multivalue'),
+        '#markup' => t('Multivalue'),
       );
     }
 

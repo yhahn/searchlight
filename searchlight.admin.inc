@@ -97,8 +97,9 @@ function searchlight_admin_environment_edit($form, $form_state, $environment) {
     '#value' => t('Save'),
   );
   $form['buttons']['cancel'] = array(
-    '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/config/search/settings/environment'),
+    '#type' => 'link',
+    '#title' => t('Cancel'),
+    '#href' => 'admin/config/search/settings/environment'
   );
   return $form;
 }
@@ -239,6 +240,7 @@ function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
   $form['#datasource_name'] = $datasource->name;
   $datasource->init();
   $datasource->optionsForm($form, $form_state);
+
 
   $form['buttons']['save'] = array(
     '#type' => 'submit',

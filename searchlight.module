@@ -54,7 +54,7 @@ function searchlight_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
-    'access arguments' => array(5, 'delete'),
+    'access arguments' => array(6, 'delete'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -63,7 +63,7 @@ function searchlight_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
-    'access arguments' => array(5, 'revert'),
+    'access arguments' => array(6, 'revert'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -111,7 +111,7 @@ function searchlight_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
-    'access arguments' => array(5, 'delete'),
+    'access arguments' => array(6, 'delete'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -120,7 +120,7 @@ function searchlight_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 6, 'revert'),
     'access callback' => 'searchlight_task_access',
-    'access arguments' => array(5, 'revert'),
+    'access arguments' => array(6, 'revert'),
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );

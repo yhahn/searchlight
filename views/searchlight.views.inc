@@ -259,6 +259,13 @@ function searchlight_views_default_views() {
           'relationship' => 'none',
           'label' => $vocab->name,
         ),
+        'machine_name' => array(
+          'id' => 'machine_name',
+          'table' => 'taxonomy_vocabulary',
+          'field' => 'machine_name',
+          'relationship' => 'none',
+        ),
+
       ));
 
       // If Views can handle the Taxonomy vocab module field for supporting
@@ -285,10 +292,10 @@ function searchlight_views_default_views() {
         ));
       }
       $handler->override_option('searchlight_multivalue', array(
-        'field' => 'term_data_tid',
-        'label_field' => 'term_data_name',
+        'field' => 'taxonomy_term_data_tid',
+        'label_field' => 'taxonomy_term_data_name',
         'override' => array(
-          'name' => 'term_data_tid_' . $identifier,
+          'name' => 'taxonomy_term_data_tid_' . $identifier,
           'label' => $vocab->name,
         ),
       ));
@@ -368,10 +375,10 @@ function searchlight_views_default_views() {
             ));
           }
           $handler->override_option('searchlight_multivalue', array(
-            'field' => 'node_users__term_data_tid',
+            'field' => 'node_users__taxonomy_term_data_tid',
             'label_field' => 'node_users__term_data_name',
             'override' => array(
-              'name' => "term_data_tid_{$profile_type}_{$identifier}",
+              'name' => "taxonomy_term_data_tid_{$profile_type}_{$identifier}",
               'label' => $vocab->name,
             ),
           ));

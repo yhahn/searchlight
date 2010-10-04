@@ -15,12 +15,12 @@ class SearchlightFacetTerm extends SearchlightFacet {
     $this->term = taxonomy_term_load($this->value);
 
     // Attempt to parse the vocab from the field name.
-    $identifier = trim(array_pop(explode('term_data_tid_', $this->name)));
+    $identifier = trim(array_pop(explode('taxonomy_term_data_tid_', $this->name)));
     if (is_numeric($identifier)) {
       $vid = $identifier;
     }
     else {
-      $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module = :module LIMIT 1", array(':module' => module, '' => array(':module' => $identifier)))->fetchField();
+      $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module = :module LIMIT 1", array(':module' => $identifier))->fetchField();
     }
     $this->vocab = taxonomy_vocabulary_load($vid);
     if (!empty($this->vocab->hierarchy)) {
