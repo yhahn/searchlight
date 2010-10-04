@@ -242,13 +242,14 @@ function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
   $datasource->optionsForm($form, $form_state);
 
 
-  $form['buttons']['save'] = array(
+  $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  $form['buttons']['cancel'] = array(
-    '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/config/search/settings/datastore'),
+  $form['actions']['cancel'] = array(
+    '#type' => 'link',
+    '#title' => t('Cancel'),
+    '#href' => 'admin/config/search/settings/datastore',
   );
   return $form;
 }
@@ -413,7 +414,7 @@ function searchlight_admin_backend($form, $form_state) {
     '#options' => array(0 => '< ' . t('Choose a backend') . ' >'),
     '#default_value' => variable_get('searchlight_backend', 'sphinx'),
     '#attributes' => array(
-      'class' => 'searchlight-backend-select',
+      'class' => array('searchlight-backend-select'),
     ),
   );
   foreach (searchlight_registry('backend', TRUE) as $key => $info) {
@@ -424,7 +425,7 @@ function searchlight_admin_backend($form, $form_state) {
     $form["searchlight_backend_{$key}"]['#title'] = $info['title'];
     $form["searchlight_backend_{$key}"]['#type'] = 'fieldset';
     $form["searchlight_backend_{$key}"]['#attributes'] = array(
-      'class' => "searchlight-backend-settings searchlight-backend-{$key}",
+      'class' => array("searchlight-backend-settings", "searchlight-backend-{$key}"),
     );
   }
   $form = system_settings_form($form);
