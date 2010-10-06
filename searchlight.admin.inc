@@ -87,7 +87,6 @@ function searchlight_admin_environment_new(&$form, &$form_state) {
  * Edit form for environment.
  */
 function searchlight_admin_environment_edit($form, $form_state, $environment) {
-  $form = array();
   $form['#environment'] = $environment;
   $form['#environment_name'] = $environment->name;
   $environment->optionsForm($form, $form_state);
@@ -238,13 +237,18 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
 function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
   $form['#datasource'] = $datasource;
   $form['#datasource_name'] = $datasource->name;
+  $form['#attached']['js']['misc/tableselect.js'] = array('type' => 'file');
+
   $datasource->init();
   $datasource->optionsForm($form, $form_state);
-
 
   $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
+    '#limit_validation_errors' => array(
+      array('options'),
+      array('fields', 'fields'),
+      array('multivalues', 'fields')),
   );
   $form['actions']['cancel'] = array(
     '#type' => 'link',
@@ -257,7 +261,7 @@ function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
 /**
  * Submit handler for searchlight_admin_datasource_edit().
  */
-function searchlight_admin_datasource_edit_submit(&$form, $form_state) {
+function searchlight_admin_datasource_edit_submit($form, &$form_state) {
   if (!empty($form['#datasource'])) {
     $form['#datasource']->optionsSubmit($form, $form_state);
   }

@@ -110,7 +110,6 @@ class SearchlightDatasource {
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
       $class = $handler ? get_class($handler) : NULL;
-
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
       // column type is not enough information to determine the usage of the
@@ -280,6 +279,7 @@ class SearchlightDatasource {
       '#value' => t('Add field'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('fields', 'new')),
       '#ahah' => array(
         'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-new-add/fields',
         'wrapper' => 'datasource-fields',
@@ -293,6 +293,7 @@ class SearchlightDatasource {
         '#value' => t('Remove selected fields'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('fields', 'fields')),
         '#ahah' => array(
           'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-remove/fields',
           'wrapper' => 'datasource-fields',
@@ -359,6 +360,7 @@ class SearchlightDatasource {
       '#value' => t('Add multivalue'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('multivalues', 'new')),
       '#ahah' => array(
         'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-new-add/multivalues',
         'wrapper' => 'datasource-multivalues',
@@ -372,6 +374,7 @@ class SearchlightDatasource {
         '#value' => t('Remove selected multivalues'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('multivalues', 'fields')),
         '#ahah' => array(
           'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-remove/multivalues',
           'wrapper' => 'datasource-multivalues',
@@ -492,8 +495,13 @@ class SearchlightDatasource {
     // Retrieve field information for storage with datasource.
     $handler = isset($this->view->field[$field]) ? $this->view->field[$field] : NULL;
 
+    // Track fields added so we can provide a default usage based on datatype.
+    $fields_added = array();
+
     // Don't use alias for base field.
     if ($field === $this->view->base_field) {
+      $fields_added[] = $field;
+
       $this->fields[$field] = array(
         'label' => $field,
         'datatype' => $this->getDatatype(NULL, $table, $field),
@@ -504,6 +512,8 @@ class SearchlightDatasource {
     }
     // Use alias for all other fields.
     if ($handler) {
+      $fields_added[] = $handler->field_alias;
+
       $this->fields[$handler->field_alias] = array(
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
@@ -523,6 +533,8 @@ class SearchlightDatasource {
           $field = $info['field'];
         }
         if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+          $fields_added[] = $handler->aliases[$field];
+
           $this->fields[$handler->aliases[$field]] = array(
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
@@ -530,6 +542,14 @@ class SearchlightDatasource {
             'field' => $field,
             'name' => $handler->aliases[$field],
           );
+        }
+      }
+    }
+
+    if (sizeof($fields_added)) {
+      foreach ($fields_added as $name) {
+        if (!isset($this->fields[$name]['usage'])) {
+          $this->fields[$name]['usage'] = ($this->fields[$name]['datatype'] === 'text') ? 'content' : 'attribute';
         }
       }
     }

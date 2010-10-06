@@ -243,7 +243,6 @@ function theme_searchlight_admin_datasource_fields($variables) {
   }
   // Existing fields.
   // TODO Please change this theme call to use an associative array for the $variables parameter.
-  // TODO Please change this theme call to use an associative array for the $variables parameter.
   $rows[] = array(
     array(
       'class' => array('select-all'),
