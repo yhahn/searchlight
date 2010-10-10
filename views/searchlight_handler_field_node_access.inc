@@ -11,7 +11,7 @@ class searchlight_handler_field_node_access extends views_handler_field {
     parent::options_form($form, $form_state);
     $options = array();
     $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $options[$row->realm] = check_plain($row->realm);
     }
     $form['realm'] = array(

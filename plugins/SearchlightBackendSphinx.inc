@@ -219,7 +219,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // TODO Please convert this statement to the D7 database API syntax.
     // TODO Please convert this statement to the D7 database API syntax.
     $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $delete[$row->{$datasource->base_field}] = array(1);
     }
 
@@ -486,7 +486,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             ':status' => -1,
             ':type' => $datasource->base_table,
           )));
-        while ($row = db_fetch_object($result)) {
+        foreach ($result as $row) {
           $delete[$row->id] = array(1);
         }
         if (!empty($update)) {

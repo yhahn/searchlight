@@ -536,7 +536,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           ':type' => $datasource->base_table,
         )));
       $delete = array();
-      while ($row = db_fetch_object($result)) {
+      foreach ($result as $row) {
         $delete[] = $row->id;
       }
       if (!empty($delete)) {
