@@ -517,12 +517,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
         // $solr->optimize(); //merges multiple segments into one
 
-        $args = $ids;
-        array_unshift($args, $datasource->base_table);
-        // TODO Please convert this statement to the D7 database API syntax.
-        // TODO Please convert this statement to the D7 database API syntax.
-        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
-                  AND id IN (" . rtrim(str_repeat('%d,', count($ids)), ',') . ")", $args);
+        $query = db_update('searchlight_search')
+          ->fields(array('status' => 1))
+          ->condition('type', $datasource->base_table)
+          ->condition('id', $ids, 'IN')
+          ->execute();
 
         drush_log(dt('@datasource: Indexing completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($ids))), 'success');
       }
@@ -531,10 +530,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
 
       // Deletion.
-      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => status, ':type' => type, '' => array(
-          ':status' => -1,
-          ':type' => $datasource->base_table,
-        )));
+      $result = db_select('searchlight_search', 's')
+        ->fields('s')
+        ->condition('status', -1)
+        ->condition('type', $datasource->base_table)
+        ->execute();
       $delete = array();
       foreach ($result as $row) {
         $delete[] = $row->id;
@@ -547,12 +547,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
 
         // Once updates are complete, remove the Drupal-side records.
-        // TODO Please review the conversion of this statement to the D7 database API syntax.
-        /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
         db_delete('searchlight_search')
-  ->condition('status', -1)
-  ->condition('type', $datasource->base_table)
-  ->execute();
+          ->condition('status', -1)
+          ->condition('type', $datasource->base_table)
+          ->execute();
 
         drush_log(dt('@datasource: Deletion completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($delete))), 'success');
       }

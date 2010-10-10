@@ -216,9 +216,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     variable_del('searchlight_sphinx_last');
 
     $delete = array();
-    // TODO Please convert this statement to the D7 database API syntax.
-    // TODO Please convert this statement to the D7 database API syntax.
-    $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
+    $result = db_select($datasource->base_table, 'b')
+      ->fields('b', array($datasource->base_field))
+      ->execute();
     foreach ($result as $row) {
       $delete[$row->{$datasource->base_field}] = array(1);
     }
@@ -482,10 +482,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Note that we must update both the main and delta indices.
       foreach (searchlight_get_datasource() as $datasource) {
         $delete = array();
-        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = :status AND type = :type", array(':status' => status, ':type' => type, '' => array(
-            ':status' => -1,
-            ':type' => $datasource->base_table,
-          )));
+        $result = db_select('searchlight_search', 's')
+          ->fields('s')
+          ->condition('status', -1)
+          ->condition('type', $datasource->base_table)
+          ->execute();
         foreach ($result as $row) {
           $delete[$row->id] = array(1);
         }
@@ -498,22 +499,18 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           // TODO Please review the conversion of this statement to the D7 database API syntax.
           /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
           db_delete('searchlight_search')
-  ->condition('status', -1)
-  ->condition('type', $datasource->base_table)
-  ->execute();
+            ->condition('status', -1)
+            ->condition('type', $datasource->base_table)
+            ->execute();
         }
       }
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       cache_clear_all('searchlight', 'cache', TRUE);
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0') */
       db_update('searchlight_search')
-  ->fields(array(
-        'status' => 1,
-      ))
-  ->condition('status', 0)
-  ->execute();
+        ->fields(array('status' => 1))
+        ->condition('status', 0)
+        ->execute();
       variable_set('searchlight_sphinx_last', REQUEST_TIME);
       drush_log('Indexing complete.', 'success');
       if ($changed === TRUE) {
