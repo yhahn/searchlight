@@ -173,11 +173,6 @@ function searchlight_block_view($delta) {
 }
 
 /**
- * Implements hook_block().
- */
-function searchlight_block_OLD($op = 'list', $delta = 0, $edit = array()) { }
-
-/**
  * Implements hook_node_insert().
  */
 function searchlight_node_insert($node) {
@@ -321,7 +316,6 @@ function searchlight_theme() {
     ),
     'searchlight_solr_config' => array(
       'template' => 'searchlight-solr-config',
-      //'arguments' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
@@ -338,14 +332,17 @@ function searchlight_theme() {
     ),
     'searchlight_facet' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('facet' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_facet_link' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('field' => NULL, 'item' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_facet_active' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('field' => NULL, 'item' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_list' => array(
@@ -426,7 +423,7 @@ function searchlight_search_form(&$form_state) {
  */
 function searchlight_views_api() {
   return array(
-    'api' => 2,
+    'api' => '3.0-alpha1',
     'path' => drupal_get_path('module', 'searchlight') . '/views',
   );
 }
@@ -1075,8 +1072,8 @@ function searchlight_invalidate_index($base_table = NULL) {
       // TODO Please review the conversion of this statement to the D7 database API syntax.
       /* db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table) */
       db_delete('searchlight_search')
-  ->condition('type', $datasource->base_table)
-  ->execute();
+          ->condition('type', $datasource->base_table)
+          ->execute();
       $views_data = views_fetch_data($datasource->base_table);
       $base_field = $views_data['table']['base']['field'];
       // TODO Please convert this statement to the D7 database API syntax.

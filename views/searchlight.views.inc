@@ -1,16 +1,6 @@
 <?php
 // $Id$
 
-/**
- * Implements hook_views_query_alter().
- * Provides backwards-compatibility events for Views 2.x.
- */
-function searchlight_views_query_alter(&$view, &$query) {
-  if (views_api_version() == '2.0' && !empty($query->searchlight)) {
-    $query->build($view);
-    $query->execute($view);
-  }
-}
 
 /**
  * Implements hook_views_plugins().

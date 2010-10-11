@@ -133,12 +133,12 @@ class SearchlightEnvironment {
     if ($delta === 'facets' && $this->initView()) {
       $output = '';
       foreach ($this->render() as $rendered) {
-        $output .= theme('searchlight_facet', $rendered);
+        $output .= theme('searchlight_facet', array('facet' => $rendered));
       }
       if (!empty($output)) {
         $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";
         return array(
-          'subject' => filter_xss_admin($this->options['facets_label']),
+          'label' => filter_xss_admin($this->options['facets_label']),
           'content' => $output,
         );
       }
@@ -356,7 +356,7 @@ class SearchlightEnvironment {
     else if (empty($modifier)) {
       $exclude[] = $key;
     }
-    $options['query'] = drupal_query_string_encode($query, $exclude);
+    $options['query'] = drupal_get_query_parameters($query, $exclude);
 
     return $options;
   }

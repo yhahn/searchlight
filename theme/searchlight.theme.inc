@@ -86,19 +86,21 @@ function theme_searchlight_plugin_display_datasource($variables) {
 /**
  * Theme function for a facet.
  */
-function theme_searchlight_facet() {
-  return theme('item_list', array('items' => array(
+function theme_searchlight_facet($variables) {
+  $facet = $variables['facet'];
+  return theme('item_list', array(
       'items' => $facet['items'],
       'title' => $facet['label'],
       'type' => 'ul',
       'attributes' => array('class' => array('searchlight-facet-' . $facet['delta'])),
-    )));
+    ));
 }
 
 /**
  * Theme function for an individual (inactive) facet link.
  */
-function theme_searchlight_facet_link() {
+function theme_searchlight_facet_link($variables) {
+  $item = $variables['item'];
   $class = isset($item['class']) ? $item['class'] : '';
   return "<div class='searchlight-facet {$class}'>{$item['link']} <span class='count'>{$item['count']}</span></div>";
 }
@@ -106,7 +108,8 @@ function theme_searchlight_facet_link() {
 /**
  * Theme function for an individual (active) facet link.
  */
-function theme_searchlight_facet_active() {
+function theme_searchlight_facet_active($variables) {
+  $item = $variables['item'];
   $class = isset($item['class']) ? $item['class'] : '';
   return "<div class='searchlight-facet {$class}'>{$item['title']} <span class='remove'>{$item['link']}</span></div>";
 }

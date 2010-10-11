@@ -30,6 +30,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->backend = $backend;
     $this->client = $backend->initClient($this->datasource);
 
+    $this->offset = NULL;
+    $this->limit = NULL;
     $this->search_buildmode = NULL;
     $this->search_facets = array();
     $this->search_filter = array();
@@ -41,20 +43,28 @@ class searchlight_plugin_query extends views_plugin_query_default {
     // This flag lets others know we are a searchlight-based view.
     $this->searchlight = TRUE;
   }
-
   /**
    * Override of add_where().
    */
-  function add_where($group, $clause) {
-    $where_args = func_get_args();
-    $where_args = $this->get_args($where_args);
-
+  function add_where($group, $field, $value = NULL, $operator = NULL) {
     // Call the parent method to add the filter SQL side.
     parent::add_where($group, $clause, $where_args);
 
+    foreach ($this->datasource->fields as $name => $info) {
+      if ($name === str_replace(".", "_", $field)) {
+        $this->search_filter[] = array(
+          'field' => $name,
+          'operator' => $operator,
+          'value' => $value
+        );
+        return;
+      }
+    }
+
+
+    /*
     $split = preg_split('/[ ]([<>=!]*)|(\sIN\s)|(\sIS\s)|(\sNOT IN\s)|(\sIS NOT\s)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
     if (count($split) >= 2) {
-      $field = explode('.', trim(array_shift($split)));
       $operator = strtoupper(trim(array_shift($split)));
       $possible_args = count($split) ? array_shift($split) : '';
       if (count($field) === 2) {
@@ -107,6 +117,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
         }
       }
     }
+     */
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
@@ -256,7 +267,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if ($this->search_buildmode === 'search') {
       if ($this->search_result) {
         $placeholders = db_placeholders($this->search_result['result']);
-        parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$placeholders})", $this->search_result['result']);
+//        parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();
         $view->build_info['count_query'] = "SELECT FALSE";

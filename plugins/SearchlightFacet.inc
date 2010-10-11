@@ -114,12 +114,12 @@ class SearchlightFacet {
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('remove', $this->name, $item['id']);
         $item['link'] = l(t('remove'), $path, $options);
-        return theme('searchlight_facet_active', $this->field, $item);
+        return theme('searchlight_facet_active', array('field' => $this->field, 'item' => $item));
       case 'facets':
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('add', $this->name, $item['id']);
         $item['link'] = l($item['title'], $path, $options);
-        return theme('searchlight_facet_link', $this->field, $item);
+        return theme('searchlight_facet_link', array('field' => $this->field, 'item' => $item));
     }
   }
 
