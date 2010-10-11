@@ -153,6 +153,7 @@ class SearchlightEnvironment {
     // Adapted from searchlight_build_view. It should be possible to
     // retrieve a data source from a view without running it, untill then...
     $split = explode(':', $this->view_display);
+
     if (count($split) === 2 && $view = views_get_view($split[0])) {
       return searchlight_get_datasource($view->base_table);
     }
@@ -213,7 +214,10 @@ class SearchlightEnvironment {
     if ($datasource) {
       $form['facets'] = array('#tree' => TRUE);
       $fields = $datasource->fields;
-      $fields['search_query'] = array('label' => t('Search query'));
+      $fields['search_query'] = array(
+        'label' => t('Search query'),
+        'name' => 'search_query'
+      );
       foreach ($fields as $name => $field) {
         if ($this->isValidFacet($name)) {
           $form['facets'][$name] = array(
@@ -227,8 +231,7 @@ class SearchlightEnvironment {
           );
           $form['facets'][$name]['ui_name'] = array(
             '#title' => t('Facet'),
-            '#type' => 'markup',
-            '#value' => $field['label'],
+            '#markup' => $field['label'],
           );
           $form['facets'][$name]['weight'] = array(
             '#title' => t('Weight'),
@@ -239,7 +242,8 @@ class SearchlightEnvironment {
           // We instantiate plugins here rather than using initView() as the
           // facets on this form may not already be enabled for this environment.
           $plugin = searchlight_get_facet($datasource, $name);
-          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+          $plugin->construct($this, $field, $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+
           $plugin->optionsForm($form['facets'][$name], $form_state);
 
           $form['facets'][$name]['settings'] = array(

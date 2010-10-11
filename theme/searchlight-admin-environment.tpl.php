@@ -7,5 +7,5 @@
   <?php print drupal_render($form['options']) ?>
   <?php print $facets ?>
   <?php print $settings ?>
-  <?php print drupal_render($form); ?>
+  <?php print drupal_render_children($form); ?>
 </div>

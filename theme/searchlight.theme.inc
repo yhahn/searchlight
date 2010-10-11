@@ -305,10 +305,8 @@ function theme_searchlight_admin_datasource_fields($variables) {
 /**
  * Preprocessor for theme('searchlight_admin_environment').
  */
-function template_preprocess_searchlight_admin_environment($vars) {
-  drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.admin.js');
-  drupal_add_css(drupal_get_path("module", "searchlight") . "/searchlight.admin.css");
-  drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
+function template_preprocess_searchlight_admin_environment(&$vars) {
+//  drupal_add_tabledrag('searchlight-environment', 'order', 'sibling', 'searchlight-environment-weight', NULL, NULL, TRUE);
 
   // Basic environment info.
   $environment = $vars['form']['#environment'];
@@ -352,7 +350,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
       // Handling for specific elements.
       switch ($cell) {
         case 'weight':
-          $vars['form']['facets'][$key][$cell]['#attributes']['class'] = 'searchlight-environment-weight';
+          $vars['form']['facets'][$key][$cell]['#attributes']['class'] = array('searchlight-environment-weight');
           $row[] = drupal_render($vars['form']['facets'][$key][$cell]);
           break;
         case 'settings':
@@ -360,7 +358,7 @@ function template_preprocess_searchlight_admin_environment($vars) {
           $element_settings_id = "searchlight-facet-{$key}";
           if (!empty($element_settings)) {
             $element_settings_form = "<div class='environment-settings'>";
-            $element_settings_form .= l(t('Edit'), $_GET['q'], array('attributes' => array('class' => array('environment-settings-link')), 'fragment' => $element_settings_id));
+            $element_settings_form .= l(t('Edit'), $_GET['q'], array('class' => array('environment-settings-link'),'fragment' => $element_settings_id));
             $element_settings_form .= "<div class='environment-settings-form' id='{$element_settings_id}'>{$element_settings}</div>";
             $element_settings_form .= "</div>";
             $row[] = $element_settings_form;
@@ -382,13 +380,12 @@ function template_preprocess_searchlight_admin_environment($vars) {
 
   $rows[] = $header_row;
   $rows = array_merge($rows, $facet_rows);
-
   // Facet table.
-  $facets .= theme('table', array('header' => array(
+  $facets .= theme('table', array(
       'header' => array(),
       'rows' => $rows,
       'attributes' => array('id' => 'searchlight-environment'),
-    )));
+    ));
   $vars['facets'] = $facets;
 
   // Per-facet settings.

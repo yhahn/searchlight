@@ -716,7 +716,7 @@ function searchlight_get_datasource($base_table = NULL) {
     views_include('admin');
     $active_datasources = array();
     foreach (array_keys(views_fetch_base_tables()) as $base_table) {
-      $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+      $name = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
       if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
         $active_datasources[$name] = $datasource;
       }
@@ -724,7 +724,7 @@ function searchlight_get_datasource($base_table = NULL) {
     return $active_datasources;
   }
   else {
-    $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+    $name = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
     if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
       return $datasource;
     }
@@ -1018,8 +1018,8 @@ function searchlight_environment_delete($environment) {
     // TODO Please review the conversion of this statement to the D7 database API syntax.
     /* db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name) */
     db_delete('searchlight_environment')
-  ->condition('name', $environment->name)
-  ->execute();
+      ->condition('name', $environment->name)
+      ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }

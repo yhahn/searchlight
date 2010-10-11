@@ -89,13 +89,16 @@ function searchlight_admin_environment_new(&$form, &$form_state) {
 function searchlight_admin_environment_edit($form, $form_state, $environment) {
   $form['#environment'] = $environment;
   $form['#environment_name'] = $environment->name;
+  $form['#attached']['js'][drupal_get_path('module', 'searchlight') . '/searchlight.admin.js'] = array('type' => 'file');
+  $form['#attached']['css'][drupal_get_path('module', 'searchlight') . '/searchlight.admin.css'] = array('type' => 'file');
   $environment->optionsForm($form, $form_state);
 
-  $form['buttons']['save'] = array(
+
+  $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  $form['buttons']['cancel'] = array(
+  $form['actions']['cancel'] = array(
     '#type' => 'link',
     '#title' => t('Cancel'),
     '#href' => 'admin/config/search/settings/environment'
