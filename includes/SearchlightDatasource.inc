@@ -31,10 +31,8 @@ class SearchlightDatasource {
   }
 
   function setId() {
-    global $db_url;
-    $url = is_array($db_url) ? $db_url['default'] : $db_url;
-    $url = parse_url($url);
-    $this->id = trim(urldecode($url['path']), '/') . '_' . $this->name;
+    global $database;
+    $this->id = $database['default']['name'] . '_' . $this->name;
     return $this;
   }
 
@@ -469,7 +467,7 @@ class SearchlightDatasource {
           }
         }
         // Save options.
-        $this->options = $form_state['values']['options'];
+        $this->options = isset($form_state['values']['options']) ? $form_state['values']['options'] : array();
 
         // Save the datasource.
         searchlight_datasource_save($this);

@@ -93,7 +93,6 @@ function searchlight_admin_environment_edit($form, $form_state, $environment) {
   $form['#attached']['css'][drupal_get_path('module', 'searchlight') . '/searchlight.admin.css'] = array('type' => 'file');
   $environment->optionsForm($form, $form_state);
 
-
   $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -217,7 +216,7 @@ function searchlight_admin_datasource_new(&$form, &$form_state) {
 function searchlight_admin_datasource_save(&$form, &$form_state) {
   foreach ($form_state['values']['active'] as $base_table => $datasource) {
     if (!empty($datasource)) {
-      $current = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+      $current = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
       variable_set('searchlight_datasource_' . $base_table, $datasource);
       drupal_set_message(t('New active datasource settings have been saved.'), 'status', FALSE);
 

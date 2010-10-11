@@ -176,9 +176,9 @@ function theme_searchlight_admin_list($variables) {
 
       // Actions
       $links = array(
-        'edit' => l(t('Edit'), "admin/config/search/settings/{$path}/list/{$object->name}"),
-        'delete' => l(t('Delete'), "admin/config/search/settings/{$path}/list/{$object->name}/delete"),
-        'revert' => l(t('Revert'), "admin/config/search/settings/{$path}/list/{$object->name}/revert"),
+        'edit' => l(t('Edit'), "admin/config/search/settings/{$path}/{$object->name}"),
+        'delete' => l(t('Delete'), "admin/config/search/settings/{$path}/{$object->name}/delete"),
+        'revert' => l(t('Revert'), "admin/config/search/settings/{$path}/{$object->name}/revert"),
       );
       foreach (array_keys($links) as $key) {
         if (!searchlight_task_access($object, $key)) {
