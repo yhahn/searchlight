@@ -554,7 +554,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     if (file_prepare_directory($conf_path, TRUE)) {
       // Collect configuration arrays for each datasource.
-      foreach (searchlight_get_datasource() as $datasource) {
+      foreach (searchlight_datasource_load(NULL, TRUE) as $datasource) {
         $source = $this->sphinxDatasourceConf($datasource);
 
         // Add delta index.
@@ -666,20 +666,19 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       'index' => array(),
     );
 
-    // Retrieve db info.
-    global $db_url, $db_type;
-    $url = is_array($db_url) ? $db_url['default'] : $db_url;
-    $url = parse_url($url);
-
     // Configuration options.
     $conf['conf']['id'] = $datasource_id;
-    $conf['conf']['type'] = $db_type === 'mysqli' ? 'mysql' : $db_type;
-    $conf['conf']['sql_user'] = urldecode($url['user']);
-    $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
-    $conf['conf']['sql_host'] = urldecode($url['host']);
-    $conf['conf']['sql_db']   = trim(urldecode($url['path']), '/');
-    $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
+    // Use mysql stored database credentials.
+    if ($creds = drush_get_context('DRUSH_DB_CREDENTIALS')) {
+      $conf['conf']['type'] = $creds['driver'] === 'mysqli' ? 'mysql' : $creds['driver'];
+      $conf['conf']['sql_user'] = $creds['user'];
+      $conf['conf']['sql_pass'] = $creds['pass'];
+      $conf['conf']['sql_host'] = $creds['host'];
+      $conf['conf']['sql_db']   = $creds['name'];
+      $conf['conf']['sql_port'] = isset($creds['port']) ? $creds['port'] : '3306';
+
+    }
     // Check for optional sql_sock option.
     $sock = trim($this->settings['sql_sock']);
     if (!empty($sock)) {
@@ -718,8 +717,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query_pre'] = "SET NAMES utf8";
 
       $sql_query = clone $view->query;
-      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" . ' BETWEEN $start AND $end');
-      $sql_query->add_field(NULL, '0', 'searchlight_deleted');
+
+//      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" . ' BETWEEN $start AND $end');
+//      $sql_query->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query);
       }
@@ -728,7 +728,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Build the info query.
       $sql_query_info = clone $view->query;
-      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id');
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}", $id);
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query_info);
@@ -812,10 +812,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
   function sphinxWriteSQL($query, $args) {
-    _db_query_callback($args, TRUE);
-    $query = db_prefix_tables($query);
-    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
-    return $query;
+    $query = Database::getConnection('default')->prepareQuery( (string) $query);
+    return $query->queryString;
   }
 
   /**

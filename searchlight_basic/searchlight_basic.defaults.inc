@@ -34,6 +34,7 @@ function _searchlight_basic_searchlight_default_datasources() {
       'name' => 'node_title',
       'usage' => 'content',
     ),
+/*
     'node_revisions_body' => array(
       'label' => 'Node: Body (body)',
       'datatype' => 'text',
@@ -41,7 +42,7 @@ function _searchlight_basic_searchlight_default_datasources() {
       'field' => 'body',
       'name' => 'node_revisions_body',
       'usage' => 'content',
-    ),
+    ),*/
     'node_status' => array(
       'label' => 'Node: Published (status)',
       'datatype' => 'int',
