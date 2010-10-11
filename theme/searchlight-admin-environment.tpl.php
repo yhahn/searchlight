@@ -1,5 +1,5 @@
 <div class='searchlight-admin-environment'>
-  <div class='clear-block'>
+  <div class='clearfix'>
     <div class='searchlight-admin-info environment-info'>
       <h2 class='searchlight-admin-name'><?php print $name ?></h2>
     </div>

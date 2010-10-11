@@ -1,5 +1,5 @@
 <div class='searchlight-admin-datasource'>
-  <div class='clear-block'>
+  <div class='clearfix'>
     <div class='searchlight-admin-info datasource-info'>
       <h2 class='searchlight-admin-name'><?php print $name ?></h2>
       <label><?php print t('Base table') ?></label>
