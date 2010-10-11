@@ -78,6 +78,7 @@ function _searchlight_basic_views_default_views() {
   $handler->display->display_options['fields']['title']['alter']['html'] = 0;
   $handler->display->display_options['fields']['title']['link_to_node'] = 1;
   /* Field: Node: Teaser */
+  /*
   $handler->display->display_options['fields']['teaser']['id'] = 'teaser';
   $handler->display->display_options['fields']['teaser']['table'] = 'node_revisions';
   $handler->display->display_options['fields']['teaser']['field'] = 'teaser';
@@ -90,6 +91,7 @@ function _searchlight_basic_views_default_views() {
   $handler->display->display_options['fields']['teaser']['alter']['ellipsis'] = 1;
   $handler->display->display_options['fields']['teaser']['alter']['strip_tags'] = 1;
   $handler->display->display_options['fields']['teaser']['alter']['html'] = 0;
+  */
   /* Sort criterion: Search: Searchlight */
   $handler->display->display_options['sorts']['search']['id'] = 'search';
   $handler->display->display_options['sorts']['search']['table'] = 'searchlight';

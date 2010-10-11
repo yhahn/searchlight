@@ -29,8 +29,8 @@ class searchlight_handler_field_node_access extends views_handler_field {
     parent::query();
     $table = $this->ensure_my_table();
     if (!empty($this->options['realm'])) {
-      $this->query->add_where('AND', "$table.realm = '%s'", $this->options['realm']);
-      $this->query->add_where('AND', "$table.grant_view >= 1");
+      $this->query->add_where('AND', "$table.realm = '" .  $this->options['realm'] . "'", array(), 'formula');
+      $this->query->add_where('AND', "$table.grant_view >= -1", array(), 'formula');
     }
   }
 

@@ -718,8 +718,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       $sql_query = clone $view->query;
 
-//      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" . ' BETWEEN $start AND $end');
-//      $sql_query->add_field(NULL, '0', 'searchlight_deleted');
+      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .  ' BETWEEN $start AND $end ', array(), 'formula');
+      $sql_query->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query);
       }
@@ -812,8 +812,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
   function sphinxWriteSQL($query, $args) {
-    $query = Database::getConnection('default')->prepareQuery( (string) $query);
-    return $query->queryString;
+    $connection = Database::getConnection('default');
+    return $connection->prepareQuery( (string) $query)->queryString;
   }
 
   /**
