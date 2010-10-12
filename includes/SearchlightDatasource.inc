@@ -31,8 +31,8 @@ class SearchlightDatasource {
   }
 
   function setId() {
-    global $database;
-    $this->id = $database['default']['name'] . '_' . $this->name;
+    global $databases;
+    $this->id = $databases['default']['default']['database'] . '_' . $this->name;
     return $this;
   }
 

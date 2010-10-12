@@ -127,8 +127,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if ($field === 'searchlight_weight') {
       $this->search_sort[] = array(
         'field' => 'searchlight_weight',
-        'order' => $order,
-      ); // "@weight {$order}";
+        'direction' => $order,
+      );
     }
     else {
       // Field is aliased. Use query fields to retrieve actual table, field.
@@ -142,8 +142,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
           if ($name === "{$table}_{$field}" && $info['usage'] !== 'content') {
             $this->search_sort[] = array(
               'field' => $name,
-              'order' => $order,
-            ); // "{$name} {$order}";
+              'direction' => $order,
+            );;
             break;
           }
         }
@@ -153,7 +153,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       else if (empty($table) && isset($this->datasource->fields[$alias]) && $this->datasource->fields[$alias]['usage'] !== 'content') {
         $this->search_sort[] = array(
           'field' => $alias,
-          'order' => $order,
+          'direction' => $order,
         );
       }
     }
@@ -274,7 +274,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
         parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();
-//        $view->build_info['count_query'] = 
+        $view->build_info['count_query'] = $this->query();
 
       }
     }

@@ -313,10 +313,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $sphinx_sorts = array();
       foreach ($sorts as $sort) {
         if ($sort['field'] === 'searchlight_weight') {
-          $sphinx_sorts[] = "@weight {$sort['order']}";
+          $sphinx_sorts[] = "@weight {$sort['direction']}";
         }
         else {
-          $sphinx_sorts[] = "{$sort['field']} {$sort['order']}";
+          $sphinx_sorts[] = "{$sort['field']} {$sort['direction']}";
         }
       }
       $client->setSortMode(SPH_SORT_EXTENDED, implode(', ', $sphinx_sorts));
@@ -727,7 +727,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Build the info query.
       $sql_query_info = clone $view->query;
-      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}", $id);
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id', array(), 'formula');
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query_info);

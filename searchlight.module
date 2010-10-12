@@ -179,12 +179,12 @@ function searchlight_node_insert($node) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0) */
   $id = db_insert('searchlight_search')
-  ->fields(array(
-    'type' => 'node',
-    'id' => $node->nid,
-    'status' => 0,
-  ))
-  ->execute();
+    ->fields(array(
+      'type' => 'node',
+      'id' => $node->nid,
+      'status' => 0,
+    ))
+    ->execute();
 }
 
 /**
@@ -194,11 +194,10 @@ function searchlight_node_update($node) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid) */
   db_update('searchlight_search')
-  ->fields(array(
-    'status' => 0,
-  ))
-  ->condition('type', 'node' and id)
-  ->execute();
+    ->fields(array( 'status' => 0,))
+    ->condition('type', 'node')
+    ->condition('id', $node->nid)
+    ->execute();
 }
 
 /**
@@ -208,17 +207,11 @@ function searchlight_node_delete($node) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid) */
   db_update('searchlight_search')
-  ->fields(array(
-    'status' => -1,
-  ))
-  ->condition('type', 'node' and id)
-  ->execute();
+    ->fields(array( 'status' => -1,))
+    ->condition('type', 'node')
+    ->condition('id', $node->nid)
+    ->execute();
 }
-
-/**
- * Implements hook_nodeapi().
- */
-function searchlight_nodeapi_OLD($node, $op) { }
 
 /**
  * Implements hook_comment_insert().
@@ -227,12 +220,12 @@ function searchlight_comment_insert($comment) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0) */
   $id = db_insert('searchlight_search')
-  ->fields(array(
-    'type' => 'comments',
-    'id' => $a1['cid'],
-    'status' => 0,
-  ))
-  ->execute();
+    ->fields(array(
+      'type' => 'comments',
+      'id' => $comment->cid,
+      'status' => 0,
+    ))
+    ->execute();
   $update_node = TRUE;
 }
 
@@ -243,12 +236,10 @@ function searchlight_comment_update($comment) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']) */
   db_update('searchlight_search')
-  ->fields(array(
-    'status' => 0,
-  ))
-  ->condition('type', 'comments')
-  ->condition('id', $a1['cid'])
-  ->execute();
+    ->fields(array('status' => 0,))
+    ->condition('type', 'comments')
+    ->condition('id', $comment->cid)
+    ->execute();
   $update_node = TRUE;
 }
 
@@ -259,32 +250,11 @@ function searchlight_comment_delete($comment) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']) */
   db_update('searchlight_search')
-  ->fields(array(
-    'status' => -1,
-  ))
-  ->condition('type', 'comments' and id)
-  ->execute();
+    ->fields(array('status' => -1, ))
+    ->condition('type', 'comments')
+    ->condition('id', $comment->cid)
+    ->execute();
   $update_node = TRUE;
-}
-
-/**
- * Implements hook_comment().
- */
-function searchlight_comment_OLD(&$a1, $op) {
-  // TODO Remaining code in this function needs to be moved to the appropriate new hook function.
-  $update_node = FALSE;
-  if ($update_node) {
-    // Mark the parent node as needing an update. Changes in node comments
-    // can affect the node as well (e.g. node_comment_statistics).
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $a1['nid']) */
-    db_update('searchlight_search')
-  ->fields(array(
-      'status' => 0,
-    ))
-  ->condition('type', 'node' and id)
-  ->execute();
-  }
 }
 
 /**
@@ -848,8 +818,8 @@ function searchlight_datasource_delete($datasource) {
     // TODO Please review the conversion of this statement to the D7 database API syntax.
     /* db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name) */
     db_delete('searchlight_datasource')
-  ->condition('name', $datasource->name)
-  ->execute();
+      ->condition('name', $datasource->name)
+      ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }
