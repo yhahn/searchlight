@@ -40,7 +40,7 @@ class SearchlightFacet {
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '=',
-        'args' => array($this->value),
+        'value' => $this->value,
       );
     }
 
@@ -161,19 +161,11 @@ class SearchlightFacet {
     if ($this->field['usage'] === 'multivalue') {
       $ids = array_keys($items);
 
-      // Views 2.x
-      if (views_api_version() == '2.0') {
-        views_include('query');
-        $query = new views_query($this->field['table'], $this->field['field']);
-      }
-      // Views 3.x
-      else {
-        $query = views_get_plugin('query', 'views_query');
-        $query->init($this->field['table'], $this->field['field']);
-      }
+      $query = views_get_plugin('query', 'views_query');
+      $query->init($this->field['table'], $this->field['field']);
 
       // Add WHERE condition on item ids.
-      $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (" . db_placeholders($ids, 'int') . ")", $ids);
+      $query->add_where(0, "{$this->field['table']}.{$this->field['field']}", $ids, 'IN');
 
       // Add base field.
       $field_alias = $query->add_field($this->field['table'], $this->field['field']);

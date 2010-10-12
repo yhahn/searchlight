@@ -14,12 +14,12 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '>',
-        'args' => array($range['from']),
+        'value' => $range['from'],
       );
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '<',
-        'args' => array($range['to']),
+        'value' => $range['to'],
       );
     }
 
@@ -51,7 +51,7 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
       foreach ($items as $k => $item) {
         $format = $this->options['date_format'];
         $timestamp = is_numeric($item['id']) ? $item['id'] : strtotime($item['id']);
-        $items[$k]['title'] = format_date($timestamp, 'custom', $format, 0);
+        $items[$k]['title'] = format_date($timestamp, 'custom', $format, 'UTC');
       }
       return $items;
     }

@@ -48,7 +48,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
    */
   function add_where($group, $field, $value = NULL, $operator = NULL) {
     // Call the parent method to add the filter SQL side.
-    parent::add_where($group, $clause, $where_args);
+    parent::add_where($group, $field, $value, $operator);
 
     foreach ($this->datasource->fields as $name => $info) {
       if ($name === str_replace(".", "_", $field)) {
@@ -243,8 +243,13 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if (!empty($replacements)) {
       foreach ($this->search_filter as $j => $filter) {
         $this->search_filter[$j]['field'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['field']);
-        foreach ($this->search_filter[$j]['args'] as $k => $arg) {
-          $this->search_filter[$j]['args'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
+        if (is_array($this->search_filter[$j]['value'])) {
+          foreach ($this->search_filter[$j]['value'] as $k => $arg) {
+            $this->search_filter[$j]['value'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
+          }
+        }
+        else {
+          $this->search_filter[$j]['value'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['value']);
         }
       }
     }
@@ -266,12 +271,11 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     if ($this->search_buildmode === 'search') {
       if ($this->search_result) {
-        $placeholders = db_placeholders($this->search_result['result']);
-//        parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
+        parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();
-        $view->build_info['count_query'] = "SELECT FALSE";
-        $view->build_info['query_args'] = $this->get_where_args();
+//        $view->build_info['count_query'] = 
+
       }
     }
     elseif ($this->search_buildmode === 'default') {
@@ -326,3 +330,4 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 }
+

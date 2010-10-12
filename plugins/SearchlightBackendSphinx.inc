@@ -149,7 +149,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     foreach ($facets as $facet) {
       $field = $datasource->fields[$facet['field']];
       $limit = $facet['limit'];
-
       switch ($field['datatype']) {
         case 'timestamp':
           $groupby = array(
@@ -231,7 +230,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of setFilter().
    */
-  function setFilter(&$client, $datasource, $filters) {
+  function etFilter(&$client, $datasource, $filters) {
     // Hardwired delete filter. See sphinxDatasourceConf() for how this is
     // added to the sphinx index.
     $filters['searchlight_deleted'] = array(
@@ -245,7 +244,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $key => $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value     = $params['value'];
         if (in_array($operator, array('<', '>', '>=', '<='))) {
           unset($filters[$key]);
           switch ($operator) {
@@ -253,13 +252,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             case '>=':
               $range_filters[$field]['field'] = $field;
               $range_filters[$field]['max'] = isset($range_filters[$field]['max']) ? $range_filters[$field]['max'] : SEARCHLIGHT_SPHINX_FILTER_MAX;
-              $range_filters[$field]['min'] = eval("return {$args[0]};");
+              $range_filters[$field]['min'] = eval("return {$value};");
               $range_filters[$field]['exclude'] = $operator === '>' ? TRUE : FALSE;
               break;
             case '<':
             case '<=':
               $range_filters[$field]['field'] = $field;
-              $range_filters[$field]['max'] = eval("return {$args[0]};");
+              $range_filters[$field]['max'] = eval("return {$value};");
               $range_filters[$field]['min'] = isset($range_filters[$field]['min']) ? $range_filters[$field]['min'] : SEARCHLIGHT_SPHINX_FILTER_MIN;
               $range_filters[$field]['exclude'] = $operator === '<' ? TRUE : FALSE;
               break;
@@ -280,17 +279,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value    = $params['value'];
         switch ($operator) {
           case '=':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
             break;
           case 'IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
             break;
           case '<>':
           case 'NOT IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, TRUE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, TRUE);
             break;
         }
       }
@@ -639,7 +638,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function sphinxSetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
     $ordinals = array();
-    foreach ($values as $arg) {
+    foreach ((array) $values as $arg) {
       $arg = trim($arg);
       if (is_numeric($arg)) {
         $ordinals[] = $arg;
@@ -878,14 +877,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
         if (!empty($result['matches']) && count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
-          $ids = implode(',', array_keys($result['matches']));
+          $ids = array_keys($result['matches']);
           $view = $datasource->view->copy();
           $view->build();
           $view->set_items_per_page(0);
           $view->query->where = array();
-          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
+          $view->query->add_where(0, "{$view->base_table}.{$view->base_field}", $ids, 'IN');
           $view->build_info['query'] = $view->query->query();
-          $view->build_info['query_args'] = $view->query->get_where_args();
           $view->execute();
           foreach ($view->result as $row) {
             $id = $row->{$view->base_field};
