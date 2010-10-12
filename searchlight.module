@@ -143,6 +143,7 @@ function searchlight_menu() {
 function searchlight_menu_alter(&$items) {
   $items['admin/config/search/settings'] = $items['admin/config/search/settings/datasource'];
   $items['admin/config/search/settings']['title'] = 'Search';
+  $items['admin/config/search/settings']['description'] = 'Configure relevance settings for search and other indexing options.';
   $items['admin/config/search/settings']['type'] = MENU_NORMAL_ITEM;
   unset($items['admin/config/search/settings']['weight']);
 }
@@ -340,9 +341,10 @@ function searchlight_theme() {
   );
 }
 
+
+
 /**
  * Preprocessor for theme('page').
- */
 function searchlight_preprocess_page(&$vars) {
   if ($global_search = variable_get('searchlight_global_search', FALSE)) {
     list($path, $identifier) = explode(':', $global_search);
@@ -354,9 +356,12 @@ function searchlight_preprocess_page(&$vars) {
       'no_redirect' => TRUE,
       'input' => array(),
     );
-    $vars['search_box'] = drupal_build_form('searchlight_search_form', $form_state);
+    //   $vars['search_box'] = drupal_build_form('searchlight_search_form', $form_state);
   }
+
 }
+
+ */
 
 /**
  * Form builder for Searchlight GET form. Should be used with

@@ -193,7 +193,6 @@ class SearchlightFacet {
         $rows[$item['id']] = $row;
       }
     }
-
     // Render item titles.
     $this->handler->pre_render($rows);
     foreach ($rows as $id => $row) {

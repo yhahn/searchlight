@@ -75,10 +75,9 @@ function theme_searchlight_plugin_display_datasource($variables) {
     }
     $rows[] = $row;
   }
-  $output = theme('table', array('header' => array(
-      'header' => array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''),
+  $output = theme('table', array('header' => array(t('Field'), t('Datatype'), t('Usage'), t('Show facet'), ''),
       'rows' => $rows,
-    )));
+    ));
   $output .= drupal_render_children($form);
   return $output;
 }
