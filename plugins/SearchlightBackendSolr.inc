@@ -115,29 +115,29 @@ class SearchlightBackendSolr extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value    = $params['value'];
 
         switch ($operator) {
           case '<':
           case '<=':
-            $range_filters[$field]['max'] = $args[0];
+            $range_filters[$field]['max'] = $value;
             break;
           case '>':
           case '>=':
-            $range_filters[$field]['min'] = $args[0];
+            $range_filters[$field]['min'] = $value;
             break;
           case '=':
-            $client->searchlightFilters[] = $field . ':"' . $args[0] . '"';
+            $client->searchlightFilters[] = $field . ':"' . $value . '"';
             break;
           case '!=':
           case '<>':
-            $client->searchlightFilters[] = '-' . $field . ':"' . $args[0] . '"';
+            $client->searchlightFilters[] = '-' . $field . ':"' . $value . '"';
             break;
           case 'IN':
-            $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $args) . ")";
+            $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $value) . ")";
             break;
           case 'NOT IN':
-            $client->searchlightFilters[] = "-{$field}:(" . implode(' OR ', $args) . ")";
+            $client->searchlightFilters[] = "-{$field}:(" . implode(' OR ', $value) . ")";
             break;
           default:
             //dsm($params);
@@ -159,7 +159,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     if (!empty($sorts)) {
       $client->searchlightSort = array();
       foreach ($sorts as $sort) {
-        $client->searchlightSort[$sort['field']] = $sort['order'];
+        $client->searchlightSort[$sort['field']] = $sort['direction'];
       }
     }
   }

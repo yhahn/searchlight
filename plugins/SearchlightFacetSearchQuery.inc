@@ -44,7 +44,7 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('active', $this->name, $item['id']);
         $item['link'] = l(t('remove'), $path, $options);
-        return theme('searchlight_facet_active', $this->field, $item);
+        return theme('searchlight_facet_active', array('field' => $this->field, 'item' => $item));
     }
   }
 
