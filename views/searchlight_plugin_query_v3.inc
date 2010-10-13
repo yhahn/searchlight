@@ -61,63 +61,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
       }
     }
 
-
-    /*
-    $split = preg_split('/[ ]([<>=!]*)|(\sIN\s)|(\sIS\s)|(\sNOT IN\s)|(\sIS NOT\s)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-    if (count($split) >= 2) {
-      $operator = strtoupper(trim(array_shift($split)));
-      $possible_args = count($split) ? array_shift($split) : '';
-      if (count($field) === 2) {
-        $table = $field[0];
-        $field = $field[1];
-        foreach ($this->datasource->fields as $name => $info) {
-          if ($name === "{$table}_{$field}") {
-            // Get the arguments for this where clause.
-            $args = array();
-
-            // If arguments have been specified using query placeholders,
-            // simply grab as many as there have been placeholders specified.
-            $argnum = substr_count($clause, '%');
-            if ($argnum && count($where_args) >= $argnum) {
-              $args = array_slice($where_args, 0, $argnum);
-            }
-            // We may be working with a NULL check...
-            elseif ($operator == 'IS' && $possible_args == 'NULL') {
-              $operator = 'IN';
-              $args[] = 0; // This may only work with numeric fields...
-            }
-            elseif ($operator == 'IS NOT' && $possible_args == 'NULL') {
-              $operator = 'IN';
-              $args[] = 1; // This may only work with numeric fields...
-            }
-            // Otherwise, groan, breath deeply & try to retrieve arguments from
-            // the query.
-            else {
-              $matches = array();
-              preg_match_all('/[A-Z*_]*|\w+|\d+/', $possible_args, $matches);
-              if (!empty($matches)) {
-                foreach ($matches as $match) {
-                  foreach ($match as $chunk) {
-                    if ($chunk !== '') {
-                      $args[] = $chunk;
-                    }
-                  }
-                }
-              }
-            }
-
-            // Done.
-            $this->search_filter[] = array(
-              'field' => $name,
-              'operator' => $operator,
-              'args' => $args,
-            );
-            return;
-          }
-        }
-      }
-    }
-     */
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {
