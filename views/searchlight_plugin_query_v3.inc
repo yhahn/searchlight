@@ -218,7 +218,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
         $view->build_info['query'] = $this->query();
         $view->build_info['count_query'] = $this->query();
-
+      }
+      else {
+        // we did not return any search results. Return no result.
+        $this->search_buildmode = 'empty';
       }
     }
     elseif ($this->search_buildmode === 'default') {
@@ -227,7 +230,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function execute(&$view) {
-    if ($this->search_buildmode === 'default') {
+    if ($this->search_buildmode === 'empty') {
+      //
+    }
+    elseif ($this->search_buildmode === 'default') {
       parent::execute($view);
     }
     elseif ($this->search_buildmode === 'search') {
