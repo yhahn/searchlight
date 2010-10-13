@@ -65,7 +65,7 @@ function _searchlight_basic_searchlight_default_datasources() {
       'table' => 'users',
       'field' => 'name',
       'name' => 'users_name',
-      'usage' => 'attribute',
+      'usage' => 'content',
     ),
     'users_uid' => array(
       'label' => 'User: Name (uid)',
