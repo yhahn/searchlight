@@ -252,7 +252,6 @@ function searchlight_views_default_views() {
           'field' => 'machine_name',
           'relationship' => 'none',
         ),
-
       ));
       $handler->override_option('filters', array(
         'machine_name' => array(
