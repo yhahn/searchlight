@@ -528,7 +528,7 @@ function searchlight_searchlight_registry() {
         'title' => t('Search query'),
         'plugin' => 'SearchlightFacetSearchQuery',
       ),
-      'term_data_tid' => array(
+      'taxonomy_term_data_tid' => array(
         'title' => t('Taxonomy term'),
         'plugin' => 'SearchlightFacetTerm',
       ),
