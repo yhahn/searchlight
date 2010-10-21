@@ -151,11 +151,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $limit = $facet['limit'];
       switch ($field['datatype']) {
         case 'timestamp':
-          $groupby = array(
-            'day' => SPH_GROUPBY_DAY,
-            'month' => SPH_GROUPBY_MONTH,
-            'year' => SPH_GROUPBY_YEAR,
-          );
+          $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
           $granularity = !empty($facet['granularity']) ? $facet['granularity'] : 'month';
           $client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
           $client->SetArrayResult(FALSE);
@@ -195,10 +191,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
                 $id = $attr['@groupby'];
                 break;
             }
-            $built[$facet['field']][$id] = array(
-              'id' => $id,
-              'count' => $attr['@count'],
-            );
+            $built[$facet['field']][$id] = array('id' => $id, 'count' => $attr['@count']);
           }
         }
       }
@@ -224,13 +217,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     $client = $this->initClient($datasource);
     $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
-    $client->UpdateAttributes($datasource->id . '_delta', array('searchlight_deleted'), $delete);
+    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
   }
 
   /**
    * Override of setFilter().
    */
-  function etFilter(&$client, $datasource, $filters) {
+  function setFilter(&$client, $datasource, $filters) {
     // Hardwired delete filter. See sphinxDatasourceConf() for how this is
     // added to the sphinx index.
     $filters['searchlight_deleted'] = array(
@@ -244,7 +237,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $key => $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $value     = $params['value'];
+        $args     = $params['args'];
         if (in_array($operator, array('<', '>', '>=', '<='))) {
           unset($filters[$key]);
           switch ($operator) {
@@ -252,13 +245,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             case '>=':
               $range_filters[$field]['field'] = $field;
               $range_filters[$field]['max'] = isset($range_filters[$field]['max']) ? $range_filters[$field]['max'] : SEARCHLIGHT_SPHINX_FILTER_MAX;
-              $range_filters[$field]['min'] = eval("return {$value};");
+              $range_filters[$field]['min'] = eval("return {$args[0]};");
               $range_filters[$field]['exclude'] = $operator === '>' ? TRUE : FALSE;
               break;
             case '<':
             case '<=':
               $range_filters[$field]['field'] = $field;
-              $range_filters[$field]['max'] = eval("return {$value};");
+              $range_filters[$field]['max'] = eval("return {$args[0]};");
               $range_filters[$field]['min'] = isset($range_filters[$field]['min']) ? $range_filters[$field]['min'] : SEARCHLIGHT_SPHINX_FILTER_MIN;
               $range_filters[$field]['exclude'] = $operator === '<' ? TRUE : FALSE;
               break;
@@ -279,17 +272,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $value    = $params['value'];
+        $args     = $params['args'];
         switch ($operator) {
           case '=':
-            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
             break;
           case 'IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
             break;
           case '<>':
           case 'NOT IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $value, TRUE);
+            $this->sphinxSetFilter($client, $datasource, $field, $args, TRUE);
             break;
         }
       }
@@ -495,8 +488,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
 
           // Once updates are complete, remove the Drupal-side records.
-          // TODO Please review the conversion of this statement to the D7 database API syntax.
-          /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
           db_delete('searchlight_search')
             ->condition('status', -1)
             ->condition('type', $datasource->base_table)
@@ -526,7 +517,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushConf() {
     $file_path = $this->drushGetConfigPath();
-    $conf_path = $file_path . '/index.d';
+    $conf_path = $file_path .'/index.d';
 
     // @TODO: Revisit configuration file generation. Need to handle:
     //

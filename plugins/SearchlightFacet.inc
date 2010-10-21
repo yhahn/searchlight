@@ -40,7 +40,7 @@ class SearchlightFacet {
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '=',
-        'value' => $this->value,
+        'args' => array($this->value),
       );
     }
 
@@ -173,8 +173,6 @@ class SearchlightFacet {
       // Add label field.
       $label_alias = $query->add_field($this->field['label_field']['table'], $this->field['label_field']['field']);
 
-      // TODO Please convert this statement to the D7 database API syntax.
-      // TODO Please convert this statement to the D7 database API syntax.
       $result = db_query($query->query(), $ids);
       $rows = array();
       while ($row = db_fetch_object($result)) {
@@ -232,5 +230,6 @@ class SearchlightFacet {
   /**
    * Provide extended form elements for a facet in the Environment editor.
    */
-  function extendedForm(&$form, $form_state) { }
+  function extendedForm(&$form, $form_state) {
+  }
 }

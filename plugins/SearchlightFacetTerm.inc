@@ -84,8 +84,6 @@ class SearchlightFacetTerm extends SearchlightFacet {
         // If the item is deeper than the current depth it should be an option
         // for further faceting drill-down.
         if ($term_item->depth > $term_current->depth) {
-          // TODO Please change this theme call to use an associative array for the $variables parameter.
-          // TODO Please change this theme call to use an associative array for the $variables parameter.
           return parent::theme($item, 'facets');
         }
         // Otherwise, broaden the search by either linking to a parent term
@@ -106,8 +104,6 @@ class SearchlightFacetTerm extends SearchlightFacet {
       }
       return '';
     }
-    // TODO Please change this theme call to use an associative array for the $variables parameter.
-    // TODO Please change this theme call to use an associative array for the $variables parameter.
     return parent::theme($item, $delta);
   }
 
@@ -139,11 +135,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
               foreach ($terms as $term) {
                 $count = $this->getDeepCount($term->tid, $raw);
                 if ($count) {
-                  $items[] = array(
-                    'id' => $term->tid,
-                    'title' => $term->name,
-                    'count' => $count,
-                  );
+                  $items[] = array('id' => $term->tid, 'title' => $term->name, 'count' => $count);
                 }
               }
             }
@@ -160,11 +152,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
             foreach ($terms as $term) {
               $count = $this->getDeepCount($term->tid, $raw);
               if ($count) {
-                $items[] = array(
-                  'id' => $term->tid,
-                  'title' => $term->name,
-                  'count' => $count, /*'link' => l($term->name, $_GET['q'], $options)*/
-                );
+                $items[] = array('id' => $term->tid, 'title' => $term->name, 'count' => $count, /*'link' => l($term->name, $_GET['q'], $options)*/);
               }
             }
           }
@@ -228,10 +216,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
     $form['count_method'] = array(
       '#title' => t('Count mode'),
       '#type' => 'select',
-      '#options' => array(
-        'shallow' => t('Shallow'),
-        'deep' => t('Deep'),
-      ),
+      '#options' => array('shallow' => t('Shallow'), 'deep' => t('Deep')),
       '#default_value' => $this->options['count_method'],
     );
   }

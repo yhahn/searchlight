@@ -14,12 +14,12 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '>',
-        'value' => $range['from'],
+        'args' => array($range['from']),
       );
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '<',
-        'value' => $range['to'],
+        'args' => array($range['to']),
       );
     }
 

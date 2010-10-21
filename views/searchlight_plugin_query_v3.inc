@@ -55,7 +55,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
         $this->search_filter[] = array(
           'field' => $name,
           'operator' => $operator,
-          'value' => $value
+          'args' => $value
         );
         return;
       }
@@ -186,13 +186,13 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if (!empty($replacements)) {
       foreach ($this->search_filter as $j => $filter) {
         $this->search_filter[$j]['field'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['field']);
-        if (is_array($this->search_filter[$j]['value'])) {
-          foreach ($this->search_filter[$j]['value'] as $k => $arg) {
-            $this->search_filter[$j]['value'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
+        if (is_array($this->search_filter[$j]['args'])) {
+          foreach ($this->search_filter[$j]['args'] as $k => $arg) {
+            $this->search_filter[$j]['args'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
           }
         }
         else {
-          $this->search_filter[$j]['value'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['value']);
+          $this->search_filter[$j]['args'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['args']);
         }
       }
     }
