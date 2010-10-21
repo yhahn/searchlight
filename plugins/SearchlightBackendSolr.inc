@@ -61,7 +61,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
    */
   function initClient($datasource) {
     $this->solrInclude();
-    $path = $this->settings['path'] .'/'. $datasource->id;
+    $path = $this->settings['path'] . '/' . $datasource->id;
     $client = new Apache_Solr_Service($this->settings['host'], (int) $this->settings['port'], $path);
     return $client;
   }
@@ -78,16 +78,16 @@ class SearchlightBackendSolr extends SearchlightBackend {
     if (isset($client->searchlightSort)) {
       foreach ($client->searchlightSort as $field => $order) {
         $field = ($field == 'searchlight_weight' ? 'score' : $field);
-        $sort .= $field .' '. strtolower($order) .',';
+        $sort .= $field . ' ' . strtolower($order) . ',';
       }
       $options['sort'] = rtrim($sort, ',');
     }
 
-    try { 
+    try {
       $response = $client->search($query, $offset, $limit, $options);
     }
     catch (Exception $e) {
-      drupal_set_message('Caught exception: '.  $e->getMessage(), 'error');
+      drupal_set_message('Caught exception: ' .  $e->getMessage(), 'error');
       return FALSE;
     }
 
@@ -97,7 +97,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
     if (!empty($ids)) {
       return array(
-        'result' => $ids, 
+        'result' => $ids,
         'total' => $response->response->numFound,
         'raw' => $response,
       );
@@ -115,29 +115,29 @@ class SearchlightBackendSolr extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value    = $params['value'];
 
-        switch($operator) {
+        switch ($operator) {
           case '<':
           case '<=':
-            $range_filters[$field]['max'] = $args[0];
+            $range_filters[$field]['max'] = $value;
             break;
           case '>':
           case '>=':
-            $range_filters[$field]['min'] = $args[0];
+            $range_filters[$field]['min'] = $value;
             break;
           case '=':
-            $client->searchlightFilters[] = $field .':"'. $args[0] .'"';
+            $client->searchlightFilters[] = $field . ':"' . $value . '"';
             break;
           case '!=':
           case '<>':
-            $client->searchlightFilters[] = '-'. $field .':"'. $args[0] .'"';
+            $client->searchlightFilters[] = '-' . $field . ':"' . $value . '"';
             break;
           case 'IN':
-            $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $args) .")";
+            $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $value) . ")";
             break;
           case 'NOT IN':
-            $client->searchlightFilters[] = "-{$field}:(" . implode(' OR ', $args) .")";
+            $client->searchlightFilters[] = "-{$field}:(" . implode(' OR ', $value) . ")";
             break;
           default:
             //dsm($params);
@@ -159,7 +159,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     if (!empty($sorts)) {
       $client->searchlightSort = array();
       foreach ($sorts as $sort) {
-        $client->searchlightSort[$sort['field']] = $sort['order'];
+        $client->searchlightSort[$sort['field']] = $sort['direction'];
       }
     }
   }
@@ -223,8 +223,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
           // TODO cache this value so it's not requested on every page load.
           $limits = array(
-            'max' => $facet['field'] ." desc",
-            'min' => $facet['field'] ." asc",
+            'max' => $facet['field'] . " desc",
+            'min' => $facet['field'] . " asc",
           );
 
           foreach ($limits as $lim => $sort) {
@@ -237,7 +237,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
               $limits[$lim] = $response->response->docs[0]->{$facet['field']};
             }
             catch (Exception $e) {
-              drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+              drupal_set_message('Caught exception: ' . $e->getMessage(), 'error');
               return;
             }
           }
@@ -245,7 +245,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           $options['facet.date'][] = $facet['field'];
           // @TODO several issues here
           //      - start/end will need to be adjusted to match an even started
-          //        point for the gap so that dates all fit within the declared 
+          //        point for the gap so that dates all fit within the declared
           //        gap, and we avoid "midnight" problems.
           //      - the month/day/time is set to Jan 1 00:00:00 as granularity/gaps
           //        are calculated as increments from the starting point. HOWEVER,
@@ -284,7 +284,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $response = $client->search($query, 0, 1, $options);
     }
     catch (Exception $e) {
-      drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+      drupal_set_message('Caught exception: ' . $e->getMessage(), 'error');
       return;
     }
 
@@ -296,7 +296,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
           // '_empty_' is Solr speak for NULL or empty values. Convert that
           // string back into something more palatable in Drupal.
           $i = $i === '_empty_' ? NULL : $i;
-          $built[$k][$i] = array('id' => $i, 'count' => $j);
+          $built[$k][$i] = array(
+            'id' => $i,
+            'count' => $j,
+          );
         }
       }
     }
@@ -308,7 +311,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
           if (!empty($j) && !in_array($i, array('gap', 'end'))) {
             // $time = gmmktime($i);
             // $build[$k][$i]format_date($time);
-            $built[$k][$i] = array('id' => $i, 'count' => $j);
+            $built[$k][$i] = array(
+              'id' => $i,
+              'count' => $j,
+            );
           }
         }
         // Reverse-chronological sort the dates.
@@ -338,7 +344,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $solr->commit();
     }
     catch (Exception $e) {
-      drupal_set_message('Caught exception: '. $e->getMessage(), 'error');
+      drupal_set_message('Caught exception: ' . $e->getMessage(), 'error');
       return;
     }
   }
@@ -348,15 +354,15 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Start the Solr service.
    */
   function drushSearchd() {
-    $file_path = conf_path() .'/solr';
-    $solr_home = drush_locate_root() .'/'. conf_path() . '/solr';
-    $log_dir = $solr_home .'/log';
-    if (file_check_directory($log_dir, TRUE)) {
-      $opts .= '-Dsolr.solr.home='. $solr_home .' ';
-      $opts .= '-Djetty.logs='. $log_dir.' ';
-      $opts .= '-Djetty.home='. $this->settings['jar_path'] .' ';
-      $opts .= '-jar '. $this->settings['jar_path'] .'/start.jar';
-      drush_op('drush_shell_exec', 'java '. $opts);
+    $file_path = conf_path() . '/solr';
+    $solr_home = drush_locate_root() . '/' . conf_path() . '/solr';
+    $log_dir = $solr_home . '/log';
+    if (file_prepare_directory($log_dir, TRUE)) {
+      $opts .= '-Dsolr.solr.home=' . $solr_home . ' ';
+      $opts .= '-Djetty.logs=' . $log_dir . ' ';
+      $opts .= '-Djetty.home=' . $this->settings['jar_path'] . ' ';
+      $opts .= '-jar ' . $this->settings['jar_path'] . '/start.jar';
+      drush_op('drush_shell_exec', 'java ' . $opts);
     }
     return drush_log("An error ocurred while starting the search daemon.", 'error');
   }
@@ -511,10 +517,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
         // $solr->optimize(); //merges multiple segments into one
 
-        $args = $ids;
-        array_unshift($args, $datasource->base_table);
-        db_query("UPDATE {searchlight_search} SET status = 1 WHERE type ='%s'
-                  AND id IN (". rtrim(str_repeat('%d,', count($ids)), ',') .")", $args);
+        $query = db_update('searchlight_search')
+          ->fields(array('status' => 1))
+          ->condition('type', $datasource->base_table)
+          ->condition('id', $ids, 'IN')
+          ->execute();
 
         drush_log(dt('@datasource: Indexing completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($ids))), 'success');
       }
@@ -523,9 +530,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
 
       // Deletion.
-      $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+      $result = db_select('searchlight_search', 's')
+        ->fields('s')
+        ->condition('status', -1)
+        ->condition('type', $datasource->base_table)
+        ->execute();
       $delete = array();
-      while ($row = db_fetch_object($result)) {
+      foreach ($result as $row) {
         $delete[] = $row->id;
       }
       if (!empty($delete)) {
@@ -536,11 +547,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
         $solr->commit();
 
         // Once updates are complete, remove the Drupal-side records.
-        db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+        db_delete('searchlight_search')
+          ->condition('status', -1)
+          ->condition('type', $datasource->base_table)
+          ->execute();
 
         drush_log(dt('@datasource: Deletion completed for @count items.', array('@datasource' => $datasource->name, '@count' => count($delete))), 'success');
       }
-      variable_set('searchlight_solr_last', time());
+      variable_set('searchlight_solr_last', REQUEST_TIME);
     }
   }
 
@@ -549,23 +563,23 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Write the Solr configuration files.
    */
   function drushConf() {
-    $file_path = conf_path() .'/solr';
-    if (file_check_directory($file_path, TRUE)) {
+    $file_path = conf_path() . '/solr';
+    if (file_prepare_directory($file_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       $cores = array();
       foreach (searchlight_get_datasource() as $datasource) {
         $datasource->init();
         $cores[] = $datasource->id;
-        $core_path = $file_path .'/'. $datasource->id;
-        if (!file_check_directory($core_path, TRUE)) {
+        $core_path = $file_path . '/' . $datasource->id;
+        if (!file_prepare_directory($core_path, TRUE)) {
           return drush_log("/{$core_path} could not be written to.", 'error');
         }
         $core_path .= '/conf';
-        if (file_check_directory($core_path, TRUE)) {
+        if (file_prepare_directory($core_path, TRUE)) {
           // Generate configuration file from datasources.
           $schema = $this->solrDatasourceConf($datasource);
           $files = array(
-            'schema.xml' => theme('searchlight_solr_schema', $schema),
+            'schema.xml' => theme('searchlight_solr_schema', array('datasource' => $schema)),
             'solrconfig.xml' => theme('searchlight_solr_config'),
           );
           $this->solrWriteFiles($core_path, $files);
@@ -575,7 +589,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         }
       }
       // Generate top level config.
-      $files = array('solr.xml' => theme('searchlight_solr_cores', $cores));
+      $files = array('solr.xml' => theme('searchlight_solr_cores', array('cores' => $cores)));
       $this->solrWriteFiles($file_path, $files);
     }
     else {
@@ -597,9 +611,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Assemble the query string.
    */
   function solrPrepareQuery(&$client, $datasource, $query) {
-    $query = empty($query) ? '[* TO *]' : '"'. $query .'"'; //  Is this really right?
+    $query = empty($query) ? '[* TO *]' : '"' . $query . '"'; //  Is this really right?
     if (isset($client->searchlightFilters)) {
-      $query .= ' '. implode(' ', $client->searchlightFilters);
+      $query .= ' ' . implode(' ', $client->searchlightFilters);
     }
     return $query;
   }
@@ -655,15 +669,15 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Write config to the filesystem
    */
   function solrWriteFiles($path, $files) {
-    foreach($files as $name => $contents) {
+    foreach ($files as $name => $contents) {
       if ($contents) {
         $existing = '';
         if (file_exists("{$path}/{$name}")) {
           $existing = file_get_contents("{$path}/{$name}");
         }
         if ($contents !== $existing) {
-         file_put_contents("{$path}/{$name}", $contents);
-         drush_log("{$path}/{$name} was written successfully.", 'success');
+          file_put_contents("{$path}/{$name}", $contents);
+          drush_log("{$path}/{$name} was written successfully.", 'success');
         }
         else {
           drush_log("{$path}/{$name} is unchanged.", 'success');

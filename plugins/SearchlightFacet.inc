@@ -40,7 +40,7 @@ class SearchlightFacet {
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '=',
-        'args' => array($this->value),
+        'value' => $this->value,
       );
     }
 
@@ -114,12 +114,12 @@ class SearchlightFacet {
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('remove', $this->name, $item['id']);
         $item['link'] = l(t('remove'), $path, $options);
-        return theme('searchlight_facet_active', $this->field, $item);
+        return theme('searchlight_facet_active', array('field' => $this->field, 'item' => $item));
       case 'facets':
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('add', $this->name, $item['id']);
         $item['link'] = l($item['title'], $path, $options);
-        return theme('searchlight_facet_link', $this->field, $item);
+        return theme('searchlight_facet_link', array('field' => $this->field, 'item' => $item));
     }
   }
 
@@ -161,19 +161,11 @@ class SearchlightFacet {
     if ($this->field['usage'] === 'multivalue') {
       $ids = array_keys($items);
 
-      // Views 2.x
-      if (views_api_version() == '2.0') {
-        views_include('query');
-        $query = new views_query($this->field['table'], $this->field['field']);
-      }
-      // Views 3.x
-      else {
-        $query = views_get_plugin('query', 'views_query');
-        $query->init($this->field['table'], $this->field['field']);
-      }
+      $query = views_get_plugin('query', 'views_query');
+      $query->init($this->field['table'], $this->field['field']);
 
       // Add WHERE condition on item ids.
-      $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
+      $query->add_where(0, "{$this->field['table']}.{$this->field['field']}", $ids, 'IN');
 
       // Add base field.
       $field_alias = $query->add_field($this->field['table'], $this->field['field']);
@@ -181,6 +173,8 @@ class SearchlightFacet {
       // Add label field.
       $label_alias = $query->add_field($this->field['label_field']['table'], $this->field['label_field']['field']);
 
+      // TODO Please convert this statement to the D7 database API syntax.
+      // TODO Please convert this statement to the D7 database API syntax.
       $result = db_query($query->query(), $ids);
       $rows = array();
       while ($row = db_fetch_object($result)) {
@@ -199,7 +193,6 @@ class SearchlightFacet {
         $rows[$item['id']] = $row;
       }
     }
-
     // Render item titles.
     $this->handler->pre_render($rows);
     foreach ($rows as $id => $row) {
@@ -239,6 +232,5 @@ class SearchlightFacet {
   /**
    * Provide extended form elements for a facet in the Environment editor.
    */
-  function extendedForm(&$form, $form_state) {
-  }
+  function extendedForm(&$form, $form_state) { }
 }

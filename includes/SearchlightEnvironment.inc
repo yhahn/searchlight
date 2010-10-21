@@ -97,14 +97,18 @@ class SearchlightEnvironment {
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
       foreach ($deltas as $delta) {
-        if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
+        if ($render = $plugin->render(clone $this->query, $delta)) {
           // Theme each item
           $items = array();
           foreach ($render as $item) {
             $items[] = $plugin->theme($item, $delta);
           }
           // Generate a label/items array suitable for theme('searchlight_facet')
-          $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items, 'delta' => $delta);
+          $rendered[$name] = array(
+            'label' => $plugin->label($delta),
+            'items' => $items,
+            'delta' => $delta,
+          );
         }
       }
     }
@@ -129,12 +133,12 @@ class SearchlightEnvironment {
     if ($delta === 'facets' && $this->initView()) {
       $output = '';
       foreach ($this->render() as $rendered) {
-        $output .= theme('searchlight_facet', $rendered);
+        $output .= theme('searchlight_facet', array('facet' => $rendered));
       }
       if (!empty($output)) {
         $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";
         return array(
-          'subject' => filter_xss_admin($this->options['facets_label']),
+          'label' => filter_xss_admin($this->options['facets_label']),
           'content' => $output,
         );
       }
@@ -149,6 +153,7 @@ class SearchlightEnvironment {
     // Adapted from searchlight_build_view. It should be possible to
     // retrieve a data source from a view without running it, untill then...
     $split = explode(':', $this->view_display);
+
     if (count($split) === 2 && $view = views_get_view($split[0])) {
       return searchlight_get_datasource($view->base_table);
     }
@@ -209,7 +214,10 @@ class SearchlightEnvironment {
     if ($datasource) {
       $form['facets'] = array('#tree' => TRUE);
       $fields = $datasource->fields;
-      $fields['search_query'] = array('label' => t('Search query'));
+      $fields['search_query'] = array(
+        'label' => t('Search query'),
+        'name' => 'search_query'
+      );
       foreach ($fields as $name => $field) {
         if ($this->isValidFacet($name)) {
           $form['facets'][$name] = array(
@@ -223,8 +231,7 @@ class SearchlightEnvironment {
           );
           $form['facets'][$name]['ui_name'] = array(
             '#title' => t('Facet'),
-            '#type' => 'markup',
-            '#value' => $field['label'],
+            '#markup' => $field['label'],
           );
           $form['facets'][$name]['weight'] = array(
             '#title' => t('Weight'),
@@ -235,7 +242,8 @@ class SearchlightEnvironment {
           // We instantiate plugins here rather than using initView() as the
           // facets on this form may not already be enabled for this environment.
           $plugin = searchlight_get_facet($datasource, $name);
-          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+          $plugin->construct($this, $field, $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+
           $plugin->optionsForm($form['facets'][$name], $form_state);
 
           $form['facets'][$name]['settings'] = array(
@@ -348,7 +356,7 @@ class SearchlightEnvironment {
     else if (empty($modifier)) {
       $exclude[] = $key;
     }
-    $options['query'] = drupal_query_string_encode($query, $exclude);
+    $options['query'] = drupal_get_query_parameters($query, $exclude);
 
     return $options;
   }

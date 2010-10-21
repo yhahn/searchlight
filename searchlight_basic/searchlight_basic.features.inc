@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implementation of hook_ctools_plugin_api().
+ * Implements hook_ctools_plugin_api().
  */
 function searchlight_basic_ctools_plugin_api() {
   module_load_include('inc', 'searchlight_basic', 'searchlight_basic.defaults');
@@ -10,7 +10,7 @@ function searchlight_basic_ctools_plugin_api() {
 }
 
 /**
- * Implementation of hook_searchlight_default_datasources().
+ * Implements hook_searchlight_default_datasources().
  */
 function searchlight_basic_searchlight_default_datasources() {
   module_load_include('inc', 'searchlight_basic', 'searchlight_basic.defaults');
@@ -19,7 +19,7 @@ function searchlight_basic_searchlight_default_datasources() {
 }
 
 /**
- * Implementation of hook_searchlight_default_environments().
+ * Implements hook_searchlight_default_environments().
  */
 function searchlight_basic_searchlight_default_environments() {
   module_load_include('inc', 'searchlight_basic', 'searchlight_basic.defaults');
@@ -28,7 +28,7 @@ function searchlight_basic_searchlight_default_environments() {
 }
 
 /**
- * Implementation of hook_views_default_views().
+ * Implements hook_views_default_views().
  */
 function searchlight_basic_views_default_views() {
   module_load_include('inc', 'searchlight_basic', 'searchlight_basic.features.views');

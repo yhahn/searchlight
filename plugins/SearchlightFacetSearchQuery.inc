@@ -44,7 +44,7 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('active', $this->name, $item['id']);
         $item['link'] = l(t('remove'), $path, $options);
-        return theme('searchlight_facet_active', $this->field, $item);
+        return theme('searchlight_facet_active', array('field' => $this->field, 'item' => $item));
     }
   }
 
@@ -56,9 +56,9 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
   function render($query, $delta) {
     if ($delta === 'active' && !empty($query->search_query)) {
       return array(array(
-        'id' => $query->search_query,
-        'title' => $query->search_query,
-      ));
+          'id' => $query->search_query,
+          'title' => $query->search_query,
+        ));
     }
     return array();
   }
@@ -78,7 +78,8 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
   function optionsForm(&$form, $form_state) {
     parent::optionsForm($form, $form_state);
     $form['items'] = array(
-      '#type' => 'value',
+      '#title' => t('Items to show'),
+      '#type' => 'hidden',
       '#value' => 1,
     );
   }

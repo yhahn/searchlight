@@ -52,12 +52,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $form['index'] = array(
       '#type' => 'fieldset',
       '#title' => t('Index settings'),
-      '#description' => t('Advanced configuration options for Sphinx. Use these options to enable CJK or other character set handling for Sphinx. Otherwise, you can leave these blank.')
+      '#description' => t('Advanced configuration options for Sphinx. Use these options to enable CJK or other character set handling for Sphinx. Otherwise, you can leave these blank.'),
     );
     $form['index']['morphology'] = array(
       '#title' => t('Morphology'),
       '#description' => t('Morphology processors to apply. See !link', array(
-        '!link' => l(t('Sphinx: morphology'), 'http://www.sphinxsearch.com/docs/current.html#conf-morphology')
+        '!link' => l(t('Sphinx: morphology'), 'http://www.sphinxsearch.com/docs/current.html#conf-morphology'),
       )),
       '#type' => 'textfield',
       '#default_value' => $this->settings['index']['morphology'],
@@ -83,7 +83,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#title' => t('N-gram characters list'),
       '#description' => t('N-gram characters list for basic CJK support. See !link and !charset for CJK support', array(
         '!link' => l(t('Sphinx: ngram_chars'), 'http://www.sphinxsearch.com/docs/current.html#ngram_chars'),
-        '!charset' => l(t('CJK n-gram characters'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables#cjk_ngram_characters')
+        '!charset' => l(t('CJK n-gram characters'), 'http://sphinxsearch.com/wiki/doku.php?id=charset_tables#cjk_ngram_characters'),
       )),
       '#type' => 'textfield',
       '#default_value' => $this->settings['index']['ngram_chars'],
@@ -145,14 +145,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Override of facetBuild().
    */
   function facetBuild(&$client, $datasource, $query = '', $facets) {
-    $client = drupal_clone($client);
+    $client = clone $client;
     foreach ($facets as $facet) {
       $field = $datasource->fields[$facet['field']];
       $limit = $facet['limit'];
-
       switch ($field['datatype']) {
         case 'timestamp':
-          $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
+          $groupby = array(
+            'day' => SPH_GROUPBY_DAY,
+            'month' => SPH_GROUPBY_MONTH,
+            'year' => SPH_GROUPBY_YEAR,
+          );
           $granularity = !empty($facet['granularity']) ? $facet['granularity'] : 'month';
           $client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
           $client->SetArrayResult(FALSE);
@@ -192,7 +195,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
                 $id = $attr['@groupby'];
                 break;
             }
-            $built[$facet['field']][$id] = array('id' => $id, 'count' => $attr['@count']);
+            $built[$facet['field']][$id] = array(
+              'id' => $id,
+              'count' => $attr['@count'],
+            );
           }
         }
       }
@@ -209,20 +215,22 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     variable_del('searchlight_sphinx_last');
 
     $delete = array();
-    $result = db_query("SELECT " . $datasource->base_field . " FROM {" . $datasource->base_table . "}");
-    while ($row = db_fetch_object($result)) {
+    $result = db_select($datasource->base_table, 'b')
+      ->fields('b', array($datasource->base_field))
+      ->execute();
+    foreach ($result as $row) {
       $delete[$row->{$datasource->base_field}] = array(1);
     }
 
     $client = $this->initClient($datasource);
     $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
-    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
+    $client->UpdateAttributes($datasource->id . '_delta', array('searchlight_deleted'), $delete);
   }
 
   /**
    * Override of setFilter().
    */
-  function setFilter(&$client, $datasource, $filters) {
+  function etFilter(&$client, $datasource, $filters) {
     // Hardwired delete filter. See sphinxDatasourceConf() for how this is
     // added to the sphinx index.
     $filters['searchlight_deleted'] = array(
@@ -236,7 +244,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $key => $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value     = $params['value'];
         if (in_array($operator, array('<', '>', '>=', '<='))) {
           unset($filters[$key]);
           switch ($operator) {
@@ -244,13 +252,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             case '>=':
               $range_filters[$field]['field'] = $field;
               $range_filters[$field]['max'] = isset($range_filters[$field]['max']) ? $range_filters[$field]['max'] : SEARCHLIGHT_SPHINX_FILTER_MAX;
-              $range_filters[$field]['min'] = eval("return {$args[0]};");
+              $range_filters[$field]['min'] = eval("return {$value};");
               $range_filters[$field]['exclude'] = $operator === '>' ? TRUE : FALSE;
               break;
             case '<':
             case '<=':
               $range_filters[$field]['field'] = $field;
-              $range_filters[$field]['max'] = eval("return {$args[0]};");
+              $range_filters[$field]['max'] = eval("return {$value};");
               $range_filters[$field]['min'] = isset($range_filters[$field]['min']) ? $range_filters[$field]['min'] : SEARCHLIGHT_SPHINX_FILTER_MIN;
               $range_filters[$field]['exclude'] = $operator === '<' ? TRUE : FALSE;
               break;
@@ -271,17 +279,17 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $args     = $params['args'];
+        $value    = $params['value'];
         switch ($operator) {
           case '=':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
             break;
           case 'IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, FALSE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, FALSE);
             break;
           case '<>':
           case 'NOT IN':
-            $this->sphinxSetFilter($client, $datasource, $field, $args, TRUE);
+            $this->sphinxSetFilter($client, $datasource, $field, $value, TRUE);
             break;
         }
       }
@@ -305,10 +313,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $sphinx_sorts = array();
       foreach ($sorts as $sort) {
         if ($sort['field'] === 'searchlight_weight') {
-          $sphinx_sorts[] = "@weight {$sort['order']}";
+          $sphinx_sorts[] = "@weight {$sort['direction']}";
         }
         else {
-          $sphinx_sorts[] = "{$sort['field']} {$sort['order']}";
+          $sphinx_sorts[] = "{$sort['field']} {$sort['direction']}";
         }
       }
       $client->setSortMode(SPH_SORT_EXTENDED, implode(', ', $sphinx_sorts));
@@ -347,7 +355,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     }
   }
 
-  
+
   /**
    * Return a directory where the configuration files and indexes are stored.
    *
@@ -371,13 +379,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $conf_path = $this->drushGetConfigPath();
     $conf_file = $this->drushGetConfigFile();
 
-    if (file_check_directory($conf_path, TRUE)) {
+    if (file_prepare_directory($conf_path, TRUE)) {
       $files = array();
 
       // rerieve list of possible configuration file matches.
       $files[] = $conf_path . '/sphinx.conf';
 
-      $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..') , 0, false, 'name');
+      $matches = drush_scan_directory($conf_path . '/index.d/', '/^.*\.conf$/', array('.', '..'), 0, false, 'name');
 
       foreach ($matches as $name => $file) {
         $files[] = $file->filename;
@@ -393,7 +401,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
       }
 
-      // load the previous file 
+      // load the previous file
       $old_config = (file_exists($conf_file)) ? file_get_contents($conf_file) : '';
 
       if ($old_config != $string) {
@@ -414,7 +422,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $file_path = $this->drushGetConfigPath() . '/log';
 
     $lock_file = "{$file_path}/searchd.lock";
-    if (file_check_directory($file_path, TRUE)) {
+    if (file_prepare_directory($file_path, TRUE)) {
       $lock = file_exists($lock_file) ? file_get_contents($lock_file) : 0;
 
       if ((int) $lock == 1) {
@@ -422,7 +430,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
 
       file_put_contents($lock_file, '1');
-      if (file_check_directory($file_path, TRUE)) {
+      if (file_prepare_directory($file_path, TRUE)) {
         $pid_file = "{$file_path}/searchd.pid";
         $pid = file_exists($pid_file) ? file_get_contents($pid_file) : '';
 
@@ -450,9 +458,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // Create the sphinx directory if it doesn't exist.
     $changed = $this->drushGenerateMergedConfig();
     $file_path = $this->drushGetConfigPath() . '/indexes';
-    if (file_check_directory($file_path, TRUE)) {
+    if (file_prepare_directory($file_path, TRUE)) {
       // Determine if we should update deltas only.
-      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > time();
+      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > REQUEST_TIME;
 
       // Build list of this site's indexes.
       $indexes = array();
@@ -473,8 +481,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Note that we must update both the main and delta indices.
       foreach (searchlight_get_datasource() as $datasource) {
         $delete = array();
-        $result = db_query("SELECT * FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
-        while ($row = db_fetch_object($result)) {
+        $result = db_select('searchlight_search', 's')
+          ->fields('s')
+          ->condition('status', -1)
+          ->condition('type', $datasource->base_table)
+          ->execute();
+        foreach ($result as $row) {
           $delete[$row->id] = array(1);
         }
         if (!empty($update)) {
@@ -483,14 +495,22 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
 
           // Once updates are complete, remove the Drupal-side records.
-          db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table);
+          // TODO Please review the conversion of this statement to the D7 database API syntax.
+          /* db_query("DELETE FROM {searchlight_search} WHERE status = -1 AND type = '%s'", $datasource->base_table) */
+          db_delete('searchlight_search')
+            ->condition('status', -1)
+            ->condition('type', $datasource->base_table)
+            ->execute();
         }
       }
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       cache_clear_all('searchlight', 'cache', TRUE);
-      db_query('UPDATE {searchlight_search} SET status = 1 WHERE status = 0');
-      variable_set('searchlight_sphinx_last', time());
+      db_update('searchlight_search')
+        ->fields(array('status' => 1))
+        ->condition('status', 0)
+        ->execute();
+      variable_set('searchlight_sphinx_last', REQUEST_TIME);
       drush_log('Indexing complete.', 'success');
       if ($changed === TRUE) {
         return $this->drushSearchd();
@@ -506,7 +526,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushConf() {
     $file_path = $this->drushGetConfigPath();
-    $conf_path = $file_path .'/index.d';
+    $conf_path = $file_path . '/index.d';
 
     // @TODO: Revisit configuration file generation. Need to handle:
     //
@@ -527,13 +547,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     //   variable_set('searchlight_config_changed', FALSE);
     // }
 
-    if (file_check_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
+    if (file_prepare_directory($file_path, TRUE) && drush_get_option('sl-sphinx-base-conf', TRUE)) {
       $this->drushBaseConf();
     }
 
-    if (file_check_directory($conf_path, TRUE)) {
+    if (file_prepare_directory($conf_path, TRUE)) {
       // Collect configuration arrays for each datasource.
-      foreach (searchlight_get_datasource() as $datasource) {
+      foreach (searchlight_datasource_load(NULL, TRUE) as $datasource) {
         $source = $this->sphinxDatasourceConf($datasource);
 
         // Add delta index.
@@ -544,7 +564,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
 
         // Generate configuration file from datasource.
-        $sphinx_conf = theme('searchlight_sphinx_index_conf', $source);
+        $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
         $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
         if ($sphinx_conf !== $existing) {
           file_put_contents($conf_file, $sphinx_conf);
@@ -562,8 +582,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function drushBaseConf() {
     $file_path = $this->drushGetConfigPath();
     $conf_file = "{$file_path}/sphinx.conf";
-    if (file_check_directory($file_path, TRUE)) {
-      $sphinx_conf = theme('searchlight_sphinx_conf', $this->sphinxSearchdConf());
+    if (file_prepare_directory($file_path, TRUE)) {
+      $sphinx_conf = theme('searchlight_sphinx_conf', array('searchd' => $this->sphinxSearchdConf()));
       if ($sphinx_conf) {
         $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
         if ($sphinx_conf === $existing) {
@@ -618,7 +638,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function sphinxSetFilter(&$client, $datasource, $attribute, $values, $exclude = FALSE) {
     $ordinals = array();
-    foreach ($values as $arg) {
+    foreach ((array) $values as $arg) {
       $arg = trim($arg);
       if (is_numeric($arg)) {
         $ordinals[] = $arg;
@@ -640,22 +660,24 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     $datasource->init();
     $datasource_id = $delta ? $datasource->id . '_delta' : $datasource->id;
 
-    $conf = array('conf' => array(), 'index' => array());
-
-    // Retrieve db info.
-    global $db_url, $db_type;
-    $url = is_array($db_url) ? $db_url['default'] : $db_url;
-    $url = parse_url($url);
+    $conf = array(
+      'conf' => array(),
+      'index' => array(),
+    );
 
     // Configuration options.
     $conf['conf']['id'] = $datasource_id;
-    $conf['conf']['type'] = $db_type === 'mysqli' ? 'mysql' : $db_type;
-    $conf['conf']['sql_user'] = urldecode($url['user']);
-    $conf['conf']['sql_pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
-    $conf['conf']['sql_host'] = urldecode($url['host']);
-    $conf['conf']['sql_db']   = trim(urldecode($url['path']), '/');
-    $conf['conf']['sql_port'] = isset($url['port']) ? urldecode($url['port']) : '3306';
 
+    // Use mysql stored database credentials.
+    if ($creds = drush_get_context('DRUSH_DB_CREDENTIALS')) {
+      $conf['conf']['type'] = $creds['driver'] === 'mysqli' ? 'mysql' : $creds['driver'];
+      $conf['conf']['sql_user'] = $creds['user'];
+      $conf['conf']['sql_pass'] = $creds['pass'];
+      $conf['conf']['sql_host'] = $creds['host'];
+      $conf['conf']['sql_db']   = $creds['name'];
+      $conf['conf']['sql_port'] = isset($creds['port']) ? $creds['port'] : '3306';
+
+    }
     // Check for optional sql_sock option.
     $sock = trim($this->settings['sql_sock']);
     if (!empty($sock)) {
@@ -693,8 +715,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Force utf8 when indexing.
       $conf['conf']['sql_query_pre'] = "SET NAMES utf8";
 
-      $sql_query = drupal_clone($view->query);
-      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .' BETWEEN $start AND $end');
+      $sql_query = clone $view->query;
+
+      $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .  ' BETWEEN $start AND $end ', array(), 'formula');
       $sql_query->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query);
@@ -703,8 +726,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
       // Build the info query.
-      $sql_query_info = drupal_clone($view->query);
-      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" .' = $id');
+      $sql_query_info = clone $view->query;
+      $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id', array(), 'formula');
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
       if ($delta) {
         $this->queryFresh($sql_query_info);
@@ -721,9 +744,9 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       // Merge in attributes.
       $sql_attr = array();
       $sphinx_type = array(
-        'text'      => 'sql_attr_str2ordinal',
-        'int'       => 'sql_attr_uint',
-        'float'     => 'sql_attr_float',
+        'text' => 'sql_attr_str2ordinal',
+        'int' => 'sql_attr_uint',
+        'float' => 'sql_attr_float',
         'timestamp' => 'sql_attr_timestamp',
       );
 
@@ -739,7 +762,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         }
         // Generate multivalue queries.
         else if ($field['usage'] === 'multivalue' && $mva_view = searchlight_build_view($field['view'])) {
-          $query = drupal_clone($mva_view->query);
+          $query = clone $mva_view->query;
           // Remove any fields that are not the id field or attribute field.
           foreach ($query->fields as $alias => $query_field) {
             if ($query_field['field'] === $mva_view->base_field && $query_field['table'] === $mva_view->base_table) {
@@ -767,8 +790,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   }
 
   /**
-  * Get the Sphinx searchd settings.
-  */
+   * Get the Sphinx searchd settings.
+   */
   function sphinxSearchdConf() {
     $searchd = array();
     $searchd['log'] = $this->drushGetConfigPath() . '/log/searchd.log';
@@ -788,10 +811,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
   function sphinxWriteSQL($query, $args) {
-    _db_query_callback($args, TRUE);
-    $query = db_prefix_tables($query);
-    $query = preg_replace_callback(DB_QUERY_REGEXP, '_db_query_callback', $query);
-    return $query;
+    $connection = Database::getConnection('default');
+    return $connection->prepareQuery( (string) $query)->queryString;
   }
 
   /**
@@ -856,14 +877,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
         if (!empty($result['matches']) && count($result['matches']) < 1000) {
           // Dispatch a Views query to retrieve the corresponding string.
-          $ids = implode(',', array_keys($result['matches']));
+          $ids = array_keys($result['matches']);
           $view = $datasource->view->copy();
           $view->build();
           $view->set_items_per_page(0);
           $view->query->where = array();
-          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
+          $view->query->add_where(0, "{$view->base_table}.{$view->base_field}", $ids, 'IN');
           $view->build_info['query'] = $view->query->query();
-          $view->build_info['query_args'] = $view->query->get_where_args();
           $view->execute();
           foreach ($view->result as $row) {
             $id = $row->{$view->base_field};

@@ -31,10 +31,8 @@ class SearchlightDatasource {
   }
 
   function setId() {
-    global $db_url;
-    $url = is_array($db_url) ? $db_url['default'] : $db_url;
-    $url = parse_url($url);
-    $this->id = trim(urldecode($url['path']), '/') .'_'. $this->name;
+    global $databases;
+    $this->id = $databases['default']['default']['database'] . '_' . $this->name;
     return $this;
   }
 
@@ -67,7 +65,7 @@ class SearchlightDatasource {
         'id' => $this->base_field,
         'table' => $this->base_table,
         'field' => $this->base_field,
-        'relationship' => 'none'
+        'relationship' => 'none',
       );
     }
     foreach ($this->getFields() as $name => $field) {
@@ -75,7 +73,7 @@ class SearchlightDatasource {
         'id' => $field['name'],
         'table' => $field['table'],
         'field' => $field['field'],
-        'relationship' => 'none'
+        'relationship' => 'none',
       );
     }
     $handler->override_option('fields', $fields);
@@ -110,17 +108,16 @@ class SearchlightDatasource {
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
       $class = $handler ? get_class($handler) : NULL;
-
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
       // column type is not enough information to determine the usage of the
       // field.
       $map = array(
-        'serial'  => 'int',
-        'int'     => 'int',
+        'serial' => 'int',
+        'int' => 'int',
         'varchar' => 'text',
-        'text'    => 'text',
-        'float'   => 'float',
+        'text' => 'text',
+        'float' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
@@ -182,7 +179,6 @@ class SearchlightDatasource {
         }
       }
     }
-
     foreach ($usable as $view) {
       if ($view->name !== 'searchlight_node_access') {
         foreach ($view->display as $display) {
@@ -231,21 +227,19 @@ class SearchlightDatasource {
     $form['#datasource'] = $this;
 
     // Calculations of indexing percentage.
-    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = '%s' GROUP BY status", $this->base_table);
+    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = :type GROUP BY status", array(':type' => $this->base_table));
     $items_indexed = 0;
     $items_total = 0;
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $items_indexed = $row->status == 1 ? $row->count : $items_indexed;
       $items_total = $items_total + $row->count;
     }
     $form['index']['#tree'] = TRUE;
     $form['index']['percent'] = array(
-      '#type' => 'markup',
-      '#value' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
+      '#markup' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
     );
     $form['index']['counts'] = array(
-      '#type' => 'markup',
-      '#value' => t('@indexed of @total total', array(
+      '#markup' => t('@indexed of @total total', array(
         '@indexed' => $items_indexed,
         '@total' => $items_total,
       )),
@@ -257,7 +251,7 @@ class SearchlightDatasource {
 
     $form['help'] = array(
       '#type' => 'item',
-      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.')
+      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.'),
     );
 
     $form['fields'] = array(
@@ -283,8 +277,9 @@ class SearchlightDatasource {
       '#value' => t('Add field'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('fields', 'new')),
       '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-fields-new-add/fields',
+        'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-new-add/fields',
         'wrapper' => 'datasource-fields',
         'method' => 'replace',
       ),
@@ -296,14 +291,14 @@ class SearchlightDatasource {
         '#value' => t('Remove selected fields'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('fields', 'fields')),
         '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-fields-remove/fields',
+          'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-remove/fields',
           'wrapper' => 'datasource-fields',
           'method' => 'replace',
         ),
       );
     }
-
     // Adjust existing fields
     $form['fields']['fields'] = array('#tree' => TRUE);
     foreach ($this->getFields() as $name => $info) {
@@ -317,14 +312,12 @@ class SearchlightDatasource {
 
       // Field label.
       $form['fields']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['fields']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       // Usage
@@ -332,7 +325,10 @@ class SearchlightDatasource {
       $default_usage = isset($this->fields[$name]['usage']) ? $this->fields[$name]['usage'] : $default_usage;
       $form['fields']['fields'][$name]['usage'] = array(
         '#type' => 'select',
-        '#options' => array( 'content' => t('Content'), 'attribute' => t('Attribute')),
+        '#options' => array(
+          'content' => t('Content'),
+          'attribute' => t('Attribute'),
+        ),
         '#default_value' => $default_usage,
       );
     }
@@ -362,8 +358,9 @@ class SearchlightDatasource {
       '#value' => t('Add multivalue'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('multivalues', 'new')),
       '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-new-add/multivalues',
+        'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-new-add/multivalues',
         'wrapper' => 'datasource-multivalues',
         'method' => 'replace',
       ),
@@ -375,14 +372,15 @@ class SearchlightDatasource {
         '#value' => t('Remove selected multivalues'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('multivalues', 'fields')),
         '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-remove/multivalues',
+          'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-remove/multivalues',
           'wrapper' => 'datasource-multivalues',
           'method' => 'replace',
         ),
       );
     }
-
+    $form['multivalues']['fields'] = array();
     foreach ($this->getMultivalues() as $name => $info) {
       $form['multivalues']['fields'][$name] = array();
 
@@ -394,19 +392,16 @@ class SearchlightDatasource {
 
       // Field label.
       $form['multivalues']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['multivalues']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       $form['multivalues']['fields'][$name]['usage'] = array(
-        '#type' => 'markup',
-        '#value' => t('Multivalue'),
+        '#markup' => t('Multivalue'),
       );
     }
 
@@ -472,7 +467,7 @@ class SearchlightDatasource {
           }
         }
         // Save options.
-        $this->options = $form_state['values']['options'];
+        $this->options = isset($form_state['values']['options']) ? $form_state['values']['options'] : array();
 
         // Save the datasource.
         searchlight_datasource_save($this);
@@ -498,8 +493,13 @@ class SearchlightDatasource {
     // Retrieve field information for storage with datasource.
     $handler = isset($this->view->field[$field]) ? $this->view->field[$field] : NULL;
 
+    // Track fields added so we can provide a default usage based on datatype.
+    $fields_added = array();
+
     // Don't use alias for base field.
     if ($field === $this->view->base_field) {
+      $fields_added[] = $field;
+
       $this->fields[$field] = array(
         'label' => $field,
         'datatype' => $this->getDatatype(NULL, $table, $field),
@@ -510,6 +510,8 @@ class SearchlightDatasource {
     }
     // Use alias for all other fields.
     if ($handler) {
+      $fields_added[] = $handler->field_alias;
+
       $this->fields[$handler->field_alias] = array(
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
@@ -529,6 +531,8 @@ class SearchlightDatasource {
           $field = $info['field'];
         }
         if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+          $fields_added[] = $handler->aliases[$field];
+
           $this->fields[$handler->aliases[$field]] = array(
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
@@ -536,6 +540,14 @@ class SearchlightDatasource {
             'field' => $field,
             'name' => $handler->aliases[$field],
           );
+        }
+      }
+    }
+
+    if (sizeof($fields_added)) {
+      foreach ($fields_added as $name) {
+        if (!isset($this->fields[$name]['usage'])) {
+          $this->fields[$name]['usage'] = ($this->fields[$name]['datatype'] === 'text') ? 'content' : 'attribute';
         }
       }
     }

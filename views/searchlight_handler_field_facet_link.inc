@@ -1,9 +1,11 @@
 <?php
 
 class searchlight_handler_field_facet_link extends views_handler_field {
-  function query() {}
+  function query() { }
 
-  function allow_advanced_render() { return FALSE; }
+  function allow_advanced_render() {
+    return FALSE;
+  }
 
   function option_definition() {
     $options = parent::option_definition();
@@ -52,6 +54,8 @@ class searchlight_handler_field_facet_link extends views_handler_field {
         $path = $environment->getURLPath();
         $options = $environment->getURLOptions('add', $facet, $tokens[$this->options['field_token']]);
         $options['absolute'] = $this->options['absolute'];
+        // TODO The second parameter to this function call should be an array.
+        // TODO The second parameter to this function call should be an array.
         return url($path, $options);
       }
     }

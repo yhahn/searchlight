@@ -11,10 +11,13 @@ class searchlight_handler_field_node_access extends views_handler_field {
     parent::options_form($form, $form_state);
     $options = array();
     $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $options[$row->realm] = check_plain($row->realm);
     }
-    $form['realm'] = array('#type' => 'select', '#options' => $options);
+    $form['realm'] = array(
+      '#type' => 'select',
+      '#options' => $options,
+    );
   }
 
   function construct() {
@@ -26,8 +29,8 @@ class searchlight_handler_field_node_access extends views_handler_field {
     parent::query();
     $table = $this->ensure_my_table();
     if (!empty($this->options['realm'])) {
-      $this->query->add_where('AND', "$table.realm = '%s'", $this->options['realm']);
-      $this->query->add_where('AND', "$table.grant_view >= 1");
+      $this->query->add_where('AND', "$table.realm = '" .  $this->options['realm'] . "'", array(), 'formula');
+      $this->query->add_where('AND', "$table.grant_view >= -1", array(), 'formula');
     }
   }
 
@@ -42,5 +45,7 @@ class searchlight_handler_field_node_access extends views_handler_field {
     }
   }
 
-  function allow_advanced_render() { return FALSE; }
+  function allow_advanced_render() {
+    return FALSE;
+  }
 }

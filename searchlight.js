@@ -1,4 +1,29 @@
 (function($) {
+
+
+  Drupal.behaviors.searchlight = {attach : function(context, settings) {
+    if (Drupal.settings.views && Drupal.settings.views.ajaxViews) {
+      $('.searchlight-environment:not(.searchlightProcessed)').each(function() {
+        // Retrieve current page view's settings and DOM element.
+        var settings = {};
+        var view = '';
+        var identifier = $(this).attr('class').split('searchlight-view-')[1].split('-');
+        for (var i in Drupal.settings.views.ajaxViews) {
+          if (
+            Drupal.settings.views.ajaxViews[i].view_name == identifier[0] &&
+            Drupal.settings.views.ajaxViews[i].view_display_id == identifier[1]
+          ) {
+            settings = Drupal.settings.views.ajaxViews[i];
+            view = $('.view-dom-id-' + settings.view_dom_id);
+            $('a', this).drupalSearchlight('ajaxViewLink', {view: view, settings: settings});
+            break;
+          }
+        }
+      }).addClass('searchlightProcessed');
+    }
+  }}
+
+
   $.fn.drupalSearchlight = function(method, params) {
     switch (method) {
       case 'ajaxViewLink':
@@ -65,24 +90,3 @@
   };
 })(jQuery);
 
-Drupal.behaviors.searchlight = function(context) {
-  if (Drupal.settings.views && Drupal.settings.views.ajaxViews) {
-    $('.searchlight-environment:not(.searchlightProcessed)').each(function() {
-      // Retrieve current page view's settings and DOM element.
-      var settings = {};
-      var view = '';
-      var identifier = $(this).attr('class').split('searchlight-view-')[1].split('-');
-      for (var i in Drupal.settings.views.ajaxViews) {
-        if (
-          Drupal.settings.views.ajaxViews[i].view_name == identifier[0] &&
-          Drupal.settings.views.ajaxViews[i].view_display_id == identifier[1]
-        ) {
-          settings = Drupal.settings.views.ajaxViews[i];
-          view = $('.view-dom-id-' + settings.view_dom_id);
-          $('a', this).drupalSearchlight('ajaxViewLink', {view: view, settings: settings});
-          break;
-        }
-      }
-    }).addClass('searchlightProcessed');
-  }
-};

@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  */
 function searchlight_drush_command() {
   $items = array();
