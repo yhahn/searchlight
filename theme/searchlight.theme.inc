@@ -208,7 +208,7 @@ function theme_searchlight_admin_list($variables) {
   }
   $rows[] = $row;
   $output = theme('table', array(
-    'header' => array($name_label, $extra_label, t('Storage'), t('Operations')),
+    'header' => isset($name_label) ? array($name_label, $extra_label, t('Storage'), t('Operations')) : array(),
     'rows' => $rows,
     'attributes' => array(
       'class' => array('object-admin')
