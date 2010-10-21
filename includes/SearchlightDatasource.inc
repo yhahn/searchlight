@@ -251,7 +251,7 @@ class SearchlightDatasource {
 
     $form['help'] = array(
       '#type' => 'item',
-      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.'),
+      '#markup' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.'),
     );
 
     $form['fields'] = array(
@@ -278,8 +278,8 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#limit_validation_errors' => array(array('fields', 'new')),
-      '#ahah' => array(
-        'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-new-add/fields',
+      '#ajax' => array(
+        'callback' => 'searchlight_admin_datasource_ajax_fields_add',
         'wrapper' => 'datasource-fields',
         'method' => 'replace',
       ),
@@ -292,8 +292,8 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#limit_validation_errors' => array(array('fields', 'fields')),
-        '#ahah' => array(
-          'path' => 'admin/config/search/settings/datasource/ahah/edit-fields-remove/fields',
+        '#ajax' => array(
+          'callback' => 'searchlight_admin_datasource_ajax_fields_remove',
           'wrapper' => 'datasource-fields',
           'method' => 'replace',
         ),
@@ -359,8 +359,8 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#limit_validation_errors' => array(array('multivalues', 'new')),
-      '#ahah' => array(
-        'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-new-add/multivalues',
+      '#ajax' => array(
+        'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
         'wrapper' => 'datasource-multivalues',
         'method' => 'replace',
       ),
@@ -373,8 +373,8 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#limit_validation_errors' => array(array('multivalues', 'fields')),
-        '#ahah' => array(
-          'path' => 'admin/config/search/settings/datasource/ahah/edit-multivalues-remove/multivalues',
+        '#ajax' => array(
+          'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
           'wrapper' => 'datasource-multivalues',
           'method' => 'replace',
         ),

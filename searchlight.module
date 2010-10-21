@@ -67,15 +67,6 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/config/search/settings/datasource/ahah/%/%'] = array(
-    'page callback' => 'searchlight_admin_datasource_ahah',
-    'page arguments' => array(6, 7),
-    'access callback' => 'user_access',
-    'access arguments' => array('administer site configuration'),
-    'file' => 'searchlight.admin.inc',
-    'type' => MENU_CALLBACK,
-  );
-
   $items['admin/config/search/settings/environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',

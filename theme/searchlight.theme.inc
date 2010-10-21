@@ -286,7 +286,7 @@ function theme_searchlight_admin_datasource_fields($variables) {
   // Remove fields footer.
   if (!empty($form['remove'])) {
     $rows[] = array(array(
-        'data' => drupal_render_children($form['remove']),
+        'data' => drupal_render($form['remove']),
         'colspan' => 4,
         'header' => TRUE,
       ));

@@ -270,32 +270,47 @@ function searchlight_admin_datasource_edit_submit($form, &$form_state) {
 }
 
 /**
- * AHAH callback & processor for datasource editor.
+ * AJAX callback & processor for datasource editor.
  */
-function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
-  $form_state = array();
+function searchlight_admin_datasource_ajax($form, $form_state, $clicked_id, $element = 'fields') {
   $form_state['clicked_button']['#id'] = $clicked_id;
-  $form_state['values'] = $_POST;
-  $form = form_get_cache($_POST['form_build_id'], $form_state);
-  if ($form) {
-    $datasource = searchlight_datasource_load($form['#datasource_name']);
-    $datasource->optionsSubmit($form, $form_state);
 
-    $form['#datasource'] = $datasource;
-    $datasource->optionsForm($form, $form_state);
-    form_set_cache($_POST['form_build_id'], $form, $form_state);
+  $datasource = searchlight_datasource_load($form['#datasource_name']);
+  $datasource->optionsSubmit($form, $form_state);
 
-    // Build and render the new element, then return it in JSON format.
-    $form_state = array();
-    $form['#post'] = array();
-    $form = form_builder($form['form_id']['#value'], $form, $form_state);
-    $output = drupal_render($form[$element]);
-    drupal_json_output(array('status' => TRUE, 'data' => $output));
-  }
-  else {
-    drupal_json_output(array('status' => FALSE, 'data' => ''));
-  }
-  exit();
+  $form['#datasource'] = $datasource;
+  $datasource->optionsForm($form, $form_state);
+  form_set_cache($_POST['form_build_id'], $form, $form_state);
+
+  return $form[$element];
+}
+
+/**
+ * Form AJAX callback for adding fields.
+ */
+function searchlight_admin_datasource_ajax_fields_add($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-fields-new-add', 'fields');
+}
+
+/**
+ * Form AJAX callback for removing fields.
+ */
+function searchlight_admin_datasource_ajax_fields_remove($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-fields-remove', 'fields');
+}
+
+/**
+ * Form AJAX callback for adding MVA fields.
+ */
+function searchlight_admin_datasource_ajax_multivalues_add($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-multivalues-new-add', 'multivalues');
+}
+
+/**
+ * Form AJAX callback for removing MVA fields.
+ */
+function searchlight_admin_datasource_ajax_multivalues_remove($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-multivalues-remove', 'multivalues');
 }
 
 /**
