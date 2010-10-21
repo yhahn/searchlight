@@ -17,12 +17,11 @@ class SearchlightFacetTerm extends SearchlightFacet {
     // Attempt to parse the vocab from the field name.
     $identifier = trim(array_pop(explode('taxonomy_term_data_tid_', $this->name)));
     if (is_numeric($identifier)) {
-      $vid = $identifier;
+      $this->vocab = taxonomy_vocabulary_load($identifier);
     }
     else {
-      $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module = :module LIMIT 1", array(':module' => $identifier))->fetchField();
+      $this->vocab = taxonomy_vocabulary_machine_name_load($identifier);
     }
-    $this->vocab = taxonomy_vocabulary_load($vid);
     if (!empty($this->vocab->hierarchy)) {
       $this->tree = array();
       foreach (taxonomy_get_tree($this->vocab->vid) as $term) {
