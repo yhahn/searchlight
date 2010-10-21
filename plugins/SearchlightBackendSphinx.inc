@@ -722,7 +722,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($delta) {
         $this->queryFresh($sql_query);
       }
-      $conf['conf']['sql_query'] = $this->sphinxWriteSQL($sql_query->query(), $sql_query->get_where_args());
+      $conf['conf']['sql_query'] = $this->sphinxWriteSQL($sql_query);
       $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
       // Build the info query.
@@ -732,7 +732,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($delta) {
         $this->queryFresh($sql_query_info);
       }
-      $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query_info->query(), $sql_query_info->get_where_args());
+      $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query);
       $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
       // Assume serial ids on the base table and step by 1000.
@@ -776,7 +776,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
           if ($delta) {
             $this->queryFresh($query);
           }
-          $mva_query = $this->sphinxWriteSQL($query->query(), $query->get_where_args());
+          $mva_query = $this->sphinxWriteSQL($query);
           $mva_query = str_replace("\n", " \\\n", trim($mva_query));
           $sql_attr[] = "sql_attr_multi = uint {$field['name']} from query; {$mva_query}";
         }
@@ -810,9 +810,75 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Write a SQL query with fully prefixed tables and replaced arguments.
    */
-  function sphinxWriteSQL($query, $args) {
+  function sphinxWriteSQL($query) {
     $connection = Database::getConnection('default');
-    return $connection->prepareQuery( (string) $query)->queryString;
+    $sql = $connection->prepareQuery( (string) $query->query())->queryString;
+
+    // Monstrous hack. Because PDO only allows access to prepared queries and
+    // not the full query with placeholders replaced with actual values we
+    // need to "parse" and replace the placeholders on our own.
+    //
+    // Assumptions:
+    // - Argument placeholder tokens are named as :db_condition_placeholder_[x]
+    //   and Views where condition are in the same order and as the
+    //   placeholders.
+    $replace = array();
+    // Process SQL args in Views JOINs.
+    $i = 0;
+    foreach ($query->table_queue as $t) {
+      if (!empty($t['join']->extra)) {
+        foreach ($t['join']->extra as $extra) {
+          if (!empty($extra['value'])) {
+            $replace[":views_join_condition_{$i}"] = $this->sphinxPrepareSQLArg($extra['value']);
+            $i++;
+          }
+        }
+      }
+    }
+    // Process SQL args in Views WHEREs
+    $i = 0;
+    foreach ($query->where as $w) {
+      if (isset($w['conditions'])) {
+        foreach ($w['conditions'] as $condition) {
+          if (!empty($condition['value'])) {
+            $args = array();
+            foreach ($condition['value'] as $arg) {
+              $args[] = $this->sphinxPrepareSQLArg($arg);
+            }
+            $replace[":db_condition_placeholder_{$i}"] = implode(',', $args);
+            $i++;
+          }
+        }
+      }
+    }
+    $sql = strtr($sql, $replace);
+    return $sql;
+  }
+
+  /**
+   * Prepare an SQL argument for use in an SQL query.
+   * Do *NOT* use this unless you absolutely know how and why you might need
+   * it. It is only used in the Searchlight sphinx backend to generate select
+   * queries for use in the sphinx.conf file.
+   */
+  function sphinxPrepareSQLArg($arg) {
+    $connection = Database::getConnection('default');
+    switch ($connection->databaseType()) {
+      case 'mysql':
+      case 'pgsql':
+        // @TODO better handling of types. Currently numeric strings and actual
+        // number fields can be confused.
+        if (is_numeric($arg)) {
+        }
+        else {
+          // addslashes() is used here because mysql_real_escape_string()
+          // requires a mysql_connect() connection which is not used by PDO.
+          // @TODO: fix this stopgap with a real solution..
+          $arg = addslashes($arg);
+          $arg = "'{$arg}'";
+        }
+        return $arg;
+    }
   }
 
   /**
