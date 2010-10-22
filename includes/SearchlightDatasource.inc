@@ -278,11 +278,13 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#limit_validation_errors' => array(array('fields', 'new')),
-      '#ajax' => array(
-        'callback' => 'searchlight_admin_datasource_ajax_fields_add',
-        'wrapper' => 'datasource-fields',
-        'method' => 'replace',
-      ),
+      // @TODO: Determine why AJAX is failing. Possibly because the element to
+      // which the ajax behavior is attached is replaced by the ajax callback.
+      // '#ajax' => array(
+      //   'callback' => 'searchlight_admin_datasource_ajax_fields_add',
+      //   'wrapper' => 'datasource-fields',
+      //   'method' => 'replace',
+      // ),
     );
 
     // Remove fields
@@ -292,11 +294,11 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#limit_validation_errors' => array(array('fields', 'fields')),
-        '#ajax' => array(
-          'callback' => 'searchlight_admin_datasource_ajax_fields_remove',
-          'wrapper' => 'datasource-fields',
-          'method' => 'replace',
-        ),
+        // '#ajax' => array(
+        //   'callback' => 'searchlight_admin_datasource_ajax_fields_remove',
+        //   'wrapper' => 'datasource-fields',
+        //   'method' => 'replace',
+        // ),
       );
     }
     // Adjust existing fields
@@ -359,11 +361,11 @@ class SearchlightDatasource {
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
       '#limit_validation_errors' => array(array('multivalues', 'new')),
-      '#ajax' => array(
-        'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
-        'wrapper' => 'datasource-multivalues',
-        'method' => 'replace',
-      ),
+      // '#ajax' => array(
+      //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
+      //   'wrapper' => 'datasource-multivalues',
+      //   'method' => 'replace',
+      // ),
     );
 
     // Remove fields
@@ -373,11 +375,11 @@ class SearchlightDatasource {
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
         '#limit_validation_errors' => array(array('multivalues', 'fields')),
-        '#ajax' => array(
-          'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
-          'wrapper' => 'datasource-multivalues',
-          'method' => 'replace',
-        ),
+        // '#ajax' => array(
+        //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
+        //   'wrapper' => 'datasource-multivalues',
+        //   'method' => 'replace',
+        // ),
       );
     }
     $form['multivalues']['fields'] = array();
