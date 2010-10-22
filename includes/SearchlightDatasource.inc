@@ -530,7 +530,18 @@ class SearchlightDatasource {
           $table = isset($info['table']) ? $info['table'] : $table;
           $field = $info['field'];
         }
-        if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+
+        // Check if we are dealing with a field API field handler.
+        // - Skip the actual field specified by the handler (entity_id).
+        // - Exclude field metadata in additional_fields (language, etid, delta, etc.)
+        $add_field = FALSE;
+        if (isset($handler->definition['field_info'], $handler->definition['entity_tables'])) {
+          $add_field = !in_array($field, array('delta', 'etid', 'language')) && strpos($field, '_format') === FALSE;
+        }
+        else {
+          $add_field = $field !== $handler->view->base_field || $table !== $handler->view->base_table;
+        }
+        if ($add_field) {
           $fields_added[] = $handler->aliases[$field];
 
           $this->fields[$handler->aliases[$field]] = array(
