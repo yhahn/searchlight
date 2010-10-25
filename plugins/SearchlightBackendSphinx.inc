@@ -759,7 +759,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
             if ($query_field['field'] === $mva_view->base_field && $query_field['table'] === $mva_view->base_table) {
               continue;
             }
-            if ($query_field['field'] === $field['field']) {
+            if ($query_field['field'] === $field['field'] && $query_field['table'] === $field['table']) {
               continue;
             }
             unset($query->fields[$alias]);
