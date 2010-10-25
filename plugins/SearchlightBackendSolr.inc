@@ -596,6 +596,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
       return drush_log("/{$file_path} could not be written to.", 'error');
     }
   }
+  
+  /**
+   * Execute functionality on drush cron run.
+   */
+  function drushCron() {
+    $this->drushIndex();
+  }
 
   /**
    * From the apachsolr module.
