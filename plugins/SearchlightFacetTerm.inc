@@ -15,7 +15,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
     $this->term = taxonomy_term_load($this->value);
 
     // Attempt to parse the vocab from the field name.
-    $identifier = trim(array_pop(explode('taxonomy_term_data_tid_', $this->name)));
+    $identifier = trim(array_pop(explode('taxonomy_index_tid_', $this->name)));
     if (is_numeric($identifier)) {
       $this->vocab = taxonomy_vocabulary_load($identifier);
     }

@@ -103,6 +103,22 @@ function searchlight_views_data_alter(&$data) {
     );
   }
 
+  // A special handler for taxonomy_index table. Taxonomy views integration
+  // in D7 sometimes makes use of `taxonomy_term_data` but when used for
+  // arguments, filters, etc. directly queries against `taxonomy_index`. 
+  if (module_exists('taxonomy')) {
+    $data['taxonomy_index']['searchlight_tid'] = array(
+      'title' => t('Term ID (Searchlight)'),
+      'help' => t('The taxonomy term ID'),
+      'real field' => 'tid',
+      'field' => array(
+        'field' => 'tid',
+        'handler' => 'views_handler_field_numeric',
+        'click sortable' => TRUE,
+      ),
+    );
+  }
+
   // OG UID field handler. Needed to allow filtering directly against OG UID.
   if (module_exists('og_views')) {
     $data['og_uid']['nid']['field'] = array(
@@ -226,6 +242,41 @@ function searchlight_views_default_views() {
     $view->base_table = 'node';
     $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
+    /* Display: All terms */
+    $handler = $view->new_display('searchlight_multivalue', 'all', 'searchlight_multivalue_all');
+    $handler->override_option('arguments', array());
+    $handler->override_option('relationships', array());
+    $handler->override_option('sorts', array());
+    $handler->override_option('fields', array(
+      'nid' => array(
+        'id' => 'nid',
+        'table' => 'node',
+        'field' => 'nid',
+        'relationship' => 'none',
+      ),
+      'seachlight_tid' => array(
+        'id' => 'searchlight_tid',
+        'table' => 'taxonomy_index',
+        'field' => 'searchlight_tid',
+        'relationship' => 'none',
+        'label' => t('Term ID'),
+      ),
+      'name' => array(
+        'id' => 'name',
+        'table' => 'taxonomy_term_data',
+        'field' => 'name',
+        'relationship' => 'none',
+        'label' => t('All terms'),
+      ),
+    ));
+    $handler->override_option('searchlight_multivalue', array(
+      'field' => 'taxonomy_index_tid',
+      'label_field' => 'taxonomy_term_data_name',
+      'override' => array(
+        'name' => 'taxonomy_index_tid',
+        'label' => t('Taxonomy (all)'),
+      ),
+    ));
     foreach (taxonomy_get_vocabularies() as $vocab) {
       /* Display: Vocabulary */
       $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_' . $vocab->machine_name);
@@ -239,18 +290,19 @@ function searchlight_views_default_views() {
           'field' => 'nid',
           'relationship' => 'none',
         ),
+        'seachlight_tid' => array(
+          'id' => 'searchlight_tid',
+          'table' => 'taxonomy_index',
+          'field' => 'searchlight_tid',
+          'relationship' => 'none',
+          'label' => t('Term ID'),
+        ),
         'name' => array(
           'id' => 'name',
           'table' => 'taxonomy_term_data',
           'field' => 'name',
           'relationship' => 'none',
           'label' => $vocab->name,
-        ),
-        'machine_name' => array(
-          'id' => 'machine_name',
-          'table' => 'taxonomy_vocabulary',
-          'field' => 'machine_name',
-          'relationship' => 'none',
         ),
       ));
       $handler->override_option('filters', array(
@@ -262,10 +314,10 @@ function searchlight_views_default_views() {
         ),
       ));
       $handler->override_option('searchlight_multivalue', array(
-        'field' => 'taxonomy_term_data_tid',
+        'field' => 'taxonomy_index_tid',
         'label_field' => 'taxonomy_term_data_name',
         'override' => array(
-          'name' => 'taxonomy_term_data_tid_' . $vocab->machine_name,
+          'name' => 'taxonomy_index_tid_' . $vocab->machine_name,
           'label' => $vocab->name,
         ),
       ));
