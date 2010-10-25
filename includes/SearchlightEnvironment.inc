@@ -62,7 +62,7 @@ class SearchlightEnvironment {
       if ($view) {
         $this->view = $view;
         $this->query = $view->query;
-        $this->datasource = $view->query->datasource;
+        $this->datasource = isset($view->query->datasource) ? $view->query->datasource : NULL;
         $this->plugins = array();
 
         foreach ($this->getFacets() as $name => $facet) {
