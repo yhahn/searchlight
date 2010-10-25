@@ -54,7 +54,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
       if ($name === str_replace(".", "_", $field)) {
         $this->search_filter[] = array(
           'field' => $name,
-          'operator' => !empty($operator) ? $operator : 'IN',
+          'operator' => !empty($operator) ? strtoupper($operator) : 'IN',
           'args' => $value
         );
         return;
