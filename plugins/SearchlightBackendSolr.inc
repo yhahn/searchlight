@@ -40,6 +40,14 @@ class SearchlightBackendSolr extends SearchlightBackend {
       '#default_value' => $this->settings['path'],
       '#size' => 60,
     );
+    $form['jar_path'] = array(
+      '#title' => t('Solr jar path'),
+      '#description' => t('Absolute path to the directory which contains start.jar'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['jar_path'],
+      '#size' => 60,
+    );
+    
     $form['item_limit'] = array(
       '#title' => t('Items to index per job'),
       '#type' => 'select',
