@@ -551,28 +551,13 @@ function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
 }
 
 /**
- * Implements hook_ajax_data_alter().
- *
- * This hook is called by Views (and some other modules) when returning AJAX
- * data to the client. It provides an event for other modules to hook into to
- * alter the AJAX data returned and register additional *javascript* callbacks
- * to be used once the AJAX response is received.
+ * Implements hook_ajax_render_alter().
  */
-function searchlight_ajax_data_alter(&$object, $type, $metadata) {
-  if ($type === 'views') {
-    $view = $metadata;
-    // If this is a searchlight view with AJAX, add a callback for updating any
-    // associated facet blocks.
-    if (isset($view->query) && !empty($view->query->searchlight)) {
-      $environment = searchlight_environment_active(NULL, $view->name, $view->current_display);
-      if ($environment) {
-        $block = $environment->getBlock('facets');
-        $object->searchlightData = array(".searchlight-environment-{$environment->name}" => $block['content']);
-
-        // Add searchlight replace callback.
-        $object->__callbacks[] = '$().drupalSearchlight.replace';
-      }
-    }
+function searchlight_ajax_render_alter(&$commands) {
+  $environment = searchlight_environment_active();
+  if ($environment) {
+    $block = $environment->getBlock('facets');
+    $commands[] = ajax_command_replace(".searchlight-environment-{$environment->name}", $block['content']);
   }
 }
 
