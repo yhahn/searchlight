@@ -448,7 +448,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           }
 
           $ids = implode(',', array_keys($items['datasource']));
-          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})");
+          $view->query->add_where(0, "{$view->base_table}.{$view->base_field} IN ({$ids})", array(), 'formula');
         }
         else {
           continue;
