@@ -542,7 +542,7 @@ class SearchlightDatasource {
           }
         }
         // Save options.
-        $this->options = isset($form_state['values']['options']) ? $form_state['values']['options'] : array();
+        $this->options = isset($form_state['values']['options']) ? $form_state['values']['options'] : $this->options;
 
         // Save the datasource.
         searchlight_datasource_save($this);
