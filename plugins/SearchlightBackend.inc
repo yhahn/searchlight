@@ -114,7 +114,7 @@ abstract class SearchlightBackend {
    * Set a sort parameter for the search backend.
    */
   function setSort(&$client, $datasource, $sorts) { }
-
+  
   /**
    * Set a pager/limit parameter for the search backend.
    */

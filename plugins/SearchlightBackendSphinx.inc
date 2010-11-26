@@ -151,6 +151,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $limit = $facet['limit'];
       switch ($field['datatype']) {
         case 'timestamp':
+        case 'date':
           $groupby = array('day' => SPH_GROUPBY_DAY, 'month' => SPH_GROUPBY_MONTH, 'year' => SPH_GROUPBY_YEAR);
           $granularity = !empty($facet['granularity']) ? $facet['granularity'] : 'month';
           $client->SetGroupBy($field['name'], $groupby[$granularity], '@group desc');
@@ -185,6 +186,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
                 $id = $this->sphinxGetOrdinal($datasource, $field['name'], $attr['@groupby']);
                 break;
               case 'timestamp':
+              case 'date':
                 $id = $this->sphinxGetTimestamp($attr['@groupby'], !empty($facet['granularity']) ? $facet['granularity'] : 'month');
                 break;
               default:

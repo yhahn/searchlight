@@ -108,6 +108,11 @@ class SearchlightDatasource {
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
       $class = $handler ? get_class($handler) : NULL;
+      // Use handler defined in $data in case $data has been altered by another
+      // and requires for example another handler
+      if (isset($data[$table][$field]['field']['handler'])) {
+        $class = $data[$table][$field]['field']['handler'];
+      }
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
       // column type is not enough information to determine the usage of the
@@ -123,6 +128,11 @@ class SearchlightDatasource {
         $column_type = $map[$schema['fields'][$field]['type']];
         if ($column_type === 'int' && strpos($class, 'date') !== FALSE) {
           return 'timestamp';
+        }
+        // Handle date fields with type varchar(map->text) and certain date-time
+        // format-types and also custom view handlers containing 'date' in the name.
+        if ($column_type === 'text' && (isset($data[$table][$field]['settings']['format_type']) || strpos($class, 'date') !== FALSE)) {
+          return 'date';
         }
         return isset($map[$column_type]) ? $map[$column_type] : FALSE;
       }
@@ -335,15 +345,7 @@ class SearchlightDatasource {
       );
     }
 
-    // @TODO: Handle multivalues.
-    $form['multivalues'] = array(
-      '#tree' => TRUE,
-      '#theme' => 'searchlight_admin_datasource_fields',
-      '#title' => t('Multivalues'),
-      '#prefix' => "<div id='datasource-multivalues'>",
-      '#suffix' => "</div>",
-    );
-
+    // Handle multivalues.
     // Add fields
     $multivalue_options = array();
     foreach ($this->buildMultivalues() as $name => $info) {
@@ -351,72 +353,131 @@ class SearchlightDatasource {
         $multivalue_options[$name] = $info['label'];
       }
     }
+    $form['multivalues'] = array(
+          '#tree' => TRUE,
+          '#theme' => 'searchlight_admin_datasource_fields',
+          '#title' => t('Multivalues'),
+          '#prefix' => "<div id='datasource-multivalues'>",
+          '#suffix' => "</div>",
+    );
     $form['multivalues']['new']['#tree'] = TRUE;
     $form['multivalues']['new']['field'] = array(
-      '#type' => 'select',
-      '#options' => $multivalue_options,
+          '#type' => 'select',
+          '#options' => $multivalue_options,
     );
     $form['multivalues']['new']['add'] = array(
-      '#value' => t('Add multivalue'),
-      '#type' => 'submit',
-      '#submit' => array('searchlight_admin_datasource_edit_submit'),
-      '#limit_validation_errors' => array(array('multivalues', 'new')),
-      // '#ajax' => array(
-      //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
-      //   'wrapper' => 'datasource-multivalues',
-      //   'method' => 'replace',
-      // ),
+          '#value' => t('Add multivalue'),
+          '#type' => 'submit',
+          '#submit' => array('searchlight_admin_datasource_edit_submit'),
+          '#limit_validation_errors' => array(array('multivalues', 'new')),
+    // '#ajax' => array(
+    //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
+    //   'wrapper' => 'datasource-multivalues',
+    //   'method' => 'replace',
+    // ),
     );
-
+    
     // Remove fields
     if (count($this->getMultivalues())) {
       $form['multivalues']['remove'] = array(
-        '#value' => t('Remove selected multivalues'),
-        '#type' => 'submit',
-        '#submit' => array('searchlight_admin_datasource_edit_submit'),
-        '#limit_validation_errors' => array(array('multivalues', 'fields')),
-        // '#ajax' => array(
-        //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
-        //   'wrapper' => 'datasource-multivalues',
-        //   'method' => 'replace',
-        // ),
+            '#value' => t('Remove selected multivalues'),
+            '#type' => 'submit',
+            '#submit' => array('searchlight_admin_datasource_edit_submit'),
+            '#limit_validation_errors' => array(array('multivalues', 'fields')),
+      // '#ajax' => array(
+      //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
+      //   'wrapper' => 'datasource-multivalues',
+      //   'method' => 'replace',
+      // ),
       );
     }
     $form['multivalues']['fields'] = array();
     foreach ($this->getMultivalues() as $name => $info) {
       $form['multivalues']['fields'][$name] = array();
-
+    
       // Remove field checkbox.
       $form['multivalues']['fields'][$name]['remove'] = array(
-        '#type' => 'checkbox',
-        '#default_value' => FALSE,
+            '#type' => 'checkbox',
+            '#default_value' => FALSE,
       );
-
+    
       // Field label.
       $form['multivalues']['fields'][$name]['label'] = array(
-        '#markup' => $info['label'],
+            '#markup' => $info['label'],
       );
-
+    
       // Datatype
       $form['multivalues']['fields'][$name]['datatype'] = array(
-        '#markup' => "<code>{$info['datatype']}</code>",
+            '#markup' => "<code>{$info['datatype']}</code>",
       );
-
+    
       $form['multivalues']['fields'][$name]['usage'] = array(
-        '#markup' => t('Multivalue'),
+            '#markup' => t('Multivalue'),
       );
     }
-
-    $form['options']['#tree'] = TRUE;
-    // In reality, these are multivalue fields that are generated
-    // programmatically.
-    if ($this->base_table === 'node') {
-      $form['options']['node_access'] = array(
-        '#title' => t('Node access'),
-        '#description' => t('Include node access information in datasource'),
-        '#type' => 'checkbox',
-        '#default_value' => $this->options['node_access'],
+   
+    $backend = variable_get('searchlight_backend');
+    $settings = variable_get('searchlight_backend_' . $backend);  
+    if ($settings['grouping']) {
+      // Group
+      $form['groupfield'] = array(
+        '#tree' => TRUE,
+        '#theme' => 'searchlight_admin_datasource_fields',
+        '#title' => t('Group'),
+        '#prefix' => "<div id='datasource-fields'>",
+        '#suffix' => "</div>",
       );
+  
+      // Add fields
+      $groupfield_options = array();
+      foreach ($this->getFields() as $name => $info) {
+        $groupfield_options[$name] = $info['label'];
+      }
+      $form['groupfield']['new']['#tree'] = TRUE;
+      $form['groupfield']['new']['field'] = array(
+        '#type' => 'select',
+        '#options' => $groupfield_options,
+      );
+      $form['groupfield']['new']['add'] = array(
+        '#value' => t('Add group field'),
+        '#type' => 'submit',
+        '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('groupfield', 'new')),
+      );
+  
+      // Remove field
+      if (isset($this->options['groupfield'])) {
+        $form['groupfield']['remove'] = array(
+          '#value' => t('Remove groupfield'),
+          '#type' => 'submit',
+          '#submit' => array('searchlight_admin_datasource_edit_submit'),
+          '#limit_validation_errors' => array(array('groupfield', 'fields')),
+        );
+      }
+      $form['groupfield']['fields'] = array();
+      if (isset($this->options['groupfield'])) {
+        $form['groupfield']['fields'][$this->options['groupfield']] = array();
+        
+        // Remove field checkbox.
+        $form['groupfield']['fields'][$this->options['groupfield']]['remove'] = array(
+                '#type' => 'checkbox',
+                '#default_value' => FALSE,
+        );
+        
+        // Field label.
+        $form['groupfield']['fields'][$this->options['groupfield']]['label'] = array(
+          '#markup' => $this->fields[$this->options['groupfield']]['label'],
+        );
+        
+        // Datatype
+        $form['groupfield']['fields'][$this->options['groupfield']]['datatype'] = array(
+                '#markup' => "<code>{$this->fields[$this->options['groupfield']]['datatype']}</code>",
+        );
+        
+        $form['groupfield']['fields'][$this->options['groupfield']]['usage'] = array(
+                '#markup' => t('Grouping'),
+        );
+      }
     }
     return $form;
   }
@@ -452,6 +513,18 @@ class SearchlightDatasource {
         foreach ($form_state['values']['multivalues']['fields'] as $name => $values) {
           if (!empty($values['remove'])) {
             $this->removeMultivalue($name);
+          }
+        }
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-groupfield-new-add':
+        $this->options['groupfield'] = $form_state['values']['groupfield']['new']['field'];
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-groupfield-remove':
+        foreach ($form_state['values']['groupfield']['fields'] as $name => $values) {
+          if (!empty($values['remove'])) {
+            unset ($this->options['groupfield']);
           }
         }
         searchlight_datasource_save($this, TRUE);

@@ -121,13 +121,21 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
 
     foreach ($fields as $name => $info) {
 
-      if ($options['field'] === $name) {
-        $info['usage'] = 'multivalue';
-        $multivalue = array_merge($multivalue, $info);
-      }
-      elseif ($options['label_field'] === $name) {
+//      if ($options['field'] === $name) {
+//        $info['usage'] = 'multivalue';
+//        $multivalue = array_merge($multivalue, $info);
+//      }
+//      elseif ($options['label_field'] === $name) {
+//        $info['usage'] = 'multivalue';
+//        $multivalue['label_field'] = $info;
+//      }
+      if ($options['label_field'] === $name) {
         $info['usage'] = 'multivalue';
         $multivalue['label_field'] = $info;
+      }
+      else {
+          $info['usage'] = 'multivalue';
+          $multivalue = array_merge($multivalue, $info);
       }
     }
     // Override explicitly specified properties if available.

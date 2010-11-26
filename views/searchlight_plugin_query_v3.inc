@@ -211,6 +211,11 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     // Build facets.
     $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
+  
+    // Count the number of groups from the facet result to determine the total when using result grouping
+    if (!empty($this->datasource->options['groupfield'])) {
+      $this->search_result['total'] = count($this->search_result_facets[$this->datasource->options['groupfield']]);
+    }
 
     if ($this->search_buildmode === 'search') {
       if ($this->search_result) {

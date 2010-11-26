@@ -53,6 +53,11 @@ class SearchlightBackendSolr extends SearchlightBackend {
         1000 => 1000,
       ),
     );
+    $form['grouping'] = array(
+      '#title' => t('Supports Result Grouping / Field Collapsing (Solr4.0 and higher)'),
+   	  '#type' => 'checkbox',
+      '#default_value' => $this->settings['grouping'],
+    );
     return $form;
   }
 
@@ -82,6 +87,13 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
       $options['sort'] = rtrim($sort, ',');
     }
+    
+    // Handle grouping
+    if (isset($datasource->options['groupfield'])) {
+      $groupfilter = array();
+      $options['group'] = 'true';
+      $options['group.field'] = $datasource->options['groupfield'];
+    }
 
     try {
       $response = $client->search($query, $offset, $limit, $options);
@@ -91,14 +103,25 @@ class SearchlightBackendSolr extends SearchlightBackend {
       return FALSE;
     }
 
-    foreach ($response->response->docs as $doc) {
-      $ids[] = $doc->{$datasource->base_field};
+    if (is_array($response->grouped->{$datasource->options['groupfield']}->groups)) {
+      foreach ($response->grouped->{$datasource->options['groupfield']}->groups as $group) {
+        if (is_array($group->doclist->docs)) {
+          foreach ($group->doclist->docs as $doc) {
+            $ids[] = $doc->{$datasource->base_field};
+          }
+        }
+      }      
     }
-
+    else {
+      foreach ($response->response->docs as $doc) {
+        $ids[] = $doc->{$datasource->base_field};
+      }
+    }
     if (!empty($ids)) {
+      !empty($response->grouped->{$datasource->options['groupfield']}->matches) ? $count = $response->grouped->{$datasource->options['groupfield']}->matches : $count = $response->response->numFound;
       return array(
         'result' => $ids,
-        'total' => $response->response->numFound,
+        'total' => $count,
         'raw' => $response,
       );
     }
@@ -115,23 +138,23 @@ class SearchlightBackendSolr extends SearchlightBackend {
       foreach ($filters as $params) {
         $field    = $params['field'];
         $operator = $params['operator'];
-        $value    = $params['value'];
+        $value    = $params['args'];
 
         switch ($operator) {
           case '<':
           case '<=':
-            $range_filters[$field]['max'] = $value;
+            $range_filters[$field]['max'] = implode($value);
             break;
           case '>':
           case '>=':
-            $range_filters[$field]['min'] = $value;
+            $range_filters[$field]['min'] = implode($value);
             break;
           case '=':
-            $client->searchlightFilters[] = $field . ':"' . $value . '"';
+            $client->searchlightFilters[] = $field . ':"' . implode($value) . '"';
             break;
           case '!=':
           case '<>':
-            $client->searchlightFilters[] = '-' . $field . ':"' . $value . '"';
+            $client->searchlightFilters[] = '-' . $field . ':"' . implode($value) . '"';
             break;
           case 'IN':
             $client->searchlightFilters[] = "{$field}:(" . implode(' OR ', $value) . ")";
@@ -219,6 +242,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       $field = $datasource->fields[$facet['field']];
       switch ($field['datatype']) {
         case 'timestamp':
+        case 'date':
           $date_facets[$facet['field']] = $facet;
 
           // TODO cache this value so it's not requested on every page load.
@@ -308,7 +332,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       foreach ($response->facet_counts->facet_dates as $k => $v) {
         foreach ($v as $i => $j) {
           // Filter out empty ranges.
-          if (!empty($j) && !in_array($i, array('gap', 'end'))) {
+          if (!empty($j) && !in_array($i, array('gap', 'end', 'start'))) {
             // $time = gmmktime($i);
             // $build[$k][$i]format_date($time);
             $built[$k][$i] = array(
@@ -483,12 +507,15 @@ class SearchlightBackendSolr extends SearchlightBackend {
                 break;
               case 'multivalue':
                 $mva_item = $raw_items[$field['name']][$id];
-                // Ideally we would use the handler to discover the MVA field
-                // alias. For now just do it by convention.
-                $alias = "{$field['table']}_{$field['field']}";
+                $mva_field_handler = $view->field[$field['name']];
+                $alias = $mva_field_handler->field_alias;
                 if (isset($mva_item->{$alias})) {
                   if ($field['datatype'] == 'timestamp') {
                     $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $mva_item->{$alias});
+                  }
+                  elseif ($field['datatype'] == 'date') {
+                    $date_time = new DateTime($mva_item->{$alias}, new DateTimeZone('UTC'));
+                    $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
                   }
                   else {
                     $document->{$field['name']} = $mva_item->{$alias};
@@ -500,6 +527,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
                 if (isset($raw_item->{$field['name']})) {
                   if ($field['datatype'] == 'timestamp') {
                     $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $raw_item->{$field['name']});
+                  }
+                  elseif ($field['datatype'] == 'date') {
+                    $date_time = new DateTime($raw_item->{$field['name']}, new DateTimeZone('UTC'));
+                    $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
                   }
                   else {
                     $document->{$field['name']} = $raw_item->{$field['name']};
@@ -661,6 +692,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
             $conf['schema'][$f]['type'] = 'string';
             break;
           case 'timestamp':
+          case 'date':
             $conf['schema'][$f]['type'] = 'date';
         }
 
