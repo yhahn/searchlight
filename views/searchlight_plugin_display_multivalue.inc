@@ -121,6 +121,9 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
 
     foreach ($fields as $name => $info) {
 
+//  Why should fields without label_field not
+//  be added to the multivalue array ????????
+//
 //      if ($options['field'] === $name) {
 //        $info['usage'] = 'multivalue';
 //        $multivalue = array_merge($multivalue, $info);
