@@ -274,13 +274,8 @@ class SearchlightDatasource {
 
     // Add fields
     $field_options = array();
-    
-//    // Figure out all the base tables allowed based upon what the relationships provide.
-    $base_tables = $this->view->get_base_tables();      
-    $fields = views_fetch_fields(array_keys($base_tables), 'field', TRUE);
-    
-//    $fields = views_fetch_fields($this->base_table, 'field', TRUE);
-    
+    $fields = views_fetch_fields($this->base_table, 'field', TRUE);
+
     foreach ($fields as $field_id => $info) {
       $field_options[$info['group']][$field_id] = $info['title'];
     }
