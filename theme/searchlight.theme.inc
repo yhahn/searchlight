@@ -129,7 +129,7 @@ function theme_searchlight_admin_list($variables) {
           'data' => check_plain($group),
           'colspan' => 4,
           'header' => TRUE,
-        ));
+        ),);
     }
     foreach ($objects as $object) {
       if ($object instanceof SearchlightDatasource) {
@@ -139,7 +139,7 @@ function theme_searchlight_admin_list($variables) {
         $name_label = t('Active datasource');
         $extra_label = t('Base table');
       }
-      else if ($object instanceof SearchlightEnvironment) {
+      elseif ($object instanceof SearchlightEnvironment) {
         $extra = $object->view_display;
         $type = 'environment';
         $path = 'environment';
@@ -211,7 +211,7 @@ function theme_searchlight_admin_list($variables) {
     'header' => isset($name_label) ? array($name_label, $extra_label, t('Storage'), t('Operations')) : array(),
     'rows' => $rows,
     'attributes' => array(
-      'class' => array('object-admin')
+      'class' => array('object-admin'),
     ),
   ));
   $output .= drupal_render_children($form);
@@ -232,22 +232,27 @@ function theme_searchlight_admin_datasource_fields($variables) {
   if (!empty($form['new'])) {
     $rows[] = array(array(
         'data' => t('Add field'),
-        'colspan' => 4,
+        'colspan' => 5,
         'header' => TRUE,
-      ));
+      ),);
     $rows[] = array(
       array(
         'data' => drupal_render($form['new']['field']),
-        'colspan' => 3,
+        'colspan' => 4,
       ),
       array('data' => drupal_render($form['new']['add'])),
     );
   }
   // Existing fields.
-  // TODO Please change this theme call to use an associative array for the $variables parameter.
+  // TODO Please change this theme call to use an associative array for the
+  // $variables parameter.
   $rows[] = array(
     array(
       'class' => array('select-all'),
+      'header' => TRUE,
+    ),
+    array(
+      'data' => t('Relation'),
       'header' => TRUE,
     ),
     array(
@@ -280,16 +285,16 @@ function theme_searchlight_admin_datasource_fields($variables) {
   if (!element_children($form['fields'])) {
     $rows[] = array(array(
         'data' => t('No fields found.'),
-        'colspan' => 4,
-      ));
+        'colspan' => 5,
+      ),);
   }
   // Remove fields footer.
   if (!empty($form['remove'])) {
     $rows[] = array(array(
         'data' => drupal_render($form['remove']),
-        'colspan' => 4,
+        'colspan' => 5,
         'header' => TRUE,
-      ));
+      ),);
   }
 
   $output = theme('table', array(
@@ -298,6 +303,88 @@ function theme_searchlight_admin_datasource_fields($variables) {
       'attributes' => array(),
       'caption' => $form['#title'],
     ));
+
+  $output .= drupal_render_children($form);
+
+  return $output;
+}
+
+/**
+ * Theme function for searchlight datasource display form.
+ */
+function theme_searchlight_admin_datasource_relations($variables) {
+  $form = $variables['form'];
+  $output = '';
+  $rows = array();
+  drupal_add_js('misc/tableselect.js');
+
+  // New fields header.
+  if (!empty($form['new'])) {
+    $rows[] = array(array(
+      'data' => t('Add relation'),
+      'colspan' => 3,
+      'header' => TRUE,
+    ),);
+    $rows[] = array(
+    array(
+      'data' => drupal_render($form['new']['relation']),
+      'colspan' => 2,
+    ),
+    array('data' => drupal_render($form['new']['add'])),
+    );
+  }
+  // Existing fields.
+  // TODO Please change this theme call to use an associative array for the
+  // $variables parameter.
+  $rows[] = array(
+    array(
+      'class' => array('select-all'),
+      'header' => TRUE,
+    ),
+    array(
+      'data' => t('Relation'),
+      'header' => TRUE,
+    ),
+    array(
+      'data' => t('Required'),
+      'header' => TRUE,
+    ),
+  );
+  foreach (element_children($form['relations']) as $key) {
+    if ($key !== 'new') {
+      $row = array();
+      foreach (element_children($form['relations'][$key]) as $cell) {
+        if (isset($form['relations'][$key][$cell]['#markup']) ||
+        (isset($form['relations'][$key][$cell]['#type']) &&
+        !in_array($form['relations'][$key][$cell]['#type'], array('hidden', 'value')))) {
+
+          $row[] = drupal_render($form['relations'][$key][$cell]);
+        }
+      }
+      $rows[] = $row;
+    }
+  }
+  if (!element_children($form['relations'])) {
+    $rows[] = array(array(
+      'data' => t('No relations found.'),
+      'colspan' => 3,
+    ),);
+  }
+  // Remove fields footer.
+  if (!empty($form['remove'])) {
+    $rows[] = array(array(
+      'data' => drupal_render($form['remove']),
+      'colspan' => 3,
+      'header' => TRUE,
+    ),);
+  }
+
+  $output = theme('table', array(
+    'header' => array(),
+    'rows' => $rows,
+    'attributes' => array(),
+    'caption' => $form['#title'],
+  ));
 
   $output .= drupal_render_children($form);
 

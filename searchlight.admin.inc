@@ -65,7 +65,7 @@ function searchlight_admin_environment_validate_name($element, &$form_state) {
     form_set_error('name', t('The environment name can only consist of lowercase letters, dashes, underscores, and numbers.'));
   }
   // Check for name collision
-  else if ($exists = searchlight_environment_load($element['#value'], TRUE)) {
+  elseif ($exists = searchlight_environment_load($element['#value'], TRUE)) {
     form_set_error('name', t('A environment with this name already exists. Please choose another name or delete the existing environment before creating a new one.'));
   }
 }
@@ -100,7 +100,7 @@ function searchlight_admin_environment_edit($form, $form_state, $environment) {
   $form['actions']['cancel'] = array(
     '#type' => 'link',
     '#title' => t('Cancel'),
-    '#href' => 'admin/config/search/settings/environment'
+    '#href' => 'admin/config/search/settings/environment',
   );
   return $form;
 }
@@ -188,11 +188,11 @@ function searchlight_admin_datasource_new_validate(&$form, &$form_state) {
     form_set_error('name', t('!name field is required.', array('!name' => $form['new']['name']['#title'])));
   }
   // Check for string identifier sanity
-  else if (!preg_match('!^[a-z0-9_-]+$!', $name)) {
+  elseif (!preg_match('!^[a-z0-9_-]+$!', $name)) {
     form_set_error('name', t('The datasource name can only consist of lowercase letters, dashes, underscores, and numbers.'));
   }
   // Check for name collision
-  else if ($exists = searchlight_datasource_load($name, TRUE)) {
+  elseif ($exists = searchlight_datasource_load($name, TRUE)) {
     form_set_error('name', t('A datasource with this name already exists. Please choose another name or delete the existing datasource before creating a new one.'));
   }
 }
@@ -250,7 +250,9 @@ function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
     '#limit_validation_errors' => array(
       array('options'),
       array('fields', 'fields'),
-      array('multivalues', 'fields')),
+      array('multivalues', 'fields'),
+      array('relations', 'relations'),
+    ),
   );
   $form['actions']['cancel'] = array(
     '#type' => 'link',
@@ -356,7 +358,8 @@ function searchlight_admin_confirm($form, &$form_state, $type, $object, $op) {
       $message = '';
       break;
   }
-  $form = confirm_form($form,
+  $form = confirm_form(
+    $form,
     t('Are you sure you want to !action the @type %title?', array('%title' => $object->name, '@type' => $type_name, '!action' => $action)),
     'admin/config/search/settings',
     $message,
@@ -378,7 +381,8 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
         case 'searchlight_datasource':
           searchlight_datasource_delete($object);
 
-          // If reverting, display a message indicating that the index must be rebuilt.
+          // If reverting, display a message indicating that the index must be
+          // rebuilt.
           if ($form_state['values']['action'] === 'revert') {
             drupal_set_message(t('Datasource @datasource reverted. The index for this datasource needs to be rebuilt.', array('@datasource' => $object->name)));
           }

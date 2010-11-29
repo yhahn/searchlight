@@ -323,6 +323,11 @@ function searchlight_theme() {
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
+    'searchlight_admin_datasource_relations' => array(
+      'render element' => 'form',
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
     'searchlight_admin_environment' => array(
       'template' => 'searchlight-admin-environment',
       'render element' => 'form',

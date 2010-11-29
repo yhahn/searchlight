@@ -55,7 +55,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
     );
     $form['grouping'] = array(
       '#title' => t('Supports Result Grouping / Field Collapsing (Solr4.0 and higher)'),
-   	  '#type' => 'checkbox',
+      '#type' => 'checkbox',
       '#default_value' => $this->settings['grouping'],
     );
     return $form;
@@ -87,7 +87,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
       $options['sort'] = rtrim($sort, ',');
     }
-    
+
     // Handle grouping
     if (isset($datasource->options['groupfield'])) {
       $groupfilter = array();
@@ -110,7 +110,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
             $ids[] = $doc->{$datasource->base_field};
           }
         }
-      }      
+      }
     }
     else {
       foreach ($response->response->docs as $doc) {
@@ -627,7 +627,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
       return drush_log("/{$file_path} could not be written to.", 'error');
     }
   }
-  
+
   /**
    * Execute functionality on drush cron run.
    */

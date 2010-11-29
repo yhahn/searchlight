@@ -45,6 +45,11 @@ function searchlight_schema() {
         'type' => 'text',
         'serialize' => TRUE,
       ),
+      'relations' => array(
+        'description' => 'Serialized storage of datasource relations settings.',
+        'type' => 'text',
+        'serialize' => TRUE,
+      ),
       'filters' => array(
         'description' => 'Serialized storage of datasource filter settings.',
         'type' => 'text',
