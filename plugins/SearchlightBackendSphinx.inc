@@ -819,7 +819,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     foreach ($query->table_queue as $t) {
       if (!empty($t['join']->extra)) {
         foreach ($t['join']->extra as $extra) {
-          if (!empty($extra['value'])) {
+          if (!is_null($extra['value'])) {
             $replace[":views_join_condition_{$i}"] = $this->sphinxPrepareSQLArg($extra['value']);
             $i++;
           }
