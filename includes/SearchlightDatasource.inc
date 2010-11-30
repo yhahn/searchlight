@@ -66,7 +66,7 @@ class SearchlightDatasource {
       $fields[$this->base_field] = array(
         'id' => $this->base_field,
         'table' => $this->base_table,
-        'field' => $this->base_field,
+        'field' => $this->base_table . '.' . $this->base_field,
         'relationship' => 'none',
       );
     }
@@ -74,7 +74,7 @@ class SearchlightDatasource {
       $fields[$name] = array(
         'id' => $field['name'],
         'table' => $field['table'],
-        'field' => $field['field'],
+        'field' => $field['table'] . '.' . $field['field'],
         'relationship' => $field['relationship'],
       );
     }
@@ -249,7 +249,7 @@ class SearchlightDatasource {
    *
    * Orignal code resides in admin.inc of views.
    */
-  function getFieldRelationshipOptions($field_id, $field_info) {
+  function getFieldRelationshipOptions($field_id) {
     $relationship_options = array();
 
     $view = &$this->view;
@@ -271,7 +271,7 @@ class SearchlightDatasource {
       $data = views_fetch_data($relationship['table']);
       $base = $data[$relationship['field']]['relationship']['base'];
       $base_fields = views_fetch_fields($base, 'field', $view->display_handler->use_group_by());
-      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
+      if (isset($base_fields[$item['field']])) {
         $relationship_handler->init($view, $relationship);
         $relationship_options[$relationship['id']] = $relationship_handler->label();
       }
@@ -281,7 +281,7 @@ class SearchlightDatasource {
       // Make sure the existing relationship is even valid. If not, force
       // it to none.
       $base_fields = views_fetch_fields($view->base_table, 'field', $view->display_handler->use_group_by());
-      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
+      if (isset($base_fields[$item['field']])) {
         $relationship_options = array_merge(array('none' => t('Do not use a relationship')), $relationship_options);
       }
     }
@@ -390,7 +390,7 @@ class SearchlightDatasource {
       );
 
       // Relation
-      if (count($relation_options = $this->getFieldRelationshipOptions($name, $info)) > 1) {
+      if (count($relation_options = $this->getFieldRelationshipOptions($name)) > 1) {
 
         $form['fields']['fields'][$name]['relationship'] = array(
           '#type' => 'select',
