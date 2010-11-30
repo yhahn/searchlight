@@ -326,11 +326,11 @@ function theme_searchlight_admin_datasource_relations($variables) {
       'header' => TRUE,
     ),);
     $rows[] = array(
-    array(
-      'data' => drupal_render($form['new']['relation']),
-      'colspan' => 2,
-    ),
-    array('data' => drupal_render($form['new']['add'])),
+      array(
+        'data' => drupal_render($form['new']['relation']),
+        'colspan' => 2,
+      ),
+      array('data' => drupal_render($form['new']['add'])),
     );
   }
   // Existing fields.

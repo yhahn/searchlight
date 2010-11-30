@@ -283,7 +283,6 @@ class SearchlightDatasource {
       if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
         $relationship_options = array_merge(array('none' => t('Do not use a relationship')), $relationship_options);
       }
-      $rel = empty($item['relationship']) ? 'none' : $item['relationship'];
     }
     return $relationship_options;
   }
@@ -391,6 +390,7 @@ class SearchlightDatasource {
 
       // Relation
       if (count($relation_options = $this->getFieldRelationshipOptions($name, $info)) > 1) {
+
         $form['fields']['fields'][$name]['relationship'] = array(
           '#type' => 'select',
           '#options' => $relation_options,
@@ -398,7 +398,7 @@ class SearchlightDatasource {
         );
       }
       else {
-        $relation = key($relation_options);
+        $relation = reset($relation_options);
         $form['fields']['fields'][$name]['relation_name'] = array(
           '#markup' => ((empty($relation)) ? t('none') : $relation),
         );
@@ -440,22 +440,22 @@ class SearchlightDatasource {
       }
     }
     $form['multivalues'] = array(
-          '#tree' => TRUE,
-          '#theme' => 'searchlight_admin_datasource_fields',
-          '#title' => t('Multivalues'),
-          '#prefix' => "<div id='datasource-multivalues'>",
-          '#suffix' => "</div>",
+      '#tree' => TRUE,
+      '#theme' => 'searchlight_admin_datasource_fields',
+      '#title' => t('Multivalues'),
+      '#prefix' => "<div id='datasource-multivalues'>",
+      '#suffix' => "</div>",
     );
     $form['multivalues']['new']['#tree'] = TRUE;
     $form['multivalues']['new']['field'] = array(
-          '#type' => 'select',
-          '#options' => $multivalue_options,
+      '#type' => 'select',
+      '#options' => $multivalue_options,
     );
     $form['multivalues']['new']['add'] = array(
-          '#value' => t('Add multivalue'),
-          '#type' => 'submit',
-          '#submit' => array('searchlight_admin_datasource_edit_submit'),
-          '#limit_validation_errors' => array(array('multivalues', 'new')),
+      '#value' => t('Add multivalue'),
+      '#type' => 'submit',
+      '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('multivalues', 'new')),
     // '#ajax' => array(
     //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
     //   'wrapper' => 'datasource-multivalues',
@@ -466,10 +466,10 @@ class SearchlightDatasource {
     // Remove fields
     if (count($this->getMultivalues())) {
       $form['multivalues']['remove'] = array(
-            '#value' => t('Remove selected multivalues'),
-            '#type' => 'submit',
-            '#submit' => array('searchlight_admin_datasource_edit_submit'),
-            '#limit_validation_errors' => array(array('multivalues', 'fields')),
+        '#value' => t('Remove selected multivalues'),
+        '#type' => 'submit',
+        '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('multivalues', 'fields')),
       // '#ajax' => array(
       //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
       //   'wrapper' => 'datasource-multivalues',
@@ -483,22 +483,22 @@ class SearchlightDatasource {
 
       // Remove field checkbox.
       $form['multivalues']['fields'][$name]['remove'] = array(
-            '#type' => 'checkbox',
-            '#default_value' => FALSE,
+        '#type' => 'checkbox',
+        '#default_value' => FALSE,
       );
 
       // Field label.
       $form['multivalues']['fields'][$name]['label'] = array(
-            '#markup' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['multivalues']['fields'][$name]['datatype'] = array(
-            '#markup' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       $form['multivalues']['fields'][$name]['usage'] = array(
-            '#markup' => t('Multivalue'),
+        '#markup' => t('Multivalue'),
       );
     }
 
@@ -512,8 +512,7 @@ class SearchlightDatasource {
 
     // Add relations
     $relation_options = array();
-    $fields = $options = views_fetch_fields(array_keys($base_tables), 'relationship');
-
+    $fields = views_fetch_fields(array_keys($base_tables), 'relationship');
     foreach ($fields as $relation_id => $info) {
       $relation_options[$info['group']][$relation_id] = $info['title'];
     }
@@ -552,10 +551,12 @@ class SearchlightDatasource {
 
       // Relation label.
       $form['relations']['relations'][$name]['label'] = array(
-        '#markup' => $info['label'],
+        '#type' => 'textfield',
+        '#default_value' => $info['label'],
+        '#field_suffix' => '(' . $info['table'] . '.' . $info['field'] . ')',
       );
 
-      // Required
+      // Required relation.
       $form['relations']['relations'][$name]['required'] = array(
         '#type' => 'checkbox',
         '#default_value' => (int) $info['required'],
