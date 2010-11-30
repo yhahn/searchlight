@@ -128,6 +128,8 @@ class SearchlightDatasource {
         'varchar' => 'text',
         'text' => 'text',
         'float' => 'float',
+        'numeric' => 'float',
+        'decimal' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
