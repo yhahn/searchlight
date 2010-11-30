@@ -246,7 +246,6 @@ class SearchlightDatasource {
    * Finds all possible relations ships for a field.
    *
    * Orignal code resides in admin.inc of views.
-   *
    */
   function getFieldRelationshipOptions($field_id, $field_info) {
     $relationship_options = array();
@@ -792,7 +791,7 @@ class SearchlightDatasource {
 
     // Don't use alias for base field.
     if ($field === $this->view->base_field) {
-      $fields_added[] = $field;
+      $fields_added[] = $table . '.' . $field;
 
       $this->fields[$field] = array(
         'label' => $field,
@@ -804,9 +803,9 @@ class SearchlightDatasource {
     }
     // Use alias for all other fields.
     if ($handler) {
-      $fields_added[] = $handler->field_alias;
+      $fields_added[] = $handler->table . '.' . $handler->field_alias;
 
-      $this->fields[$handler->field_alias] = array(
+      $this->fields[$handler->table . '.' . $handler->field_alias] = array(
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
         'table' => $handler->table,
@@ -836,9 +835,9 @@ class SearchlightDatasource {
           $add_field = $field !== $handler->view->base_field || $table !== $handler->view->base_table;
         }
         if ($add_field) {
-          $fields_added[] = $handler->aliases[$field];
+          $fields_added[] = $table . '.' . $handler->aliases[$field];
 
-          $this->fields[$handler->aliases[$field]] = array(
+          $this->fields[$table . '.' . $handler->aliases[$field]] = array(
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
             'table' => $table,
