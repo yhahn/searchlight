@@ -683,11 +683,11 @@ function searchlight_get_datasource($base_table = NULL) {
 /**
  * Retrieve a new inited Searchlight query.
  */
-function searchlight_get_query($base_table, $base_field, $backend = NULL) {
+function searchlight_get_query($base_table, $base_field, $options = array(), $backend = NULL) {
   $backend = !isset($backend) ? searchlight_get_backend() : $backend;
   if ($backend) {
     $query = views_get_plugin('query', 'searchlight');
-    $query->init($base_table, $base_field, $backend);
+    $query->init($base_table, $base_field, $options, $backend);
     return $query;
   }
   return FALSE;

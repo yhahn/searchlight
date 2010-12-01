@@ -17,8 +17,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
   /**
    * Override of init().
    */
-  function init($base_table = 'node', $base_field = 'nid', $backend) {
-    parent::init($base_table, $base_field, array());
+  function init($base_table = 'node', $base_field = 'nid', $options = array(), $backend) {
+    parent::init($base_table, $base_field, $options);
 
     // Init the fields array on behalf of the parent.
     $this->fields = isset($this->fields) ? $this->fields : array();
