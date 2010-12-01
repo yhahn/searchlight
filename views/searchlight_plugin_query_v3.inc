@@ -214,6 +214,11 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     if ($this->search_buildmode === 'search') {
       if ($this->search_result) {
+        // Make the query distinct if the option was set.
+        if (!empty($this->options['distinct'])) {
+          $this->set_distinct();
+        }
+
         parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();
