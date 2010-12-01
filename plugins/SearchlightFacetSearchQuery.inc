@@ -77,10 +77,9 @@ class SearchlightFacetSearchQuery extends SearchlightFacet {
    */
   function optionsForm(&$form, $form_state) {
     parent::optionsForm($form, $form_state);
-    $form['items'] = array(
-      '#title' => t('Items to show'),
-      '#type' => 'hidden',
-      '#value' => 1,
-    );
+    $form['items']['#type'] = 'hidden';
+    $form['items']['#value'] = true;
+    $form['sort']['#type'] = 'hidden';
+    $form['sort']['#value'] = 'count';
   }
 }

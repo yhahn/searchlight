@@ -163,6 +163,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
               $items[] = $item;
             }
           }
+          $this->sort($items);
           return $items;
           break;
       }
