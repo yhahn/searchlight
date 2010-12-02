@@ -69,12 +69,15 @@ class SearchlightDatasource {
       );
     }
     foreach ($this->getFields() as $name => $field) {
-      $fields[$name] = array(
-        'id' => $field['name'],
-        'table' => $field['table'],
-        'field' => $field['field'],
-        'relationship' => 'none',
-      );
+      $data = views_fetch_data($field['table']);
+      if (isset($data[$field['field']]['field'])) {
+        $fields[$name] = array(
+          'id' => $field['name'],
+          'table' => $field['table'],
+          'field' => $field['field'],
+          'relationship' => 'none',
+        );
+      }
     }
     $handler->override_option('fields', $fields);
     return $this;
