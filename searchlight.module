@@ -875,13 +875,18 @@ function searchlight_environment_active($environment = NULL, $view = NULL, $disp
   }
   // Match both view & display. Note that a lazy matched environment is not
   // static cached as multiple may be active on the same page.
+  // EXCEPTION: In the context of an views AJAX response do static cache the
+  // active environment to allow the AJAX payload to be altered.
+  // See searchlight_ajax_render_alter().
   else if (isset($view, $display)) {
     foreach (searchlight_environment_load() as $environment) {
       list($environment_view, $environment_display) = explode(':', $environment->view_display);
       if ($environment->view_display === "{$view}:{$display}") {
+        $active = isset($_REQUEST['view_name'], $_REQUEST['view_display_id']) ? $environment : $active;
         return $environment;
       }
       else if ($environment_view === $view) {
+        $active = isset($_REQUEST['view_name'], $_REQUEST['view_display_id']) ? $environment : $active;
         return $environment;
       }
     }
