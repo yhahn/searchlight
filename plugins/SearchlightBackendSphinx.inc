@@ -549,7 +549,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
         // Add delta index.
         if (!empty($this->settings['delta_ttl'])) {
-          $source = $this->sphinxDatasourceConf($source, TRUE);
+          $source = $this->sphinxDatasourceConf($datasource, TRUE);
         }
 
         $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
@@ -817,7 +817,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     // Process SQL args in Views JOINs.
     $i = 0;
     foreach ($query->table_queue as $t) {
-      if (!empty($t['join']->extra)) {
+      if (!empty($t['join']->extra) && is_array($t['join']->extra)) {
         foreach ($t['join']->extra as $extra) {
           if (!is_null($extra['value'])) {
             $replace[":views_join_condition_{$i}"] = $this->sphinxPrepareSQLArg($extra['value']);
