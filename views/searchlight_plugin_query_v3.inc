@@ -51,7 +51,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     parent::add_where($group, $field, $value, $operator);
 
     foreach ($this->datasource->fields as $name => $info) {
-      if ($name === str_replace(".", "_", $field)) {
+      $match = str_replace(".", "_", $field);
+      if ($name === $match || "{$info['table']}_{$info['field']}" === $match) {
         $this->search_filter[] = array(
           'field' => $name,
           'operator' => !empty($operator) ? strtoupper($operator) : 'IN',

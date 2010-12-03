@@ -545,21 +545,21 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     if (file_prepare_directory($conf_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       foreach (searchlight_datasource_load(NULL, TRUE) as $datasource) {
-        $source = $this->sphinxDatasourceConf($datasource);
-
-        // Add delta index.
+        $conf = array(FALSE);
         if (!empty($this->settings['delta_ttl'])) {
-          $source = $this->sphinxDatasourceConf($datasource, TRUE);
+          $conf[] = TRUE;
         }
+        foreach ($conf as $delta_ttl) {
+          $source = $this->sphinxDatasourceConf($datasource, $delta_ttl);
+          $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
 
-        $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
-
-        // Generate configuration file from datasource.
-        $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
-        $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
-        if ($sphinx_conf !== $existing) {
-          file_put_contents($conf_file, $sphinx_conf);
-          drush_log("{$conf_file} was written successfully.", 'success');
+          // Generate configuration file from datasource.
+          $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
+          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+          if ($sphinx_conf !== $existing) {
+            file_put_contents($conf_file, $sphinx_conf);
+            drush_log("{$conf_file} was written successfully.", 'success');
+          }
         }
       }
       return drush_log("Sphinx configuration files were written", 'success');
