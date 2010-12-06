@@ -140,8 +140,8 @@ class SearchlightFacet {
     else {
       $this->view = $query->datasource->view->copy();
       $this->view->build();
-      foreach ($this->view->field as $field_handler) {
-        if ($field_handler->field_alias === $this->name) {
+      foreach ($this->view->field as $name => $field_handler) {
+        if ($name  === $this->name) {
           $this->handler = $field_handler;
         }
       }
@@ -186,8 +186,19 @@ class SearchlightFacet {
     else {
       $rows = array();
       foreach ($items as $item) {
+        
+        
+//        if (!empty($row->{$this->handler->field_alias})) {
+//          $object = new stdClass();
+//          $object->{$entity_info['entity keys']['id']} = $row->{$this->field_alias};
+//          // Not every entity type has bundle and revision.
+//          if (!empty($entity_info['entity keys']['bundle'])) {
+//            $object->{$entity_info['entity keys']['bundle']} = $row->{$this->aliases[$this->definition['field_name'] . '_bundle']};
+//          }
+        
+        
         $row = new stdClass();
-        $row->{$this->name} = $item['id'];
+        $row->{$this->handler->field_alias} = $item['id'];
         $rows[$item['id']] = $row;
       }
     }

@@ -46,6 +46,7 @@ class SearchlightDatasource {
     views_include('view');
     $this->view = new view;
     $this->view->base_table = $this->base_table;
+    $this->view->base_field = $this->base_field;
     $this->view->api_version = '3.0-alpha1';
     $this->view->new_display('default', 'Default', 'default');
     $this->view->set_display('default');
@@ -66,16 +67,17 @@ class SearchlightDatasource {
       $fields[$this->base_field] = array(
         'id' => $this->base_field,
         'table' => $this->base_table,
-        'field' => $this->base_table . '.' . $this->base_field,
+        'field' => $this->base_field,
         'relationship' => 'none',
       );
     }
     foreach ($this->getFields() as $name => $field) {
+      $relationship = empty($field['relationship']) ? 'none' : $field['relationship'];
       $fields[$name] = array(
         'id' => $field['name'],
         'table' => $field['table'],
-        'field' => $field['table'] . '.' . $field['field'],
-        'relationship' => $field['relationship'],
+        'field' => $field['field'],
+        'relationship' => $relationship,
       );
     }
     $handler->override_option('fields', $fields);
@@ -183,6 +185,8 @@ class SearchlightDatasource {
   function getRelations() {
     $relationships = array();
     foreach ($this->relations as $name => $relation) {
+      $relation['relationship'] = 'none';
+      $relation['group_type'] = 'group';
       $relationships[$name] = $relation;
     }
     return $relationships;
@@ -251,10 +255,14 @@ class SearchlightDatasource {
    */
   function getFieldRelationshipOptions($field_id) {
     $relationship_options = array();
-
     $view = &$this->view;
     $item = $view->get_item('default', 'field', $field_id);
-
+    
+    // If relation is already set, return it
+    if (!empty($item['relationship']) && $item['relationship'] != 'none') {
+      $relationship_options[$item['relationship']] = $item['relationship'];
+      return $relationship_options;
+    }
     // A whole bunch of code to figure out what relationships are valid for
     // this item.
     $relationships = $view->display_handler->get_option('relationships');
@@ -271,9 +279,10 @@ class SearchlightDatasource {
       $data = views_fetch_data($relationship['table']);
       $base = $data[$relationship['field']]['relationship']['base'];
       $base_fields = views_fetch_fields($base, 'field', $view->display_handler->use_group_by());
-      if (isset($base_fields[$item['field']])) {
+      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
         $relationship_handler->init($view, $relationship);
-        $relationship_options[$relationship['id']] = $relationship_handler->label();
+        $relationship_options[$relationship['id']] = $relationship_handler->options['field'];
+        //$relationship_options[$relationship['id']] = $relationship_handler->label();
       }
     }
 
@@ -281,10 +290,11 @@ class SearchlightDatasource {
       // Make sure the existing relationship is even valid. If not, force
       // it to none.
       $base_fields = views_fetch_fields($view->base_table, 'field', $view->display_handler->use_group_by());
-      if (isset($base_fields[$item['field']])) {
+      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
         $relationship_options = array_merge(array('none' => t('Do not use a relationship')), $relationship_options);
       }
     }
+   
     return $relationship_options;
   }
 
@@ -350,6 +360,7 @@ class SearchlightDatasource {
       '#type' => 'select',
       '#options' => $field_options,
     );
+    
     $form['fields']['new']['add'] = array(
       '#value' => t('Add field'),
       '#type' => 'submit',
@@ -608,8 +619,8 @@ class SearchlightDatasource {
 
         // Remove field checkbox.
         $form['groupfield']['fields'][$this->options['groupfield']]['remove'] = array(
-                '#type' => 'checkbox',
-                '#default_value' => FALSE,
+          '#type' => 'checkbox',
+          '#default_value' => FALSE,
         );
 
         // Field label.
@@ -619,11 +630,11 @@ class SearchlightDatasource {
 
         // Datatype
         $form['groupfield']['fields'][$this->options['groupfield']]['datatype'] = array(
-                '#markup' => "<code>{$this->fields[$this->options['groupfield']]['datatype']}</code>",
+          '#markup' => "<code>{$this->fields[$this->options['groupfield']]['datatype']}</code>",
         );
 
         $form['groupfield']['fields'][$this->options['groupfield']]['usage'] = array(
-                '#markup' => t('Grouping'),
+          '#markup' => t('Grouping'),
         );
       }
     }
@@ -774,16 +785,22 @@ class SearchlightDatasource {
     // Add the field to the view and build. This will give us an inited handler
     // with full aliases.
     $this->viewInit()->viewSetHandlers();
-    $fields = $this->view->display_handler->get_option('fields');
+    $fields = &$this->view->display_handler->get_option('fields');
     $fields[$field] = array(
       'id' => $field,
       'table' => $table,
       'field' => $field,
       'relationship' => 'none',
     );
-
+    
     $this->view->display_handler->set_option('fields', $fields);
     $this->view->build();
+    
+    $relationship = 'none';
+    foreach($this->getFieldRelationshipOptions($field) as $key => $val) {
+      $relationship = $val;
+    }
+    $fields[$field]['relationship'] = $relationship;
 
     // Retrieve field information for storage with datasource.
     $handler = isset($this->view->field[$field]) ? $this->view->field[$field] : NULL;
@@ -793,7 +810,7 @@ class SearchlightDatasource {
 
     // Don't use alias for base field.
     if ($field === $this->view->base_field) {
-      $fields_added[] = $table . '.' . $field;
+      $fields_added[] = $field;
 
       $this->fields[$field] = array(
         'label' => $field,
@@ -804,7 +821,7 @@ class SearchlightDatasource {
       );
     }
     // Use alias for all other fields.
-    if ($handler) {
+    if ($handler && $field != $this->view->base_field) {
       $fields_added[] = $handler->table . '.' . $handler->field_alias;
 
       $this->fields[$handler->table . '.' . $handler->field_alias] = array(
@@ -812,7 +829,8 @@ class SearchlightDatasource {
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
         'table' => $handler->table,
         'field' => $handler->real_field,
-        'name' => $handler->field_alias,
+        'name' => $table . '.' . $handler->field_alias,
+        'relationship' => $relationship,
       );
     }
     if (!empty($handler->additional_fields)) {
@@ -844,7 +862,8 @@ class SearchlightDatasource {
             'datatype' => $this->getDatatype($handler, $table, $field),
             'table' => $table,
             'field' => $field,
-            'name' => $handler->aliases[$field],
+            'name' => $table . '.' . $handler->aliases[$field],
+            'relationship' => $relationship,
           );
         }
       }

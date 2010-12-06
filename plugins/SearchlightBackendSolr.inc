@@ -81,6 +81,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
 
     $options = array();
     if (isset($client->searchlightSort)) {
+      $sort = '';
       foreach ($client->searchlightSort as $field => $order) {
         $field = ($field == 'searchlight_weight' ? 'score' : $field);
         $sort .= $field . ' ' . strtolower($order) . ',';
@@ -102,8 +103,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
       drupal_set_message('Caught exception: ' .  $e->getMessage(), 'error');
       return FALSE;
     }
-
-    if (is_array($response->grouped->{$datasource->options['groupfield']}->groups)) {
+    
+    if (!empty($datasource->options['groupfield']) && is_array($response->grouped->{$datasource->options['groupfield']}->groups)) {
       foreach ($response->grouped->{$datasource->options['groupfield']}->groups as $group) {
         if (is_array($group->doclist->docs)) {
           foreach ($group->doclist->docs as $doc) {
@@ -118,7 +119,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
       }
     }
     if (!empty($ids)) {
-      !empty($response->grouped->{$datasource->options['groupfield']}->matches) ? $count = $response->grouped->{$datasource->options['groupfield']}->matches : $count = $response->response->numFound;
+      if (!empty($datasource->options['groupfield'])) {
+        $count = $response->grouped->{$datasource->options['groupfield']}->matches;
+      }
+      else {
+        $count = $response->response->numFound;
+      }
       return array(
         'result' => $ids,
         'total' => $count,
@@ -223,7 +229,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
   function facetBuild(&$client, $datasource, $query = '', $facets) {
     $query = $this->solrPrepareQuery($client, $datasource, $query);
 
-    $limit_options = $options;
+    $limit_options = array();
     $options = array(
       'facet' => 'true',
       'facet.mincount' => '1',
@@ -281,7 +287,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           $options["f.{$facet['field']}.facet.date.start"] = $limits['min'];
           $options["f.{$facet['field']}.facet.date.end"] = $limits['max'];
 
-          switch ($facet['granularity']) {
+          switch (!empty($facet['granularity']) ? $facet['granularity'] : 'month') {
             case 'day':
               $gap = '+1DAY';
               break;
@@ -454,7 +460,6 @@ class SearchlightBackendSolr extends SearchlightBackend {
           else if (isset($view->pager) && method_exists($view->pager, 'query')) {
             $view->pager->query();
           }
-
           $this->queryFresh($view->query);
         }
         // MVA view:
@@ -500,43 +505,68 @@ class SearchlightBackendSolr extends SearchlightBackend {
         foreach ($items['datasource'] as $id => $item) {
           $document = new Apache_Solr_Document();
           $content = array();
+          $raw_item = $raw_items['datasource'][$id];
+          
           foreach ($datasource->fields as $field) {
-            switch ($field['usage']) {
-              case 'content':
-                $content[] = $this->apachesolr_clean_text($item->{$field['name']});
-                break;
-              case 'multivalue':
-                $mva_item = $raw_items[$field['name']][$id];
-                $mva_field_handler = $view->field[$field['name']];
-                $alias = $mva_field_handler->field_alias;
-                if (isset($mva_item->{$alias})) {
-                  if ($field['datatype'] == 'timestamp') {
-                    $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $mva_item->{$alias});
-                  }
-                  elseif ($field['datatype'] == 'date') {
-                    $date_time = new DateTime($mva_item->{$alias}, new DateTimeZone('UTC'));
-                    $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
-                  }
-                  else {
-                    $document->{$field['name']} = $mva_item->{$alias};
-                  }
-                }
-                break;
-              default:
-                $raw_item = $raw_items['datasource'][$id];
-                if (isset($raw_item->{$field['name']})) {
-                  if ($field['datatype'] == 'timestamp') {
-                    $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $raw_item->{$field['name']});
-                  }
-                  elseif ($field['datatype'] == 'date') {
-                    $date_time = new DateTime($raw_item->{$field['name']}, new DateTimeZone('UTC'));
-                    $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
-                  }
-                  else {
-                    $document->{$field['name']} = $raw_item->{$field['name']};
-                  }
-                }
-                break;
+            $field_handler = $view->field[$field['name']];
+            // referenced fields:
+            // alias => entity_id
+            // aliases => other field_items
+             
+            if ($field_handler->field_alias && empty($field_handler->aliases)) {
+              // We have only one choice (alias), so we use it
+              $field_value = $raw_item->{$field_handler->field_alias};
+            }
+            elseif (isset($field_handler->aliases, $field_handler->definition['field_info'], $field_handler->definition['entity_tables'])) {
+              // Todo: handle languages
+              // $language = $raw_item->{$field_handler->aliases['language']}; // e.g. 'und'
+              
+              // We have a choice of multiple field items and are dealing with a field API field handler
+              // Determine the value field item by convention. There might be a better solution for that ??
+              $field_name = $field_handler->definition['field_name'];
+              $value_field_alias = $field_handler->aliases[$field_name . '_value'];
+              if (!empty($raw_item->{$value_field_alias}) && $field['field'] != 'entity_id') {
+                $field_value = $raw_item->{$value_field_alias};
+              }
+              // Fall back to 'default' alias and get the value of the entity_id
+              else {
+                $field_value = $raw_item->{$field_handler->field_alias};
+              }
+            }
+            else {
+              $field_value = $raw_item->{$field_handler->field};
+            }
+            
+            if (!empty($field_value)) {
+              switch ($field['usage']) {
+                case 'content':
+                  $content[] = $this->apachesolr_clean_text($field_value);
+                  break;
+                case 'multivalue':
+                    if ($field['datatype'] == 'timestamp') {
+                      $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $field_value);
+                    }
+                    elseif ($field['datatype'] == 'date') {
+                      $date_time = new DateTime($field_value, new DateTimeZone('UTC'));
+                      $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
+                    }
+                    else {
+                      $document->{$field['name']} = $field_value;
+                    }
+                  break;
+                default:
+                    if ($field['datatype'] == 'timestamp') {
+                      $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $field_value);
+                    }
+                    elseif ($field['datatype'] == 'date') {
+                      $date_time = new DateTime($field_value, new DateTimeZone('UTC'));
+                      $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
+                    }
+                    else {
+                      $document->{$field['name']} = $field_value;
+                    }
+                  break;
+              }
             }
           }
           $ids[] = $id;
