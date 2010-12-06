@@ -171,7 +171,8 @@ function searchlight_views_init_query(&$view) {
       // Add Searchlight JS.
       drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.js');
 
-      $view->query = searchlight_get_query($view->base_table, $view->base_field);
+      $query_options = $view->display_handler->get_option('query');
+      $view->query = searchlight_get_query($view->base_table, $view->base_field, $query_options['options']);
     }
   }
 }

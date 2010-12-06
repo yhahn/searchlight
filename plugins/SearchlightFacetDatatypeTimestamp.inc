@@ -65,7 +65,17 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
     $options = parent::optionsDefault();
     $options['granularity'] = 'month';
     $options['date_format'] = 'F, Y';
+    $options['sort'] = 'date';
     return $options;
+  }
+
+  /**
+   * Provide an options form to be exposed in the Environment editor.
+   */
+  function optionsForm(&$form, $form_state) {
+    parent::optionsForm($form, $form_state);
+    $form['sort']['#type'] = 'hidden';
+    $form['sort']['#value'] = 'date';
   }
 
   /**

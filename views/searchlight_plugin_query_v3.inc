@@ -17,8 +17,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
   /**
    * Override of init().
    */
-  function init($base_table = 'node', $base_field = 'nid', $backend) {
-    parent::init($base_table, $base_field, array());
+  function init($base_table = 'node', $base_field = 'nid', $options = array(), $backend) {
+    parent::init($base_table, $base_field, $options);
 
     // Init the fields array on behalf of the parent.
     $this->fields = isset($this->fields) ? $this->fields : array();
@@ -51,7 +51,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     parent::add_where($group, $field, $value, $operator);
 
     foreach ($this->datasource->fields as $name => $info) {
-      if ($name === str_replace(".", "_", $field)) {
+      $match = str_replace(".", "_", $field);
+      if ($name === $match || "{$info['table']}_{$info['field']}" === $match) {
         $this->search_filter[] = array(
           'field' => $name,
           'operator' => !empty($operator) ? strtoupper($operator) : 'IN',
@@ -219,6 +220,11 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     if ($this->search_buildmode === 'search') {
       if ($this->search_result) {
+        // Make the query distinct if the option was set.
+        if (!empty($this->options['distinct'])) {
+          $this->set_distinct();
+        }
+
         parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();

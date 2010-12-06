@@ -93,7 +93,9 @@ class SearchlightFacet {
         break;
     }
     if (!empty($items) && $this->viewInit($query)) {
-      return $this->viewRenderItems($items);
+      $items = $this->viewRenderItems($items);
+      $this->sort($items);
+      return $items;
     }
     return array();
   }
@@ -217,6 +219,7 @@ class SearchlightFacet {
     return array(
       'label' => '',
       'items' => 5,
+      'sort' => 'count'
     );
   }
 
@@ -236,11 +239,47 @@ class SearchlightFacet {
       '#default_value' => $this->options['items'],
       '#options' => drupal_map_assoc(range(1, 20)) + array(0 => t('Show all')),
     );
+    $form['sort'] = array(
+      '#title' => t('Sort by'),
+      '#type' => 'select',
+      '#default_value' => $this->options['sort'],
+      '#options' => array('count' => t('Number of items'), 'name' => t('Alphabetical')),
+    );
   }
 
   /**
    * Provide extended form elements for a facet in the Environment editor.
    */
   function extendedForm(&$form, $form_state) {
+  }
+
+  /**
+   * Sort built facet items.
+   */
+  function sort(&$items) {
+    switch ($this->options['sort']) {
+      case 'count':
+        uasort($items, 'SearchlightFacet::sortCount');
+        break;
+      case 'name':
+        uasort($items, 'SearchlightFacet::sortName');
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * uasort callback, sort by count.
+   */
+  function sortCount($a, $b) {
+    return $a['count'] > $b['count'];
+  }
+
+  /**
+   * uasort callback, sort by name.
+   */
+  function sortName($a, $b) {
+    return $a['title'] > $b['title'];
   }
 }
