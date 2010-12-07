@@ -186,26 +186,55 @@ class SearchlightFacet {
     // For regular fields attempt to spoof rows with the appropriate field
     // values for rendering by the field handler.
     else {
+//      $rows = array();
+//      foreach ($items as $item) {
+//        $row = new stdClass();
+//        $row->{$this->handler->field_alias} = $item['id'];
+//        
+//        if (!empty($this->handler->aliases)) {         
+//          $row->{$this->handler->entity_info['entity keys']['id']} = $row->{$this->handler->field_alias};
+//          if (!empty($this->handler->entity_info['entity keys']['bundle'])) {
+//            $row->{$this->handler->entity_info['entity keys']['bundle']} = $row->{$this->handler->aliases[$this->handler->definition['field_name'] . '_bundle']};
+//          }
+//        }
+
+      
+//      // Not every entity type has bundle and revision.
+//      if (!empty($entity_info['entity keys']['bundle'])) {
+//        $object->{$entity_info['entity keys']['bundle']} = $row->{$this->aliases[$this->definition['field_name'] . '_bundle']};
+//      }
+//      if (!empty($entity_info['entity keys']['revision'])) {
+//        $object->{$entity_info['entity keys']['revision']} = $row->{$this->aliases[$this->definition['field_name'] . '_revision']};
+//      }
+      
+      
+      
+      
+//        $rows[$item['id']] = $row;
+//      $data = views_fetch_data($this->handler->table);
       $rows = array();
       foreach ($items as $item) {
-        
-        
-//        if (!empty($row->{$this->handler->field_alias})) {
-//          $object = new stdClass();
-//          $object->{$entity_info['entity keys']['id']} = $row->{$this->field_alias};
-//          // Not every entity type has bundle and revision.
-//          if (!empty($entity_info['entity keys']['bundle'])) {
-//            $object->{$entity_info['entity keys']['bundle']} = $row->{$this->aliases[$this->definition['field_name'] . '_bundle']};
-//          }
-        
-        
         $row = new stdClass();
         $row->{$this->handler->field_alias} = $item['id'];
+        //$row->{$this->name} = $item['id'];
+        
+        // bundle revision language delta
+//        if (!empty($this->handler->aliases)) {
+//          foreach($this->handler->aliases as $alias) {
+//            $row->{$alias} = '';
+//          }
+//        }
         $rows[$item['id']] = $row;
+//
+//             
+//        $row = new stdClass();
+//        $row->{$this->handler->field_alias} = $item['id'];
+//        $rows[$item['id']] = $row;
       }
     }
     // Render item titles.
     $this->handler->pre_render($rows);
+    $x=1;
     foreach ($rows as $id => $row) {
       $items[$id]['title'] = strip_tags($this->handler->render($row));
     }

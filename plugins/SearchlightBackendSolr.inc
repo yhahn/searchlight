@@ -509,29 +509,8 @@ class SearchlightBackendSolr extends SearchlightBackend {
           
           foreach ($datasource->fields as $field) {
             $field_handler = $view->field[$field['name']];
-            // referenced fields:
-            // alias => entity_id
-            // aliases => other field_items
-             
-            if ($field_handler->field_alias && empty($field_handler->aliases)) {
-              // We have only one choice (alias), so we use it
+            if ($field_handler->field_alias) {
               $field_value = $raw_item->{$field_handler->field_alias};
-            }
-            elseif (isset($field_handler->aliases, $field_handler->definition['field_info'], $field_handler->definition['entity_tables'])) {
-              // Todo: handle languages
-              // $language = $raw_item->{$field_handler->aliases['language']}; // e.g. 'und'
-              
-              // We have a choice of multiple field items and are dealing with a field API field handler
-              // Determine the value field item by convention. There might be a better solution for that ??
-              $field_name = $field_handler->definition['field_name'];
-              $value_field_alias = $field_handler->aliases[$field_name . '_value'];
-              if (!empty($raw_item->{$value_field_alias}) && $field['field'] != 'entity_id') {
-                $field_value = $raw_item->{$value_field_alias};
-              }
-              // Fall back to 'default' alias and get the value of the entity_id
-              else {
-                $field_value = $raw_item->{$field_handler->field_alias};
-              }
             }
             else {
               $field_value = $raw_item->{$field_handler->field};
@@ -542,33 +521,26 @@ class SearchlightBackendSolr extends SearchlightBackend {
                 case 'content':
                   $content[] = $this->apachesolr_clean_text($field_value);
                   break;
-                case 'multivalue':
-                    if ($field['datatype'] == 'timestamp') {
-                      $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $field_value);
-                    }
-                    elseif ($field['datatype'] == 'date') {
-                      $date_time = new DateTime($field_value, new DateTimeZone('UTC'));
-                      $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
-                    }
-                    else {
-                      $document->{$field['name']} = $field_value;
-                    }
-                  break;
                 default:
-                    if ($field['datatype'] == 'timestamp') {
+                  switch($field['datatype']) {
+                    case 'timestamp':
                       $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $field_value);
-                    }
-                    elseif ($field['datatype'] == 'date') {
+                      break;
+                    case 'date':
                       $date_time = new DateTime($field_value, new DateTimeZone('UTC'));
                       $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
-                    }
-                    else {
+                      break;
+                    case 'int':
+                      $document->{$field['name']} = intval($field_value);
+                      break;
+                    default: 
                       $document->{$field['name']} = $field_value;
-                    }
-                  break;
+                  }
+                break;                  
               }
             }
           }
+          
           $ids[] = $id;
           $document->_body = implode(' ', $content);
           $documents[] = $document;

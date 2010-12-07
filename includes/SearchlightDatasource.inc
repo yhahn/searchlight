@@ -72,13 +72,16 @@ class SearchlightDatasource {
       );
     }
     foreach ($this->getFields() as $name => $field) {
-      $relationship = empty($field['relationship']) ? 'none' : $field['relationship'];
-      $fields[$name] = array(
-        'id' => $field['name'],
-        'table' => $field['table'],
-        'field' => $field['field'],
-        'relationship' => $relationship,
-      );
+      $data = views_fetch_data($field['table']);
+      if (isset($data[$field['field']]['field'])) {
+        $relationship = empty($field['relationship']) ? 'none' : $field['relationship'];
+        $fields[$name] = array(
+          'id' => $field['name'],
+          'table' => $field['table'],
+          'field' => $field['field'],
+          'relationship' => $relationship,
+        );
+      }
     }
     $handler->override_option('fields', $fields);
 
@@ -258,11 +261,11 @@ class SearchlightDatasource {
     $view = &$this->view;
     $item = $view->get_item('default', 'field', $field_id);
     
-    // If relation is already set, return it
-    if (!empty($item['relationship']) && $item['relationship'] != 'none') {
-      $relationship_options[$item['relationship']] = $item['relationship'];
-      return $relationship_options;
-    }
+//    // If relation is already set, return it
+//    if (!empty($item['relationship']) && $item['relationship'] != 'none') {
+//      $relationship_options[$item['relationship']] = $item['relationship'];
+//      return $relationship_options;
+//    }
     // A whole bunch of code to figure out what relationships are valid for
     // this item.
     $relationships = $view->display_handler->get_option('relationships');
@@ -410,7 +413,7 @@ class SearchlightDatasource {
         );
       }
       else {
-        $relation = reset($relation_options);
+        $relation = $info['relationship'];
         $form['fields']['fields'][$name]['relation_name'] = array(
           '#markup' => ((empty($relation)) ? t('none') : $relation),
         );
@@ -822,14 +825,21 @@ class SearchlightDatasource {
     }
     // Use alias for all other fields.
     if ($handler && $field != $this->view->base_field) {
-      $fields_added[] = $handler->table . '.' . $handler->field_alias;
+      // Make sure alias does not exist already
+      $alias_base = $handler->field_alias;
+      $count = 1;
+      while (!empty($this->fields[$handler->field_alias])) {
+        $handler->field_alias = $alias_base . '_' . $count++;
+      }
+      
+      $fields_added[] = $handler->field_alias;
 
-      $this->fields[$handler->table . '.' . $handler->field_alias] = array(
+      $this->fields[$handler->field_alias] = array(
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
         'table' => $handler->table,
         'field' => $handler->real_field,
-        'name' => $table . '.' . $handler->field_alias,
+        'name' => $handler->field_alias,
         'relationship' => $relationship,
       );
     }
@@ -855,14 +865,14 @@ class SearchlightDatasource {
           $add_field = $field !== $handler->view->base_field || $table !== $handler->view->base_table;
         }
         if ($add_field) {
-          $fields_added[] = $table . '.' . $handler->aliases[$field];
+          $fields_added[] = $handler->aliases[$field];
 
-          $this->fields[$table . '.' . $handler->aliases[$field]] = array(
+          $this->fields[$handler->aliases[$field]] = array(
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
             'table' => $table,
             'field' => $field,
-            'name' => $table . '.' . $handler->aliases[$field],
+            'name' => $handler->aliases[$field],
             'relationship' => $relationship,
           );
         }
