@@ -505,8 +505,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
         foreach ($items['datasource'] as $id => $item) {
           $document = new Apache_Solr_Document();
           $content = array();
-          $raw_item = $raw_items['datasource'][$id];
-          
+          $raw_item = $raw_items['datasource'][$id]; 
           foreach ($datasource->fields as $field) {
             $field_handler = $view->field[$field['name']];
             if ($field_handler->field_alias) {
@@ -514,8 +513,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
             }
             else {
               $field_value = $raw_item->{$field_handler->field};
-            }
-            
+            }           
             if (!empty($field_value)) {
               switch ($field['usage']) {
                 case 'content':
@@ -539,8 +537,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
                 break;                  
               }
             }
-          }
-          
+          }       
           $ids[] = $id;
           $document->_body = implode(' ', $content);
           $documents[] = $document;
