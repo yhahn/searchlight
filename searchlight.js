@@ -10,8 +10,11 @@ Drupal.behaviors.searchlight.attach = function(context, settings) {
       var identifier = $(this).attr('class').split('searchlight-view-')[1].split('-');
       for (var i in Drupal.settings.views.ajaxViews) {
         if (
-          Drupal.settings.views.ajaxViews[i].view_name == identifier[0] &&
-          Drupal.settings.views.ajaxViews[i].view_display_id == identifier[1]
+          Drupal.settings.views.ajaxViews[i].view_name == identifier[0]
+          // @TODO: Do a loose (view-name only) check for attaching AJAX
+          // view handlers to allow environments to be used with multiple
+          // displays in the same view.
+          // && Drupal.settings.views.ajaxViews[i].view_display_id == identifier[1]
         ) {
           settings = Drupal.settings.views.ajaxViews[i];
           view = $('.view-dom-id-' + settings.view_dom_id);
