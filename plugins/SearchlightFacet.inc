@@ -262,7 +262,7 @@ class SearchlightFacet {
    * uasort callback, sort by count.
    */
   function sortCount($a, $b) {
-    return $a['count'] > $b['count'];
+    return $a['count'] < $b['count'];
   }
 
   /**
