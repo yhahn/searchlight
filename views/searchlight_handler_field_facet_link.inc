@@ -56,6 +56,7 @@ class searchlight_handler_field_facet_link extends views_handler_field {
         $options['absolute'] = $this->options['absolute'];
         // TODO The second parameter to this function call should be an array.
         // TODO The second parameter to this function call should be an array.
+        $url =url($path, $options);
         return url($path, $options);
       }
     }

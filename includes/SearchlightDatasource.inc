@@ -141,13 +141,12 @@ class SearchlightDatasource {
         if ($column_type === 'int' && strpos($class, 'date') !== FALSE) {
           return 'timestamp';
         }
-        // Handle date fields with type varchar(map->text) and certain date-time
-        // format-types and also custom view handlers containing 'date' in the name.
-        if ($column_type === 'text' && (isset($data[$table][$field]['settings']['format_type']) || strpos($class, 'date') !== FALSE)) {
-          return 'date';
-        }
         return isset($map[$column_type]) ? $map[$column_type] : FALSE;
       }
+    }
+    // Allow custom handlers to specity the data_type in definition
+    if (isset($handler->definition['data_type'])) {
+      return $handler->definition['data_type'];
     }
     // Handle a list of known function/calculation fields.
     $map = array(
@@ -825,16 +824,17 @@ class SearchlightDatasource {
     }
     // Use alias for all other fields.
     if ($handler && $field != $this->view->base_field) {
-      // Make sure alias does not exist already
+      // Generate unique id's
       $alias_base = $handler->field_alias;
       $count = 1;
       while (!empty($this->fields[$handler->field_alias])) {
         $handler->field_alias = $alias_base . '_' . $count++;
       }
-      
+
       $fields_added[] = $handler->field_alias;
 
       $this->fields[$handler->field_alias] = array(
+        'id' => $handler->field_alias,
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
         'table' => $handler->table,
@@ -868,6 +868,7 @@ class SearchlightDatasource {
           $fields_added[] = $handler->aliases[$field];
 
           $this->fields[$handler->aliases[$field]] = array(
+            'id'  =>  $handler->aliases[$field],
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
             'table' => $table,

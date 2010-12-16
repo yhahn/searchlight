@@ -34,9 +34,15 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
       }
     }
 
+    $class = get_class($handler);
+
+    // Allow custom handlers to specity the data_type in definition
+    if (isset($handler->definition['data_type'])) {
+      return $handler->definition['data_type'];
+    }
+
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
-      $class = get_class($handler);
 
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB

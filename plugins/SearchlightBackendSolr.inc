@@ -398,6 +398,22 @@ class SearchlightBackendSolr extends SearchlightBackend {
   }
 
   /**
+   * Create Solr date format
+   */
+  function createSolrDate($value, $type = 'date') {
+    switch($type) {
+      case 'timestamp':
+        $date = gmdate('Y-m-d\\TH:i:s\\Z', $value);
+        break;
+      default:
+        $date_time = new DateTime($value, new DateTimeZone('UTC'));
+        $date = $date_time->format('Y-m-d\\TH:i:s\\Z');
+      break;
+    }
+    return $date;
+  }
+
+  /**
    * Override of drushIndex().
    * Run an indexing job. Requires that the Solr service is available.
    */
@@ -460,6 +476,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
           else if (isset($view->pager) && method_exists($view->pager, 'query')) {
             $view->pager->query();
           }
+
           $this->queryFresh($view->query);
         }
         // MVA view:
@@ -505,39 +522,42 @@ class SearchlightBackendSolr extends SearchlightBackend {
         foreach ($items['datasource'] as $id => $item) {
           $document = new Apache_Solr_Document();
           $content = array();
-          $raw_item = $raw_items['datasource'][$id]; 
           foreach ($datasource->fields as $field) {
-            $field_handler = $view->field[$field['name']];
-            if ($field_handler->field_alias) {
-              $field_value = $raw_item->{$field_handler->field_alias};
-            }
-            else {
-              $field_value = $raw_item->{$field_handler->field};
-            }           
-            if (!empty($field_value)) {
-              switch ($field['usage']) {
-                case 'content':
-                  $content[] = $this->apachesolr_clean_text($field_value);
-                  break;
-                default:
+            switch ($field['usage']) {
+              case 'content':
+                $content[] = $this->apachesolr_clean_text($item->{$field['name']});
+                break;
+              case 'multivalue':
+                $mva_item = $raw_items[$field['name']][$id];
+                $document->{$field['name']} = $mva_item->{$field['name']};
+                break;
+              default:
+                $raw_item = $raw_items['datasource'][$id];
+                if (isset($raw_item->{$field['name']})) {
                   switch($field['datatype']) {
-                    case 'timestamp':
-                      $document->{$field['name']} = gmdate('Y-m-d\\TH:i:s\\Z', $field_value);
-                      break;
                     case 'date':
-                      $date_time = new DateTime($field_value, new DateTimeZone('UTC'));
-                      $document->{$field['name']} = $date_time->format('Y-m-d\\TH:i:s\\Z');
+                    case 'timestamp':
+                      $document->{$field['name']} = $this->createSolrDate($raw_item->{$field['name']}, $field['datatype']);
                       break;
-                    case 'int':
-                      $document->{$field['name']} = intval($field_value);
+                    default:
+                      $document->{$field['name']} = $raw_item->{$field['name']};
                       break;
-                    default: 
-                      $document->{$field['name']} = $field_value;
                   }
-                break;                  
-              }
+                }
+                elseif (isset($item->{$field['name']})) {
+                  switch($field['datatype']) {
+                    case 'date':
+                    case 'timestamp':
+                      $document->{$field['name']} = $this->createSolrDate($item->{$field['name']}, $field['datatype']);
+                      break;
+                    default:
+                      $document->{$field['name']} = $item->{$field['name']};
+                    break;
+                  }
+                }
+                break;
             }
-          }       
+          }
           $ids[] = $id;
           $document->_body = implode(' ', $content);
           $documents[] = $document;

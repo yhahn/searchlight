@@ -143,7 +143,7 @@ class SearchlightFacet {
       $this->view = $query->datasource->view->copy();
       $this->view->build();
       foreach ($this->view->field as $name => $field_handler) {
-        if ($name  === $this->name) {
+        if (isset($field_handler->aliases[$this->name]) || $name == $this->name) {
           $this->handler = $field_handler;
         }
       }
@@ -157,6 +157,7 @@ class SearchlightFacet {
    */
   function viewRenderItems($items) {
     $rows = array();
+    $options = array();
 
     // Multivalue fields must build a new Views query in order to
     // retrieve any secondary label field values.
@@ -164,7 +165,7 @@ class SearchlightFacet {
       $ids = array_keys($items);
 
       $query = views_get_plugin('query', 'views_query');
-      $query->init($this->field['table'], $this->field['field']);
+      $query->init($this->field['table'], $this->field['field'], $options);
 
       // Add WHERE condition on item ids.
       $query->add_where(0, "{$this->field['table']}.{$this->field['field']}", $ids, 'IN');
@@ -183,16 +184,13 @@ class SearchlightFacet {
         $rows[$row->{$this->name}] = $row;
       }
     }
-    // For regular fields attempt to spoof rows with the appropriate field
-    // values for rendering by the field handler.
-    else {
-      $rows = array();
-      foreach ($items as $item) {
-        $row = new stdClass();
-        $row->{$this->handler->field_alias} = $item['id'];
-        $rows[$item['id']] = $row;
-      }
+
+    foreach ($items as $item) {
+      $row = new stdClass();
+      $row->{$this->handler->field_alias} = $item['id'];
+      $rows[$item['id']] = $row;
     }
+
     // Render item titles.
     $this->handler->pre_render($rows);
     foreach ($rows as $id => $row) {
