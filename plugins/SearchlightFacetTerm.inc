@@ -14,7 +14,7 @@ class SearchlightFacetTerm extends SearchlightFacet {
       ->execute();
     foreach ($result as $term) {
       if (isset($items[$term->tid])) {
-        $items[$term->tid]['title'] = check_plain($term->name);
+        $items[$term->tid]['title'] = $term->name;
       }
     }
     return $items;
