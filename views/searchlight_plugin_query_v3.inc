@@ -219,7 +219,7 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
 
     if ($this->search_buildmode === 'search') {
-      if ($this->search_result) {
+      if (isset($this->search_result, $this->search_result['result'])) {
         // Make the query distinct if the option was set.
         if (!empty($this->options['distinct'])) {
           $this->set_distinct();
