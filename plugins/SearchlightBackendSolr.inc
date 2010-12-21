@@ -40,6 +40,12 @@ class SearchlightBackendSolr extends SearchlightBackend {
       '#default_value' => $this->settings['path'],
       '#size' => 60,
     );
+    $form['jar_path'] = array(
+      '#title' => t('Solr jar path'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['jar_path'],
+      '#size' => 60,
+    );
     $form['item_limit'] = array(
       '#title' => t('Items to index per job'),
       '#type' => 'select',
@@ -539,6 +545,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
                     case 'timestamp':
                       $document->{$field['name']} = $this->createSolrDate($raw_item->{$field['name']}, $field['datatype']);
                       break;
+                    case 'int':
+                      $document->{$field['name']} = intval($raw_item->{$field['name']});
+                      break;
                     default:
                       $document->{$field['name']} = $raw_item->{$field['name']};
                       break;
@@ -549,6 +558,9 @@ class SearchlightBackendSolr extends SearchlightBackend {
                     case 'date':
                     case 'timestamp':
                       $document->{$field['name']} = $this->createSolrDate($item->{$field['name']}, $field['datatype']);
+                      break;
+                    case 'int':
+                      $document->{$field['name']} = intval($item->{$field['name']});
                       break;
                     default:
                       $document->{$field['name']} = $item->{$field['name']};
