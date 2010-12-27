@@ -40,7 +40,7 @@ function searchlight_admin_environment_view_displays() {
   $usable = array();
   foreach ($views as $view) {
     foreach ($view->display as $display) {
-      if ($display->display_plugin === 'page') {
+      if ($display->display_plugin === 'page' || $display->display_plugin === 'panel_pane') {
         $view->set_display($display->id);
         $filters = $view->display_handler->get_option('filters');
         if (!empty($filters)) {
