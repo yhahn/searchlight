@@ -818,7 +818,17 @@ function searchlight_datasource_delete($datasource) {
 function searchlight_environment_pack($value) {
   $keyvals = array();
   foreach ($value as $k => $v) {
-    $keyvals[] = "{$k}-{$v}";
+    if (is_array($v)) {
+      $mv_string = '';
+      foreach ($v as $mvkey => $mv) {
+        $mv_string .= "{$mv}|";
+      }
+      $mv_string = substr($mv_string,0,-1);
+      $keyvals[] = "{$k}-{$mv_string}";
+    }
+    else {
+      $keyvals[] = "{$k}-{$v}";
+    }
   }
   return urlencode(implode(',', $keyvals));
 }
@@ -833,7 +843,13 @@ function searchlight_environment_unpack($value) {
   foreach ($split as $chunk) {
     $keyval = explode('-', $chunk, 2);
     if (count($keyval) === 2) {
-      $parsed[$keyval[0]] = $keyval[1];
+      $multivalues = explode('|', $keyval[1]);
+      if (count($multivalues) > 1) {
+        $parsed[$keyval[0]] = $multivalues;
+      }
+      else {
+        $parsed[$keyval[0]] = $keyval[1];
+      }
     }
   }
   return $parsed;
