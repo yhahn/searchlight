@@ -61,7 +61,6 @@ class searchlight_plugin_query extends views_plugin_query_default {
         return;
       }
     }
-
   }
 
   function add_orderby($table, $field, $order, $alias = '', $params = array()) {

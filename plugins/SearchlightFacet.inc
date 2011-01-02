@@ -36,7 +36,16 @@ class SearchlightFacet {
    */
   function query(&$query) {
     // Filter the query if there is an active facet value.
+    // Remove any existing filters for this same value in order to cleanly
+    // "replace" the filter condition. Note that this requires the Searchlight
+    // facets filter handler to be placed *after* any other Views filters that
+    // should be replaced when a facet is active.
     if (isset($this->value)) {
+      foreach ($query->search_filter as $key => $filter) {
+        if ($filter['field'] === $this->name) {
+          unset($query->search_filter[$key]);
+        }
+      }
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '=',
@@ -260,7 +269,7 @@ class SearchlightFacet {
    * uasort callback, sort by count.
    */
   function sortCount($a, $b) {
-    return $a['count'] > $b['count'];
+    return $a['count'] < $b['count'];
   }
 
   /**

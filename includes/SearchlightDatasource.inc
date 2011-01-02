@@ -138,7 +138,11 @@ class SearchlightDatasource {
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
-        if ($column_type === 'int' && strpos($class, 'date') !== FALSE) {
+        // Conditions under which we should consider this field a "timestamp".
+        if (
+          ($column_type === 'int' && strpos($class, 'date') !== FALSE) ||
+          (isset($handler->definition['field_info']['type']) && $handler->definition['field_info']['type'] === 'datestamp')
+        ) {
           return 'timestamp';
         }
         return isset($map[$column_type]) ? $map[$column_type] : FALSE;

@@ -227,7 +227,7 @@ class SearchlightEnvironment {
           $form['facets'][$name]['enabled'] = array(
             '#title' => t('Enabled'),
             '#type' => 'checkbox',
-            '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : TRUE,
+            '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : FALSE,
           );
           $form['facets'][$name]['ui_name'] = array(
             '#title' => t('Facet'),
@@ -272,6 +272,9 @@ class SearchlightEnvironment {
           if (isset($options['settings'])) {
             unset($this->facets[$name]['settings']);
             $this->facets[$name] = array_merge($this->facets[$name], $options['settings']);
+          }
+          if (empty($options['enabled'])) {
+            unset($this->facets[$name]);
           }
         }
 
