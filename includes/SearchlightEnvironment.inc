@@ -105,6 +105,7 @@ class SearchlightEnvironment {
           }
           // Generate a label/items array suitable for theme('searchlight_facet')
           $rendered[$name] = array(
+			'name' => $name,
             'label' => $plugin->label($delta),
             'items' => $items,
             'delta' => $delta,
@@ -141,7 +142,10 @@ class SearchlightEnvironment {
       $data['container']['facets'] = array();
       foreach ($this->render() as $rendered) {
         $data['container']['facets'][] = $rendered;
-        if (!is_array($rendered['items'][0])) $output .= theme('searchlight_facet', array('facet' => $rendered));
+        // If we don't get back arrays for items, we directly them them
+        if (!is_array($rendered['items'][0])) {
+          $output .= theme('searchlight_facet', array('facet' => $rendered));
+        }
       }
       if (!empty($output)) {
         $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";

@@ -409,16 +409,19 @@ class SearchlightBackendSolr extends SearchlightBackend {
    * Create Solr date format
    */
   function createSolrDate($value, $type = 'date') {
-    switch($type) {
-      case 'timestamp':
-        $date = gmdate('Y-m-d\\TH:i:s\\Z', $value);
+    if (!empty($value)) {
+      switch($type) {
+        case 'timestamp' && preg_match('~^[1-9][0-9]*$~', $value):
+          $date = gmdate('Y-m-d\\TH:i:s\\Z', $value);
+          break;
+        default:
+          $date_time = new DateTime($value, new DateTimeZone('UTC'));
+          $date = $date_time->format('Y-m-d\\TH:i:s\\Z');
         break;
-      default:
-        $date_time = new DateTime($value, new DateTimeZone('UTC'));
-        $date = $date_time->format('Y-m-d\\TH:i:s\\Z');
-      break;
+      }
+      return $date;
     }
-    return $date;
+    return $value;
   }
 
   /**
@@ -541,7 +544,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
                 break;
               default:
                 $raw_item = $raw_items['datasource'][$id];
-                if (isset($raw_item->{$field['name']})) {
+                if (!empty($raw_item->{$field['name']})) {
                   switch($field['datatype']) {
                     case 'date':
                     case 'timestamp':
@@ -555,7 +558,7 @@ class SearchlightBackendSolr extends SearchlightBackend {
                       break;
                   }
                 }
-                elseif (isset($item->{$field['name']})) {
+                elseif (!empty($item->{$field['name']})) {
                   switch($field['datatype']) {
                     case 'date':
                     case 'timestamp':
