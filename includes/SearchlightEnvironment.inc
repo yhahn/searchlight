@@ -131,17 +131,24 @@ class SearchlightEnvironment {
    */
   function getBlock($delta) {
     if ($delta === 'facets' && $this->initView()) {
+      // Provide an array with 'unthemed' data for modules implementing
+      // hook_block_view_alter() in order to have more theming flexibility
+      $data = array();
       $output = '';
+      $data['container']['name'] = $this->name;
+      $data['container']['view_name'] = $this->view->name;
+      $data['container']['view_current_display'] = $this->view->current_display;
+      $data['container']['facets'] = array();
       foreach ($this->render() as $rendered) {
-        $output .= theme('searchlight_facet', array('facet' => $rendered));
+        $data['container']['facets'][] = $rendered;
+        if (!is_array($rendered['items'][0])) $output .= theme('searchlight_facet', array('facet' => $rendered));
       }
       if (!empty($output)) {
         $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";
-        return array(
-          'label' => filter_xss_admin($this->options['facets_label']),
-          'content' => $output,
-        );
+        $data['label'] = filter_xss_admin($this->options['facets_label']);
+        $data['content'] = $output;
       }
+      return $data;
     }
     return array();
   }
@@ -312,8 +319,8 @@ class SearchlightEnvironment {
    * Get the URL options for the current set of active facets, adjusted using
    * one of the $op operations.
    *
-   * 'add':    Add a facet value for the given key/value pair.
-   * 'remove': Add a facet value for the given key/value pair.
+   * 'add':    Add a facet value or multiple facet values for the given key/value pair.
+   * 'remove': Add a facet value or multiple facet values for the given key/value pair.
    * 'active': Retain only active facets and drop any other query strings.
    */
   function getURLOptions($op = 'add', $key = NULL, $value = NULL) {
@@ -326,8 +333,17 @@ class SearchlightEnvironment {
         break;
       case 'remove':
         $modifier = $modifier + $this->active_values;
-        if (isset($modifier[$key])) {
-          unset($modifier[$key]);
+        if (is_array($modifier[$key]) && !empty($value)) {
+          foreach ($modifier[$key] as $k => $v) {
+            if ($v === $value) {
+              unset($modifier[$key][$k]);
+            }
+          }
+        }
+        else {
+          if (isset($modifier[$key])) {
+            unset($modifier[$key]);
+          }
         }
         break;
       case 'active':
