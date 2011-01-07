@@ -355,10 +355,10 @@ class SearchlightBackendSolr extends SearchlightBackend {
             );
           }
         }
-        // Reverse-chronological sort the dates.
+        // Chronological sort the dates.
         // @TODO: unhardwire this and do handling of facets sorting in general.
         if (!empty($built[$k])) {
-          krsort($built[$k]);
+          ksort($built[$k]);
           // Hard limit the date facet as Solr returns all elements between start
           // and end times.
           if (!empty($date_facets[$k]['limit']) && count($built[$k]) > $date_facets[$k]['limit']) {
