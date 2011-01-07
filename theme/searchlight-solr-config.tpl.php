@@ -31,6 +31,15 @@
   <requestHandler name="standard" class="solr.StandardRequestHandler" default="true" />
   <requestHandler name="/update" class="solr.XmlUpdateRequestHandler" />
   <requestHandler name="/admin/" class="org.apache.solr.handler.admin.AdminHandlers" />
+
+  <!-- ping/healthcheck -->
+  <requestHandler name="/admin/ping" class="PingRequestHandler">
+    <lst name="defaults">
+      <str name="qt">standard</str>
+      <str name="q">solrpingquery</str>
+      <str name="echoParams">all</str>
+    </lst>
+  </requestHandler>
       
   <!-- config for the admin interface --> 
   <admin>
