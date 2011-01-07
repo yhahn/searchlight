@@ -138,19 +138,15 @@ class SearchlightDatasource {
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
-        // Conditions under which we should consider this field a "timestamp".
-        if (
-          ($column_type === 'int' && strpos($class, 'date') !== FALSE) ||
-          (isset($handler->definition['field_info']['type']) && $handler->definition['field_info']['type'] === 'datestamp')
-        ) {
+        // Allow custom handlers to specity the column type in definition
+        if (isset($handler->definition['data_type'])) {
+          $column_type = $handler->definition['data_type'];
+        }
+        if ($column_type === 'int' && strpos($class, 'date') !== FALSE) {
           return 'timestamp';
         }
         return isset($map[$column_type]) ? $map[$column_type] : FALSE;
       }
-    }
-    // Allow custom handlers to specity the data_type in definition
-    if (isset($handler->definition['data_type'])) {
-      return $handler->definition['data_type'];
     }
     // Handle a list of known function/calculation fields.
     $map = array(
