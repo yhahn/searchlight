@@ -138,7 +138,6 @@ class SearchlightEnvironment {
       $output = '';
       $data['container']['name'] = $this->name;
       $data['container']['view_name'] = $this->view->name;
-      $data['container']['view_current_display'] = $this->view->current_display;
       $data['container']['facets'] = array();
       foreach ($this->render() as $rendered) {
         $data['container']['facets'][] = $rendered;
