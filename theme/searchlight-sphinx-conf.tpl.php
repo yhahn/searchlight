@@ -5,7 +5,7 @@
 
 indexer
 {
-mem_limit = 32M
+mem_limit = <?php print $searchd['memory_limit'] ?>
 }
 
 #############################################################################

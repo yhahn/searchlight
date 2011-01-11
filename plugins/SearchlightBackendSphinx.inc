@@ -13,6 +13,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   function settingsDefault() {
     return array(
       'port' => 9312,
+      'memory_limit' => '32M',
       'delta_ttl' => 0,
       'sql_sock' => '',
       'index' => array(
@@ -40,6 +41,13 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#title' => t('searchd port'),
       '#type' => 'textfield',
       '#default_value' => $this->settings['port'],
+      '#size' => 6,
+    );
+    $form['memory_limit'] = array(
+      '#title' => t('Indexer memory limit'),
+      '#type' => 'textfield',
+      '#default_value' => $this->settings['memory_limit'],
+      '#description' => t('Enforced memory usage limit that the indexer will not go above. Can be specified in bytes, or kilobytes (using K postfix), or megabytes (using M postfix). Maximum possible limit is 2047M. Too low values can hurt indexing speed, but 256M to 1024M should be enough for most if not all datasets'),
       '#size' => 6,
     );
     $form['delta_ttl'] = array(
@@ -788,6 +796,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function sphinxSearchdConf() {
     $searchd = array();
+    $searchd['memory_limit'] = $this->settings['memory_limit'];
     $searchd['log'] = $this->drushGetConfigPath() . '/log/searchd.log';
     $searchd['query_log'] = $this->drushGetConfigPath() . '/log/query.log';
     $searchd['pid_file'] = $this->drushGetConfigPath() . '/log/searchd.pid';
