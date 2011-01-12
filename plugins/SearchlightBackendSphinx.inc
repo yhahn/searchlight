@@ -14,7 +14,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     return array(
       'port' => 9312,
       'memory_limit' => '32M',
-      'delta_ttl' => 0,
+      'index_ttl' => 0,
       'sql_sock' => '',
       'index' => array(
         'morphology' => 'stem_en',
@@ -50,11 +50,11 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       '#description' => t('Enforced memory usage limit that the indexer will not go above. Can be specified in bytes, or kilobytes (using K postfix), or megabytes (using M postfix). Maximum possible limit is 2047M. Too low values can hurt indexing speed, but 256M to 1024M should be enough for most if not all datasets'),
       '#size' => 6,
     );
-    $form['delta_ttl'] = array(
-      '#title' => t('Delta index TTL'),
+    $form['index_ttl'] = array(
+      '#title' => t('Index TTL'),
       '#description' => t('In seconds. Set to "0" to re-index on every run.'),
       '#type' => 'textfield',
-      '#default_value' => $this->settings['delta_ttl'],
+      '#default_value' => $this->settings['index_ttl'],
       '#size' => 6,
     );
     $form['index'] = array(
@@ -225,7 +225,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
     $client = $this->initClient($datasource);
     $client->UpdateAttributes($datasource->id, array('searchlight_deleted'), $delete);
-    $client->UpdateAttributes($datasource->id .'_delta', array('searchlight_deleted'), $delete);
   }
 
   /**
@@ -458,31 +457,28 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Override of drushIndex().
    */
-  function drushIndex() {
-    // Create the sphinx directory if it doesn't exist.
+  function drushIndex($force = TRUE) {
+    // Determine if we should update the index.
     $changed = $this->drushGenerateMergedConfig();
-    $file_path = $this->drushGetConfigPath() . '/indexes';
-    if (file_prepare_directory($file_path, TRUE)) {
-      // Determine if we should update deltas only.
-      $delta = $this->settings['delta_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['delta_ttl']) > REQUEST_TIME;
+    $index = $this->settings['index_ttl'] && (variable_get('searchlight_sphinx_last', 0) + $this->settings['index_ttl']) < REQUEST_TIME;
 
+    // Create the sphinx directory if it doesn't exist.
+    $file_path = $this->drushGetConfigPath() . '/indexes';
+    if (($force || $changed || $index) && file_prepare_directory($file_path, TRUE)) {
       // Build list of this site's indexes.
       $indexes = array();
-      $indexes_delta = array();
       foreach (searchlight_get_datasource() as $datasource) {
         $datasource->init();
         $indexes[$datasource->id] = $datasource->id;
-        $indexes_delta[$datasource->id] = $datasource->id . '_delta';
       }
 
-      drush_op('drush_shell_exec', 'indexer --rotate --config ' . $this->drushGetConfigFile() . ' ' . implode(' ', $delta ? $indexes_delta : $indexes));
+      drush_op('drush_shell_exec', 'indexer --rotate --config ' . $this->drushGetConfigFile() . ' ' . implode(' ', $indexes));
       $output = drush_shell_exec_output();
       foreach ($output as $line) {
         drush_print($line);
       }
 
-      // Take care of entity deletion by updating searchlight_delta to 1.
-      // Note that we must update both the main and delta indices.
+      // Take care of entity deletion by updating searchlight_deleted to 1.
       foreach (searchlight_get_datasource() as $datasource) {
         $delete = array();
         $result = db_select('searchlight_search', 's')
@@ -496,7 +492,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         if (!empty($delete)) {
           $client = $this->initClient($datasource);
           $client->UpdateAttributes($indexes[$datasource->id], array('searchlight_deleted'), $delete);
-          $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
 
           // Once updates are complete, remove the Drupal-side records.
           db_delete('searchlight_search')
@@ -508,12 +503,10 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       cache_clear_all('searchlight', 'cache', TRUE);
-      if (!$delta) {
-        db_update('searchlight_search')
-          ->fields(array('status' => 1))
-          ->condition('status', 0)
-          ->execute();
-      }
+      db_update('searchlight_search')
+        ->fields(array('status' => 1))
+        ->condition('status', 0)
+        ->execute();
       variable_set('searchlight_sphinx_last', REQUEST_TIME);
       drush_log('Indexing complete.', 'success');
       if ($changed === TRUE) {
@@ -521,7 +514,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       }
     }
     else {
-      return drush_log("An error ocurred while indexing.", 'error');
+      if (!$changed && !$index) {
+        return drush_log('Indexing skipped.', 'ok');
+      }
+      else {
+        return drush_log('An error ocurred while indexing.', 'error');
+      }
     }
   }
 
@@ -558,21 +556,15 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     if (file_prepare_directory($conf_path, TRUE)) {
       // Collect configuration arrays for each datasource.
       foreach (searchlight_datasource_load(NULL, TRUE) as $datasource) {
-        $conf = array(FALSE);
-        if (!empty($this->settings['delta_ttl'])) {
-          $conf[] = TRUE;
-        }
-        foreach ($conf as $delta_ttl) {
-          $source = $this->sphinxDatasourceConf($datasource, $delta_ttl);
-          $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
+        $source = $this->sphinxDatasourceConf($datasource);
+        $conf_file = "{$conf_path}/{$source['conf']['id']}.conf";
 
-          // Generate configuration file from datasource.
-          $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
-          $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
-          if ($sphinx_conf !== $existing) {
-            file_put_contents($conf_file, $sphinx_conf);
-            drush_log("{$conf_file} was written successfully.", 'success');
-          }
+        // Generate configuration file from datasource.
+        $sphinx_conf = theme('searchlight_sphinx_index_conf', array('datasource' => $source));
+        $existing = file_exists($conf_file) ? file_get_contents($conf_file) : '';
+        if ($sphinx_conf !== $existing) {
+          file_put_contents($conf_file, $sphinx_conf);
+          drush_log("{$conf_file} was written successfully.", 'success');
         }
       }
       return drush_log("Sphinx configuration files were written", 'success');
@@ -606,7 +598,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    */
   function drushCron() {
     $this->drushConf();
-    $this->drushIndex();
+    $this->drushIndex(FALSE);
   }
 
 
@@ -660,9 +652,8 @@ class SearchlightBackendSphinx extends SearchlightBackend {
   /**
    * Generate an array representing the conf and index settings for a datasource.
    */
-  function sphinxDatasourceConf($datasource, $delta = FALSE) {
+  function sphinxDatasourceConf($datasource) {
     $datasource->init();
-    $datasource_id = $delta ? $datasource->id . '_delta' : $datasource->id;
 
     $conf = array(
       'conf' => array(),
@@ -670,7 +661,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
     );
 
     // Configuration options.
-    $conf['conf']['id'] = $datasource_id;
+    $conf['conf']['id'] = $datasource->id;
 
     // Use mysql stored database credentials.
     if ($creds = drush_get_context('DRUSH_DB_CREDENTIALS')) {
@@ -723,9 +714,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       $sql_query->add_where(0, "{$view->base_table}.{$view->base_field}" .  ' BETWEEN $start AND $end ', array(), 'formula');
       $sql_query->add_field(NULL, '0', 'searchlight_deleted');
-      if ($delta) {
-        $this->queryFresh($sql_query);
-      }
       $conf['conf']['sql_query'] = $this->sphinxWriteSQL($sql_query);
       $conf['conf']['sql_query'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query']));
 
@@ -733,9 +721,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       $sql_query_info = clone $view->query;
       $sql_query_info->add_where(0, "{$view->base_table}.{$view->base_field}" . ' = $id', array(), 'formula');
       $sql_query_info->add_field(NULL, '0', 'searchlight_deleted');
-      if ($delta) {
-        $this->queryFresh($sql_query_info);
-      }
       $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query_info);
       $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
@@ -776,9 +761,6 @@ class SearchlightBackendSphinx extends SearchlightBackend {
               continue;
             }
             unset($query->fields[$alias]);
-          }
-          if ($delta) {
-            $this->queryFresh($query);
           }
           $mva_query = $this->sphinxWriteSQL($query);
           $mva_query = str_replace("\n", " \\\n", trim($mva_query));
@@ -996,12 +978,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
    * Return the index to query.
    */
   function sphinxGetIndex($datasource) {
-    $index = $datasource->id;
-    // Determine if we need to query a delta and main index.
-    if (!empty($this->settings['delta_ttl'])) {
-      $index .= ";{$index}_delta";
-    }
-    return $index;
+    return $datasource->id;
   }
 
 }
