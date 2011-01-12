@@ -493,7 +493,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
         foreach ($result as $row) {
           $delete[$row->id] = array(1);
         }
-        if (!empty($update)) {
+        if (!empty($delete)) {
           $client = $this->initClient($datasource);
           $client->UpdateAttributes($indexes[$datasource->id], array('searchlight_deleted'), $delete);
           $client->UpdateAttributes($indexes_delta[$datasource->id], array('searchlight_deleted'), $delete);
@@ -508,10 +508,12 @@ class SearchlightBackendSphinx extends SearchlightBackend {
 
       // Clear caches so that sphinx id -> facet name mapping is updated.
       cache_clear_all('searchlight', 'cache', TRUE);
-      db_update('searchlight_search')
-        ->fields(array('status' => 1))
-        ->condition('status', 0)
-        ->execute();
+      if (!$delta) {
+        db_update('searchlight_search')
+          ->fields(array('status' => 1))
+          ->condition('status', 0)
+          ->execute();
+      }
       variable_set('searchlight_sphinx_last', REQUEST_TIME);
       drush_log('Indexing complete.', 'success');
       if ($changed === TRUE) {
