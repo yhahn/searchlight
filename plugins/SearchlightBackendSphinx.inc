@@ -734,7 +734,7 @@ class SearchlightBackendSphinx extends SearchlightBackend {
       if ($delta) {
         $this->queryFresh($sql_query_info);
       }
-      $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query);
+      $conf['conf']['sql_query_info'] = $this->sphinxWriteSQL($sql_query_info);
       $conf['conf']['sql_query_info'] = str_replace("\n", " \\\n", trim($conf['conf']['sql_query_info']));
 
       // Assume serial ids on the base table and step by 1000.
