@@ -36,7 +36,16 @@ class SearchlightFacet {
    */
   function query(&$query) {
     // Filter the query if there is an active facet value.
+    // Remove any existing filters for this same value in order to cleanly
+    // "replace" the filter condition. Note that this requires the Searchlight
+    // facets filter handler to be placed *after* any other Views filters that
+    // should be replaced when a facet is active.
     if (isset($this->value)) {
+      foreach ($query->search_filter as $key => $filter) {
+        if ($filter['field'] === $this->name) {
+          unset($query->search_filter[$key]);
+        }
+      }
       $query->search_filter[] = array(
         'field' => $this->name,
         'operator' => '=',
@@ -93,7 +102,9 @@ class SearchlightFacet {
         break;
     }
     if (!empty($items) && $this->viewInit($query)) {
-      return $this->viewRenderItems($items);
+      $items = $this->viewRenderItems($items);
+      $this->sort($items);
+      return $items;
     }
     return array();
   }
@@ -114,12 +125,12 @@ class SearchlightFacet {
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('remove', $this->name, $item['id']);
         $item['link'] = l(t('remove'), $path, $options);
-        return theme('searchlight_facet_active', $this->field, $item);
+        return theme('searchlight_facet_active', array('field' => $this->field, 'item' => $item));
       case 'facets':
         $path = $this->environment->getURLPath();
         $options = $this->environment->getURLOptions('add', $this->name, $item['id']);
         $item['link'] = l($item['title'], $path, $options);
-        return theme('searchlight_facet_link', $this->field, $item);
+        return theme('searchlight_facet_link', array('field' => $this->field, 'item' => $item));
     }
   }
 
@@ -140,8 +151,8 @@ class SearchlightFacet {
     else {
       $this->view = $query->datasource->view->copy();
       $this->view->build();
-      foreach ($this->view->field as $field_handler) {
-        if ($field_handler->field_alias === $this->name) {
+      foreach ($this->view->field as $name => $field_handler) {
+        if (isset($field_handler->aliases[$this->name]) || $name == $this->name) {
           $this->handler = $field_handler;
         }
       }
@@ -155,25 +166,18 @@ class SearchlightFacet {
    */
   function viewRenderItems($items) {
     $rows = array();
+    $options = array();
 
     // Multivalue fields must build a new Views query in order to
     // retrieve any secondary label field values.
     if ($this->field['usage'] === 'multivalue') {
       $ids = array_keys($items);
 
-      // Views 2.x
-      if (views_api_version() == '2.0') {
-        views_include('query');
-        $query = new views_query($this->field['table'], $this->field['field']);
-      }
-      // Views 3.x
-      else {
-        $query = views_get_plugin('query', 'views_query');
-        $query->init($this->field['table'], $this->field['field']);
-      }
+      $query = views_get_plugin('query', 'views_query');
+      $query->init($this->field['table'], $this->field['field'], $options);
 
       // Add WHERE condition on item ids.
-      $query->add_where(0, "{$this->field['table']}.{$this->field['field']} IN (". db_placeholders($ids, 'int') .")", $ids);
+      $query->add_where(0, "{$this->field['table']}.{$this->field['field']}", $ids, 'IN');
 
       // Add base field.
       $field_alias = $query->add_field($this->field['table'], $this->field['field']);
@@ -189,15 +193,11 @@ class SearchlightFacet {
         $rows[$row->{$this->name}] = $row;
       }
     }
-    // For regular fields attempt to spoof rows with the appropriate field
-    // values for rendering by the field handler.
-    else {
-      $rows = array();
-      foreach ($items as $item) {
-        $row = new stdClass();
-        $row->{$this->name} = $item['id'];
-        $rows[$item['id']] = $row;
-      }
+
+    foreach ($items as $item) {
+      $row = new stdClass();
+      $row->{$this->handler->field_alias} = $item['id'];
+      $rows[$item['id']] = $row;
     }
 
     // Render item titles.
@@ -215,6 +215,7 @@ class SearchlightFacet {
     return array(
       'label' => '',
       'items' => 5,
+      'sort' => 'count'
     );
   }
 
@@ -234,11 +235,47 @@ class SearchlightFacet {
       '#default_value' => $this->options['items'],
       '#options' => drupal_map_assoc(range(1, 20)) + array(0 => t('Show all')),
     );
+    $form['sort'] = array(
+      '#title' => t('Sort by'),
+      '#type' => 'select',
+      '#default_value' => $this->options['sort'],
+      '#options' => array('count' => t('Number of items'), 'name' => t('Alphabetical')),
+    );
   }
 
   /**
    * Provide extended form elements for a facet in the Environment editor.
    */
   function extendedForm(&$form, $form_state) {
+  }
+
+  /**
+   * Sort built facet items.
+   */
+  function sort(&$items) {
+    switch ($this->options['sort']) {
+      case 'count':
+        uasort($items, 'SearchlightFacet::sortCount');
+        break;
+      case 'name':
+        uasort($items, 'SearchlightFacet::sortName');
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * uasort callback, sort by count.
+   */
+  function sortCount($a, $b) {
+    return $a['count'] < $b['count'];
+  }
+
+  /**
+   * uasort callback, sort by name.
+   */
+  function sortName($a, $b) {
+    return $a['title'] > $b['title'];
   }
 }

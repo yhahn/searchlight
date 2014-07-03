@@ -1,5 +1,5 @@
 <div class='searchlight-admin-datasource'>
-  <div class='clear-block'>
+  <div class='clearfix'>
     <div class='searchlight-admin-info datasource-info'>
       <h2 class='searchlight-admin-name'><?php print $name ?></h2>
       <label><?php print t('Base table') ?></label>
@@ -18,5 +18,5 @@
   <?php print drupal_render($form['fields']) ?>
   <?php print drupal_render($form['multivalues']) ?>
   <?php print drupal_render($form['options']) ?>
-  <?php print drupal_render($form); ?>
+  <?php print drupal_render_children($form) ?>
 </div>

@@ -17,8 +17,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
   /**
    * Override of init().
    */
-  function init($base_table = 'node', $base_field = 'nid', $backend) {
-    parent::init($base_table, $base_field);
+  function init($base_table = 'node', $base_field = 'nid', $options = array(), $backend) {
+    parent::init($base_table, $base_field, $options);
 
     // Init the fields array on behalf of the parent.
     $this->fields = isset($this->fields) ? $this->fields : array();
@@ -30,6 +30,8 @@ class searchlight_plugin_query extends views_plugin_query_default {
     $this->backend = $backend;
     $this->client = $backend->initClient($this->datasource);
 
+    $this->offset = NULL;
+    $this->limit = NULL;
     $this->search_buildmode = NULL;
     $this->search_facets = array();
     $this->search_filter = array();
@@ -41,66 +43,22 @@ class searchlight_plugin_query extends views_plugin_query_default {
     // This flag lets others know we are a searchlight-based view.
     $this->searchlight = TRUE;
   }
-
   /**
    * Override of add_where().
    */
-  function add_where($group, $clause) {
-    $where_args = func_get_args();
-    $where_args = $this->get_args($where_args);
-
+  function add_where($group, $field, $value = NULL, $operator = NULL) {
     // Call the parent method to add the filter SQL side.
-    parent::add_where($group, $clause, $where_args);
+    parent::add_where($group, $field, $value, $operator);
 
-    $split = preg_split('/[ ]([<>=!]*)|(\sIN\s)|(\sIS\s)|(\sNOT IN\s)|(\sIS NOT\s)/i', trim($clause), NULL, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-    if (count($split) >= 2) {
-      $field = explode('.', trim(array_shift($split)));
-      $operator = strtoupper(trim(array_shift($split)));
-      $possible_args = count($split) ? array_shift($split) : '';
-      if (count($field) === 2) {
-        $table = $field[0];
-        $field = $field[1];
-        foreach ($this->datasource->fields as $name => $info) {
-          if ($name === "{$table}_{$field}") {
-            // Get the arguments for this where clause.
-            $args = array();
-
-            // If arguments have been specified using query placeholders,
-            // simply grab as many as there have been placeholders specified.
-            $argnum = substr_count($clause, '%');
-            if ($argnum && count($where_args) >= $argnum) {
-              $args = array_slice($where_args, 0, $argnum);
-            }
-            // We may be working with a NULL check...
-            elseif ($operator == 'IS' && $possible_args == 'NULL') {
-              $operator = 'IN';
-              $args[] = 0; // This may only work with numeric fields...
-            }
-            elseif ($operator == 'IS NOT' && $possible_args == 'NULL') {
-              $operator = 'IN';
-              $args[] = 1; // This may only work with numeric fields...
-            }
-            // Otherwise, groan, breath deeply & try to retrieve arguments from
-            // the query.
-            else {
-              $matches = array();
-              preg_match_all('/[A-Z*_]*|\w+|\d+/', $possible_args, $matches);
-              if (!empty($matches)) {
-                foreach ($matches as $match) {
-                  foreach ($match as $chunk) {
-                    if ($chunk !== '') {
-                      $args[] = $chunk;
-                    }
-                  }
-                }
-              }
-            }
-
-            // Done.
-            $this->search_filter[] = array('field' => $name, 'operator' => $operator, 'args' => $args);
-            return;
-          }
-        }
+    foreach ($this->datasource->fields as $name => $info) {
+      $match = str_replace(".", "_", $field);
+      if ($name === $match || "{$info['table']}_{$info['field']}" === $match) {
+        $this->search_filter[] = array(
+          'field' => $name,
+          'operator' => !empty($operator) ? strtoupper($operator) : 'IN',
+          'args' => $value
+        );
+        return;
       }
     }
   }
@@ -110,7 +68,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
     parent::add_orderby($table, $field, $order, $alias, $params);
 
     if ($field === 'searchlight_weight') {
-      $this->search_sort[] = array('field' => 'searchlight_weight', 'order' => $order); // "@weight {$order}";
+      $this->search_sort[] = array(
+        'field' => 'searchlight_weight',
+        'direction' => $order,
+      );
     }
     else {
       // Field is aliased. Use query fields to retrieve actual table, field.
@@ -122,7 +83,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
       if (isset($table, $field)) {
         foreach ($this->datasource->fields as $name => $info) {
           if ($name === "{$table}_{$field}" && $info['usage'] !== 'content') {
-            $this->search_sort[] = array('field' => $name, 'order' => $order); // "{$name} {$order}";
+            $this->search_sort[] = array(
+              'field' => $name,
+              'direction' => $order,
+            );;
             break;
           }
         }
@@ -130,13 +94,19 @@ class searchlight_plugin_query extends views_plugin_query_default {
       // If no table was specified or found, this is probably a function.
       // Use the alias directly if it is available.
       else if (empty($table) && isset($this->datasource->fields[$alias]) && $this->datasource->fields[$alias]['usage'] !== 'content') {
-        $this->search_sort[] = array('field' => $alias, 'order' => $order);
+        $this->search_sort[] = array(
+          'field' => $alias,
+          'direction' => $order,
+        );
       }
     }
   }
 
   function add_search_facet($name, $limit = 5, $options = array()) {
-    $this->search_facets[] = array('field' => $name, 'limit' => $limit) + $options;
+    $this->search_facets[] = array(
+      'field' => $name,
+      'limit' => $limit,
+    ) + $options;
   }
 
   /**
@@ -216,8 +186,13 @@ class searchlight_plugin_query extends views_plugin_query_default {
     if (!empty($replacements)) {
       foreach ($this->search_filter as $j => $filter) {
         $this->search_filter[$j]['field'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['field']);
-        foreach ($this->search_filter[$j]['args'] as $k => $arg) {
-          $this->search_filter[$j]['args'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
+        if (is_array($this->search_filter[$j]['args'])) {
+          foreach ($this->search_filter[$j]['args'] as $k => $arg) {
+            $this->search_filter[$j]['args'][$k] = str_replace(array_keys($replacements), $replacements, $arg);
+          }
+        }
+        else {
+          $this->search_filter[$j]['args'] = str_replace(array_keys($replacements), $replacements, $this->search_filter[$j]['args']);
         }
       }
     }
@@ -236,15 +211,27 @@ class searchlight_plugin_query extends views_plugin_query_default {
 
     // Build facets.
     $this->search_result_facets = $this->backend->facetBuild($this->client, $this->datasource, $this->search_query, $this->search_facets);
+  
+    // Count the number of groups from the facet result to determine the total when using result grouping
+    if (!empty($this->datasource->options['groupfield'])) {
+      $this->search_result['total'] = count($this->search_result['result']);
+    }
 
     if ($this->search_buildmode === 'search') {
-      if ($this->search_result) {
-        $placeholders = db_placeholders($this->search_result['result']);
-        parent::add_where(0, "{$this->base_table}.{$this->base_field} IN ({$placeholders})", $this->search_result['result']);
+      if (isset($this->search_result, $this->search_result['result'])) {
+        // Make the query distinct if the option was set.
+        if (!empty($this->options['distinct'])) {
+          $this->set_distinct();
+        }
+
+        parent::add_where(0, "{$this->base_table}.{$this->base_field}", $this->search_result['result'], 'IN');
 
         $view->build_info['query'] = $this->query();
-        $view->build_info['count_query'] = "SELECT FALSE";
-        $view->build_info['query_args'] = $this->get_where_args();
+        $view->build_info['count_query'] = $this->query();
+      }
+      else {
+        // we did not return any search results. Return no result.
+        $this->search_buildmode = 'empty';
       }
     }
     elseif ($this->search_buildmode === 'default') {
@@ -253,7 +240,10 @@ class searchlight_plugin_query extends views_plugin_query_default {
   }
 
   function execute(&$view) {
-    if ($this->search_buildmode === 'default') {
+    if ($this->search_buildmode === 'empty') {
+      //
+    }
+    elseif ($this->search_buildmode === 'default') {
       parent::execute($view);
     }
     elseif ($this->search_buildmode === 'search') {
@@ -299,3 +289,4 @@ class searchlight_plugin_query extends views_plugin_query_default {
     }
   }
 }
+

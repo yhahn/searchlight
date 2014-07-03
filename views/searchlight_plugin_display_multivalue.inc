@@ -34,20 +34,26 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
       }
     }
 
+    $class = get_class($handler);
+
+    // Allow custom handlers to specity the data_type in definition
+    if (isset($handler->definition['data_type'])) {
+      return $handler->definition['data_type'];
+    }
+
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
-      $class = get_class($handler);
 
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
       // column type is not enough information to determine the usage of the
       // field.
       $map = array(
-        'serial'  => 'int',
-        'int'     => 'int',
+        'serial' => 'int',
+        'int' => 'int',
         'varchar' => 'text',
-        'text'    => 'text',
-        'float'   => 'float',
+        'text' => 'text',
+        'float' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
@@ -69,7 +75,6 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
     $clone->set_display($this->view->current_display);
     $clone->build();
     $handlers = $clone->display_handler->get_handlers('field');
-
     $fields = array();
     foreach ($handlers as $handler) {
       if (!empty($handler->relationship) || $handler->real_field !== $handler->view->base_field) {
@@ -91,7 +96,8 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
             $table = isset($info['table']) ? $info['table'] : $table;
             $field = $info['field'];
           }
-          if (!empty($handler->relationship) || $field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+
+          if ((!empty($handler->relationship) || ($field !== $handler->view->base_field) || ($table !== $handler->view->base_table)) && !empty($handler->aliases[$field])) {
             $fields[$handler->aliases[$field]] = array(
               'label' => $handler->ui_name() . " ({$field})",
               'datatype' => $this->get_datatype($handler, $table, $field),
@@ -118,17 +124,29 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
     );
     $options = $this->get_option($this->my_name());
     $fields = $this->get_fields();
+
     foreach ($fields as $name => $info) {
-      if ($options['field'] === $name) {
-        $info['usage'] = 'multivalue';
-        $multivalue = array_merge($multivalue, $info);
-      }
-      else if ($options['label_field'] === $name) {
+
+//  Why should fields without label_field not
+//  be added to the multivalue array ????????
+//
+//      if ($options['field'] === $name) {
+//        $info['usage'] = 'multivalue';
+//        $multivalue = array_merge($multivalue, $info);
+//      }
+//      elseif ($options['label_field'] === $name) {
+//        $info['usage'] = 'multivalue';
+//        $multivalue['label_field'] = $info;
+//      }
+      if ($options['label_field'] === $name) {
         $info['usage'] = 'multivalue';
         $multivalue['label_field'] = $info;
       }
+      else {
+          $info['usage'] = 'multivalue';
+          $multivalue = array_merge($multivalue, $info);
+      }
     }
-
     // Override explicitly specified properties if available.
     if (!empty($options['override'])) {
       foreach ($options['override'] as $key => $value) {
@@ -137,13 +155,14 @@ class searchlight_plugin_display_multivalue extends views_plugin_display {
         }
       }
     }
+
     return $multivalue;
   }
 
   /**
    * Override of option_definition().
    */
-  function option_definition () {
+  function option_definition() {
     $options = parent::option_definition();
     $options[$this->my_name()]['field'] = array('default' => NULL);
     $options[$this->my_name()]['label_field'] = array('default' => NULL);

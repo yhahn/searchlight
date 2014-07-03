@@ -1,10 +1,10 @@
 <?php
 
-include_once('includes/SearchlightDatasource.inc');
-include_once('includes/SearchlightEnvironment.inc');
+include_once 'includes/SearchlightDatasource.inc';
+include_once 'includes/SearchlightEnvironment.inc';
 
 /**
- * Implementation of hook_init().
+ * Implements hook_init().
  * Forcibly disable core search indexing if present.
  */
 function searchlight_init() {
@@ -15,11 +15,11 @@ function searchlight_init() {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function searchlight_menu() {
   $items = array();
-  $items['admin/settings/search/datasource'] = array(
+  $items['admin/config/search/settings/datasource'] = array(
     'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource'),
@@ -29,17 +29,17 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource'] = array(
+  $items['admin/config/search/settings/datasource/%searchlight_datasource'] = array(
     'title' => 'Datasource',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource_edit', 5),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
-    'type' => MENU_CALLBACK,
+    'type' => MENU_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/edit'] = array(
+  $items['admin/config/search/settings/datasource/%searchlight_datasource/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_datasource_edit', 5),
@@ -49,7 +49,7 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/delete'] = array(
+  $items['admin/config/search/settings/datasource/%searchlight_datasource/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
@@ -58,7 +58,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/datasource/list/%searchlight_datasource/revert'] = array(
+  $items['admin/config/search/settings/datasource/%searchlight_datasource/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_datasource', 5, 'revert'),
@@ -67,16 +67,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/datasource/ahah/%/%'] = array(
-    'page callback' => 'searchlight_admin_datasource_ahah',
-    'page arguments' => array(5, 6),
-    'access callback' => 'user_access',
-    'access arguments' => array('administer site configuration'),
-    'file' => 'searchlight.admin.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['admin/settings/search/environment'] = array(
+  $items['admin/config/search/settings/environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment'),
@@ -86,17 +77,17 @@ function searchlight_menu() {
     'type' => MENU_LOCAL_TASK,
     'weight' => -5,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment'] = array(
+  $items['admin/config/search/settings/environment/%searchlight_environment'] = array(
     'title' => 'Environment',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment_edit', 5),
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
     'file' => 'searchlight.admin.inc',
-    'type' => MENU_CALLBACK,
+    'type' => MENU_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/edit'] = array(
+  $items['admin/config/search/settings/environment/%searchlight_environment/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_environment_edit', 5),
@@ -106,7 +97,7 @@ function searchlight_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/delete'] = array(
+  $items['admin/config/search/settings/environment/%searchlight_environment/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
@@ -115,7 +106,7 @@ function searchlight_menu() {
     'file' => 'searchlight.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/search/environment/list/%searchlight_environment/revert'] = array(
+  $items['admin/config/search/settings/environment/%searchlight_environment/revert'] = array(
     'title' => 'Revert',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_confirm', 'searchlight_environment', 5, 'revert'),
@@ -125,7 +116,7 @@ function searchlight_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
-  $items['admin/settings/search/backend'] = array(
+  $items['admin/config/search/settings/backend'] = array(
     'title' => 'Backend',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('searchlight_admin_backend'),
@@ -138,27 +129,34 @@ function searchlight_menu() {
 }
 
 /**
- * Implementation of hook_menu_alter().
+ * Implements hook_menu_alter().
  */
 function searchlight_menu_alter(&$items) {
-  $items['admin/settings/search'] = $items['admin/settings/search/datasource'];
-  $items['admin/settings/search']['title'] = 'Search';
-  $items['admin/settings/search']['type'] = MENU_NORMAL_ITEM;
-  unset($items['admin/settings/search']['weight']);
+  $items['admin/config/search/settings'] = $items['admin/config/search/settings/datasource'];
+  $items['admin/config/search/settings']['title'] = 'Search';
+  $items['admin/config/search/settings']['description'] = 'Configure relevance settings for search and other indexing options.';
+  $items['admin/config/search/settings']['type'] = MENU_NORMAL_ITEM;
+  unset($items['admin/config/search/settings']['weight']);
 }
 
 /**
- * Implementation of hook_block().
+ * Implements hook_block_info().
  */
-function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
-  if ($op === 'list') {
+function searchlight_block_info() {
+  if (TRUE) {
     $list = array();
     foreach (searchlight_environment_load() as $environment) {
-      $list['facets_'. $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
+      $list['facets_' . $environment->name] = array('info' => t('@name: Search facets', array('@name' => $environment->name)));
     }
     return $list;
   }
-  else if ($op === 'view' && strpos($delta, '_') !== FALSE) {
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function searchlight_block_view($delta) {
+  if (TRUE && strpos($delta, '_') !== FALSE) {
     list($delta, $name) = explode('_', $delta, 2);
     if (in_array($delta, array('facets'), TRUE) && $environment = searchlight_environment_load($name)) {
       return $environment->getBlock($delta);
@@ -167,50 +165,92 @@ function searchlight_block($op = 'list', $delta = 0, $edit = array()) {
 }
 
 /**
- * Implementation of hook_nodeapi().
+ * Implements hook_node_insert().
  */
-function searchlight_nodeapi($node, $op) {
-  switch ($op) {
-    case 'insert':
-      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0);
-      break;
-    case 'update':
-      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid);
-      break;
-    case 'delete':
-      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid);
-      break;
-  }
+function searchlight_node_insert($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('node', %d, %d)", $node->nid, 0) */
+  $id = db_insert('searchlight_search')
+    ->fields(array(
+      'type' => 'node',
+      'id' => $node->nid,
+      'status' => 0,
+    ))
+    ->execute();
 }
 
 /**
- * Implementation of hook_comment().
+ * Implements hook_node_update().
  */
-function searchlight_comment(&$a1, $op) {
-  $update_node = FALSE;
-  switch ($op) {
-    case 'insert':
-      db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0);
-      $update_node = TRUE;
-      break;
-    case 'update':
-      db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']);
-      $update_node = TRUE;
-      break;
-    case 'delete':
-      db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']);
-      $update_node = TRUE;
-      break;
-  }
-  if ($update_node) {
-    // Mark the parent node as needing an update. Changes in node comments
-    // can affect the node as well (e.g. node_comment_statistics).
-    db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $a1['nid']);
-  }
+function searchlight_node_update($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type='node' and id=%d", $node->nid) */
+  db_update('searchlight_search')
+    ->fields(array( 'status' => 0,))
+    ->condition('type', 'node')
+    ->condition('id', $node->nid)
+    ->execute();
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_node_delete().
+ */
+function searchlight_node_delete($node) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type='node' and id=%d", $node->nid) */
+  db_update('searchlight_search')
+    ->fields(array( 'status' => -1,))
+    ->condition('type', 'node')
+    ->condition('id', $node->nid)
+    ->execute();
+}
+
+/**
+ * Implements hook_comment_insert().
+ */
+function searchlight_comment_insert($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("INSERT INTO {searchlight_search} (type, id, status) VALUES ('comments', %d, %d)", $a1['cid'], 0) */
+  $id = db_insert('searchlight_search')
+    ->fields(array(
+      'type' => 'comments',
+      'id' => $comment->cid,
+      'status' => 0,
+    ))
+    ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_comment_update().
+ */
+function searchlight_comment_update($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = 0 WHERE type = 'comments' AND id = %d", $a1['cid']) */
+  db_update('searchlight_search')
+    ->fields(array('status' => 0,))
+    ->condition('type', 'comments')
+    ->condition('id', $comment->cid)
+    ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_comment_delete().
+ */
+function searchlight_comment_delete($comment) {
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("UPDATE {searchlight_search} SET status = -1 WHERE type = 'comments' and id = %d", $a1['cid']) */
+  db_update('searchlight_search')
+    ->fields(array('status' => -1, ))
+    ->condition('type', 'comments')
+    ->condition('id', $comment->cid)
+    ->execute();
+  $update_node = TRUE;
+}
+
+/**
+ * Implements hook_theme().
  */
 function searchlight_theme() {
   return array(
@@ -220,78 +260,87 @@ function searchlight_theme() {
     ),
     'searchlight_sphinx_conf' => array(
       'template' => 'searchlight-sphinx-conf',
-      'arguments' => array('searchd' => array()),
+      'variables' => array('searchd' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_sphinx_index_conf' => array(
       'template' => 'searchlight-sphinx-index-conf',
-      'arguments' => array('datasource' => array()),
+      'variables' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_solr_schema' => array(
       'template' => 'searchlight-solr-schema',
-      'arguments' => array('datasource' => array()),
+      'variables' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_solr_config' => array(
       'template' => 'searchlight-solr-config',
-      //'arguments' => array('datasource' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_solr_cores' => array(
       'template' => 'searchlight-solr-cores',
-      'arguments' => array('cores' => array()),
+      'variables' => array('cores' => array()),
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_plugin_display_datasource' => array(
-      'arguments' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_facet' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('facet' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_facet_link' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('field' => NULL, 'item' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_facet_active' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'variables' => array('field' => NULL, 'item' => array()),
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_list' => array(
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'render element' => 'form',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource' => array(
       'template' => 'searchlight-admin-datasource',
-      'arguments' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_datasource_fields' => array(
-      'arguments' => array('form' => array()),
+      'render element' => 'form',
+      'path' => drupal_get_path('module', 'searchlight') . '/theme',
+      'file' => 'searchlight.theme.inc',
+    ),
+    'searchlight_admin_datasource_relations' => array(
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
     'searchlight_admin_environment' => array(
       'template' => 'searchlight-admin-environment',
-      'arguments' => array('form' => array()),
+      'render element' => 'form',
       'path' => drupal_get_path('module', 'searchlight') . '/theme',
       'file' => 'searchlight.theme.inc',
     ),
   );
 }
 
+
+
 /**
  * Preprocessor for theme('page').
- */
 function searchlight_preprocess_page(&$vars) {
   if ($global_search = variable_get('searchlight_global_search', FALSE)) {
     list($path, $identifier) = explode(':', $global_search);
@@ -303,9 +352,12 @@ function searchlight_preprocess_page(&$vars) {
       'no_redirect' => TRUE,
       'input' => array(),
     );
-    $vars['search_box'] = drupal_build_form('searchlight_search_form', $form_state);
+    //   $vars['search_box'] = drupal_build_form('searchlight_search_form', $form_state);
   }
+
 }
+
+ */
 
 /**
  * Form builder for Searchlight GET form. Should be used with
@@ -317,7 +369,10 @@ function searchlight_search_form(&$form_state) {
   $form['#id'] = 'searchlight-search-form';
 
   if (!variable_get('clean_url', FALSE)) {
-    $form['q'] = array('#type' => 'hidden', '#value' => $form_state['path']);
+    $form['q'] = array(
+      '#type' => 'hidden',
+      '#value' => $form_state['path'],
+    );
   }
 
   $form[$form_state['identifier']] = array(
@@ -329,23 +384,23 @@ function searchlight_search_form(&$form_state) {
     '#name' => '', // prevent from showing up in $_GET.
     '#type' => 'submit',
     '#value' => t('Search'),
-    '#id' => form_clean_id('edit-submit-searchlight-search-form'),
+    '#id' => drupal_clean_css_identifier('edit-submit-searchlight-search-form'),
   );
   return $form;
 }
 
 /**
- * Implementation of hook_views_api().
+ * Implements hook_views_api().
  */
 function searchlight_views_api() {
   return array(
-    'api' => 2,
+    'api' => '3.0-alpha1',
     'path' => drupal_get_path('module', 'searchlight') . '/views',
   );
 }
 
 /**
- * Implementation of hook_ctools_plugin_api().
+ * Implements hook_ctools_plugin_api().
  */
 function searchlight_ctools_plugin_api($module = NULL, $api = NULL) {
   if ($module === 'searchlight') {
@@ -361,31 +416,35 @@ function searchlight_ctools_plugin_api($module = NULL, $api = NULL) {
 }
 
 /**
- * Implementation of hook_ctools_plugin_plugins().
+ * Implements hook_ctools_plugin_plugins().
  */
-function searchlight_ctools_plugin_plugins() {
+function searchlight_ctools_plugin_type() {
   return array(
-    'cache' => TRUE,
-    'use hooks' => TRUE,
+    'plugins' => array(
+      'cache' => TRUE,
+      'use hooks' => TRUE,
+      'classes' => array('handler'),
+    ),
   );
 }
 
+
 /**
- * Implementation of hook_searchlight_plugins().
+ * Implements hook_searchlight_plugins().
  * This is a CTools plugin API hook.
  */
 function searchlight_searchlight_plugins() {
   return array(
     'SearchlightBackend' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackend.inc',
         'class' => 'SearchlightBackend',
       ),
     ),
     'SearchlightBackendSphinx' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackendSphinx.inc',
         'class' => 'SearchlightBackendSphinx',
         'parent' => 'SearchlightBackend',
@@ -393,7 +452,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightBackendSolr' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightBackendSolr.inc',
         'class' => 'SearchlightBackendSolr',
         'parent' => 'SearchlightBackend',
@@ -401,14 +460,14 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacet' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacet.inc',
         'class' => 'SearchlightFacet',
       ),
     ),
     'SearchlightFacetSearchQuery' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetSearchQuery.inc',
         'class' => 'SearchlightFacetSearchQuery',
         'parent' => 'SearchlightFacet',
@@ -416,7 +475,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetTerm' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetTerm.inc',
         'class' => 'SearchlightFacetTerm',
         'parent' => 'SearchlightFacet',
@@ -424,7 +483,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetDatatypeTimestamp' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetDatatypeTimestamp.inc',
         'class' => 'SearchlightFacetDatatypeTimestamp',
         'parent' => 'SearchlightFacet',
@@ -432,7 +491,7 @@ function searchlight_searchlight_plugins() {
     ),
     'SearchlightFacetLanguage' => array(
       'handler' => array(
-        'path' => drupal_get_path('module', 'searchlight') .'/plugins',
+        'path' => drupal_get_path('module', 'searchlight') . '/plugins',
         'file' => 'SearchlightFacetLanguage.inc',
         'class' => 'SearchlightFacetLanguage',
         'parent' => 'SearchlightFacet',
@@ -442,7 +501,7 @@ function searchlight_searchlight_plugins() {
 }
 
 /**
- * Implementation of hook_searchlight_registry().
+ * Implements hook_searchlight_registry().
  */
 function searchlight_searchlight_registry() {
   return array(
@@ -465,7 +524,7 @@ function searchlight_searchlight_registry() {
         'title' => t('Search query'),
         'plugin' => 'SearchlightFacetSearchQuery',
       ),
-      'term_data_tid' => array(
+      'taxonomy_index_tid' => array(
         'title' => t('Taxonomy term'),
         'plugin' => 'SearchlightFacetTerm',
       ),
@@ -482,45 +541,33 @@ function searchlight_searchlight_registry() {
 }
 
 /**
- * Implementation of hook_form_alter() for 'views_exposed_form'.
+ * Implements hook_form_alter() for 'views_exposed_form'().
  * Ensure that Searchlight facet components are preserved when Views exposed
  * filters are submitted.
  */
 function searchlight_form_views_exposed_form_alter(&$form, &$form_state) {
   $key = variable_get('searchlight_facet_key', 'sl');
   if (!isset($form[$key]) && isset($_GET[$key])) {
-    $form[$key] = array('#type' => 'hidden', '#value' => $_GET[$key]);
+    $form[$key] = array(
+      '#type' => 'hidden',
+      '#value' => $_GET[$key],
+    );
   }
 }
 
 /**
- * Implementation of hook_ajax_data_alter().
- *
- * This hook is called by Views (and some other modules) when returning AJAX
- * data to the client. It provides an event for other modules to hook into to
- * alter the AJAX data returned and register additional *javascript* callbacks
- * to be used once the AJAX response is received.
+ * Implements hook_ajax_render_alter().
  */
-function searchlight_ajax_data_alter(&$object, $type, $metadata) {
-  if ($type === 'views') {
-    $view = $metadata;
-    // If this is a searchlight view with AJAX, add a callback for updating any
-    // associated facet blocks.
-    if (isset($view->query) && !empty($view->query->searchlight)) {
-      $environment = searchlight_environment_active(NULL, $view->name, $view->current_display);
-      if ($environment) {
-        $block = $environment->getBlock('facets');
-        $object->searchlightData = array(".searchlight-environment-{$environment->name}" => $block['content']);
-
-        // Add searchlight replace callback.
-        $object->__callbacks[] = '$().drupalSearchlight.replace';
-      }
-    }
+function searchlight_ajax_render_alter(&$commands) {
+  $environment = searchlight_environment_active();
+  if ($environment) {
+    $block = $environment->getBlock('facets');
+    $commands[] = ajax_command_replace(".searchlight-environment-{$environment->name}", $block['content']);
   }
 }
 
 /**
- * Implementation of hook_searchlight_node_access_realms_alter().
+ * Implements hook_searchlight_node_access_realms_alter().
  * Provide realms for commonly used node_access modules.
  */
 function searchlight_searchlight_node_access_realms_alter(&$realms) {
@@ -622,7 +669,7 @@ function searchlight_get_datasource($base_table = NULL) {
     views_include('admin');
     $active_datasources = array();
     foreach (array_keys(views_fetch_base_tables()) as $base_table) {
-      $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+      $name = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
       if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
         $active_datasources[$name] = $datasource;
       }
@@ -630,7 +677,7 @@ function searchlight_get_datasource($base_table = NULL) {
     return $active_datasources;
   }
   else {
-    $name = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
+    $name = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
     if (!empty($name) && $datasource = searchlight_datasource_load($name)) {
       return $datasource;
     }
@@ -641,11 +688,11 @@ function searchlight_get_datasource($base_table = NULL) {
 /**
  * Retrieve a new inited Searchlight query.
  */
-function searchlight_get_query($base_table, $base_field, $backend = NULL) {
+function searchlight_get_query($base_table, $base_field, $options = array(), $backend = NULL) {
   $backend = !isset($backend) ? searchlight_get_backend() : $backend;
   if ($backend) {
     $query = views_get_plugin('query', 'searchlight');
-    $query->init($base_table, $base_field, $backend);
+    $query->init($base_table, $base_field, $options, $backend);
     return $query;
   }
   return FALSE;
@@ -754,7 +801,11 @@ function searchlight_datasource_save($datasource, $editing = FALSE) {
  */
 function searchlight_datasource_delete($datasource) {
   if (isset($datasource->name) && ($datasource->export_type & EXPORT_IN_DATABASE)) {
-    db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {searchlight_datasource} WHERE name = '%s'", $datasource->name) */
+    db_delete('searchlight_datasource')
+      ->condition('name', $datasource->name)
+      ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }
@@ -767,7 +818,17 @@ function searchlight_datasource_delete($datasource) {
 function searchlight_environment_pack($value) {
   $keyvals = array();
   foreach ($value as $k => $v) {
-    $keyvals[] = "{$k}-{$v}";
+    if (is_array($v)) {
+      $mv_string = '';
+      foreach ($v as $mvkey => $mv) {
+        $mv_string .= "{$mv}|";
+      }
+      $mv_string = substr($mv_string,0,-1);
+      $keyvals[] = "{$k}-{$mv_string}";
+    }
+    else {
+      $keyvals[] = "{$k}-{$v}";
+    }
   }
   return urlencode(implode(',', $keyvals));
 }
@@ -782,7 +843,13 @@ function searchlight_environment_unpack($value) {
   foreach ($split as $chunk) {
     $keyval = explode('-', $chunk, 2);
     if (count($keyval) === 2) {
-      $parsed[$keyval[0]] = $keyval[1];
+      $multivalues = explode('|', $keyval[1]);
+      if (count($multivalues) > 1) {
+        $parsed[$keyval[0]] = $multivalues;
+      }
+      else {
+        $parsed[$keyval[0]] = $keyval[1];
+      }
     }
   }
   return $parsed;
@@ -829,13 +896,18 @@ function searchlight_environment_active($environment = NULL, $view = NULL, $disp
   }
   // Match both view & display. Note that a lazy matched environment is not
   // static cached as multiple may be active on the same page.
+  // EXCEPTION: In the context of an views AJAX response do static cache the
+  // active environment to allow the AJAX payload to be altered.
+  // See searchlight_ajax_render_alter().
   else if (isset($view, $display)) {
     foreach (searchlight_environment_load() as $environment) {
       list($environment_view, $environment_display) = explode(':', $environment->view_display);
       if ($environment->view_display === "{$view}:{$display}") {
+        $active = isset($_REQUEST['view_name'], $_REQUEST['view_display_id']) ? $environment : $active;
         return $environment;
       }
       else if ($environment_view === $view) {
+        $active = isset($_REQUEST['view_name'], $_REQUEST['view_display_id']) ? $environment : $active;
         return $environment;
       }
     }
@@ -917,7 +989,11 @@ function searchlight_environment_save($environment) {
  */
 function searchlight_environment_delete($environment) {
   if (isset($environment->name) && ($environment->export_type & EXPORT_IN_DATABASE)) {
-    db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {searchlight_environment} WHERE name = '%s'", $environment->name) */
+    db_delete('searchlight_environment')
+      ->condition('name', $environment->name)
+      ->execute();
     searchlight_invalidate_cache();
     return TRUE;
   }
@@ -970,10 +1046,15 @@ function searchlight_invalidate_index($base_table = NULL) {
       // Let the backend respond to a rebuild index command.
       $backend->invalidateIndex($datasource);
 
-      db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table);
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query("DELETE FROM {searchlight_search} WHERE type = '%s'", $datasource->base_table) */
+      db_delete('searchlight_search')
+          ->condition('type', $datasource->base_table)
+          ->execute();
       $views_data = views_fetch_data($datasource->base_table);
       $base_field = $views_data['table']['base']['field'];
-      db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '". $datasource->base_table ."', ". $base_field .", 0 FROM {". $datasource->base_table ."}");
+      // TODO Please convert this statement to the D7 database API syntax.
+      db_query("INSERT INTO {searchlight_search} (type, id, status) SELECT '" . $datasource->base_table . "', " . $base_field . ", 0 FROM {" . $datasource->base_table . "}");
     }
   }
 }

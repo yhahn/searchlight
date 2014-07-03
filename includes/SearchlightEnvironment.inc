@@ -97,14 +97,19 @@ class SearchlightEnvironment {
     $rendered = array();
     foreach ($this->plugins as $name => $plugin) {
       foreach ($deltas as $delta) {
-        if ($render = $plugin->render(drupal_clone($this->query), $delta)) {
+        if ($render = $plugin->render(clone $this->query, $delta)) {
           // Theme each item
           $items = array();
           foreach ($render as $item) {
             $items[] = $plugin->theme($item, $delta);
           }
           // Generate a label/items array suitable for theme('searchlight_facet')
-          $rendered[$name] = array('label' => $plugin->label($delta), 'items' => $items, 'delta' => $delta);
+          $rendered[$name] = array(
+			'name' => $name,
+            'label' => $plugin->label($delta),
+            'items' => $items,
+            'delta' => $delta,
+          );
         }
       }
     }
@@ -127,17 +132,26 @@ class SearchlightEnvironment {
    */
   function getBlock($delta) {
     if ($delta === 'facets' && $this->initView()) {
+      // Provide an array with 'unthemed' data for modules implementing
+      // hook_block_view_alter() in order to have more theming flexibility
+      $data = array();
       $output = '';
+      $data['container']['name'] = $this->name;
+      $data['container']['view_name'] = $this->view->name;
+      $data['container']['facets'] = array();
       foreach ($this->render() as $rendered) {
-        $output .= theme('searchlight_facet', $rendered);
+        $data['container']['facets'][] = $rendered;
+        // If we don't get back arrays for items, we directly them them
+        if (!is_array($rendered['items'][0])) {
+          $output .= theme('searchlight_facet', array('facet' => $rendered));
+        }
       }
       if (!empty($output)) {
         $output = "<div class='searchlight-environment searchlight-environment-{$this->name} searchlight-view-{$this->view->name}-{$this->view->current_display}'>{$output}</div>";
-        return array(
-          'subject' => filter_xss_admin($this->options['facets_label']),
-          'content' => $output,
-        );
+        $data['label'] = filter_xss_admin($this->options['facets_label']);
+        $data['content'] = $output;
       }
+      return $data;
     }
     return array();
   }
@@ -149,6 +163,7 @@ class SearchlightEnvironment {
     // Adapted from searchlight_build_view. It should be possible to
     // retrieve a data source from a view without running it, untill then...
     $split = explode(':', $this->view_display);
+
     if (count($split) === 2 && $view = views_get_view($split[0])) {
       return searchlight_get_datasource($view->base_table);
     }
@@ -209,7 +224,10 @@ class SearchlightEnvironment {
     if ($datasource) {
       $form['facets'] = array('#tree' => TRUE);
       $fields = $datasource->fields;
-      $fields['search_query'] = array('label' => t('Search query'));
+      $fields['search_query'] = array(
+        'label' => t('Search query'),
+        'name' => 'search_query'
+      );
       foreach ($fields as $name => $field) {
         if ($this->isValidFacet($name)) {
           $form['facets'][$name] = array(
@@ -219,12 +237,11 @@ class SearchlightEnvironment {
           $form['facets'][$name]['enabled'] = array(
             '#title' => t('Enabled'),
             '#type' => 'checkbox',
-            '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : TRUE,
+            '#default_value' => isset($this->facets[$name]['enabled']) ? $this->facets[$name]['enabled'] : FALSE,
           );
           $form['facets'][$name]['ui_name'] = array(
             '#title' => t('Facet'),
-            '#type' => 'markup',
-            '#value' => $field['label'],
+            '#markup' => $field['label'],
           );
           $form['facets'][$name]['weight'] = array(
             '#title' => t('Weight'),
@@ -235,7 +252,8 @@ class SearchlightEnvironment {
           // We instantiate plugins here rather than using initView() as the
           // facets on this form may not already be enabled for this environment.
           $plugin = searchlight_get_facet($datasource, $name);
-          $plugin->construct($this, $datasource->fields[$name], $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+          $plugin->construct($this, $field, $this->getValue($name), isset($this->facets[$name]) ? $this->facets[$name] : array());
+
           $plugin->optionsForm($form['facets'][$name], $form_state);
 
           $form['facets'][$name]['settings'] = array(
@@ -264,6 +282,9 @@ class SearchlightEnvironment {
           if (isset($options['settings'])) {
             unset($this->facets[$name]['settings']);
             $this->facets[$name] = array_merge($this->facets[$name], $options['settings']);
+          }
+          if (empty($options['enabled'])) {
+            unset($this->facets[$name]);
           }
         }
 
@@ -301,8 +322,8 @@ class SearchlightEnvironment {
    * Get the URL options for the current set of active facets, adjusted using
    * one of the $op operations.
    *
-   * 'add':    Add a facet value for the given key/value pair.
-   * 'remove': Add a facet value for the given key/value pair.
+   * 'add':    Add a facet value or multiple facet values for the given key/value pair.
+   * 'remove': Add a facet value or multiple facet values for the given key/value pair.
    * 'active': Retain only active facets and drop any other query strings.
    */
   function getURLOptions($op = 'add', $key = NULL, $value = NULL) {
@@ -315,8 +336,17 @@ class SearchlightEnvironment {
         break;
       case 'remove':
         $modifier = $modifier + $this->active_values;
-        if (isset($modifier[$key])) {
-          unset($modifier[$key]);
+        if (is_array($modifier[$key]) && !empty($value)) {
+          foreach ($modifier[$key] as $k => $v) {
+            if ($v === $value) {
+              unset($modifier[$key][$k]);
+            }
+          }
+        }
+        else {
+          if (isset($modifier[$key])) {
+            unset($modifier[$key]);
+          }
         }
         break;
       case 'active':
@@ -348,7 +378,7 @@ class SearchlightEnvironment {
     else if (empty($modifier)) {
       $exclude[] = $key;
     }
-    $options['query'] = drupal_query_string_encode($query, $exclude);
+    $options['query'] = drupal_get_query_parameters($query, $exclude);
 
     return $options;
   }

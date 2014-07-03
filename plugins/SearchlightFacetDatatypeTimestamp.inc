@@ -9,6 +9,12 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
    */
   function query(&$query) {
     if (isset($this->value)) {
+      foreach ($query->search_filter as $key => $filter) {
+        if ($filter['field'] === $this->name) {
+          unset($query->search_filter[$key]);
+        }
+      }
+
       $range = $query->backend->dateRange($this->value, $this->options['granularity']);
 
       $query->search_filter[] = array(
@@ -51,7 +57,7 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
       foreach ($items as $k => $item) {
         $format = $this->options['date_format'];
         $timestamp = is_numeric($item['id']) ? $item['id'] : strtotime($item['id']);
-        $items[$k]['title'] = format_date($timestamp, 'custom', $format, 0);
+        $items[$k]['title'] = format_date($timestamp, 'custom', $format, 'UTC');
       }
       return $items;
     }
@@ -65,7 +71,17 @@ class SearchlightFacetDatatypeTimestamp extends SearchlightFacet {
     $options = parent::optionsDefault();
     $options['granularity'] = 'month';
     $options['date_format'] = 'F, Y';
+    $options['sort'] = 'date';
     return $options;
+  }
+
+  /**
+   * Provide an options form to be exposed in the Environment editor.
+   */
+  function optionsForm(&$form, $form_state) {
+    parent::optionsForm($form, $form_state);
+    $form['sort']['#type'] = 'hidden';
+    $form['sort']['#value'] = 'date';
   }
 
   /**

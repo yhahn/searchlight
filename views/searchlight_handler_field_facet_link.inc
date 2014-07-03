@@ -1,15 +1,18 @@
 <?php
 
 class searchlight_handler_field_facet_link extends views_handler_field {
-  function query() {}
+  function query() { }
 
-  function allow_advanced_render() { return FALSE; }
+  function allow_advanced_render() {
+    return FALSE;
+  }
 
   function option_definition() {
     $options = parent::option_definition();
     $options['exclude']['default'] = TRUE;
     $options['facet']['default'] = NULL;
     $options['field_token']['default'] = NULL;
+    $options['text_token']['default'] = NULL;
     $options['absolute']['default'] = FALSE;
     return $options;
   }
@@ -37,10 +40,21 @@ class searchlight_handler_field_facet_link extends views_handler_field {
       '#options' => array(0 => '---') + drupal_map_assoc(array_keys($this->get_render_tokens(array()))),
       '#default_value' => $this->options['field_token'],
     );
+    $form['text_token'] = array(
+      '#title' => t('Display as link'),
+      '#type' => 'select',
+      '#options' => array(0 => '---') + drupal_map_assoc(array_keys($this->get_render_tokens(array()))),
+      '#default_value' => $this->options['text_token'],
+    );
     $form['absolute'] = array(
       '#title' => t('Absolute URL'),
       '#type' => 'checkbox',
       '#default_value' => $this->options['absolute'],
+    );
+    $form['exclude'] = array(
+      '#title' => t('Exclude this field'),
+      '#type' => 'checkbox',
+      '#default_value' => $this->options['exclude'],
     );
   }
 
@@ -52,7 +66,13 @@ class searchlight_handler_field_facet_link extends views_handler_field {
         $path = $environment->getURLPath();
         $options = $environment->getURLOptions('add', $facet, $tokens[$this->options['field_token']]);
         $options['absolute'] = $this->options['absolute'];
-        return url($path, $options);
+        // TODO The second parameter to this function call should be an array.
+        if (!empty($this->options['text_token'])) {
+          return l(check_plain($tokens[$this->options['text_token']]), $path, $options);
+        }
+        else {
+          return url($path, $options);
+        }
       }
     }
     return '';

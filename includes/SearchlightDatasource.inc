@@ -6,6 +6,7 @@ class SearchlightDatasource {
   var $base_table;
   var $base_field;
   var $fields;
+  var $relations;
   var $filters;
   var $options;
 
@@ -22,6 +23,7 @@ class SearchlightDatasource {
 
     $this->fields = !empty($this->fields) ? $this->fields : array();
     $this->filters = !empty($this->filters) ? $this->filters : array();
+    $this->relations = !empty($this->relations) ? $this->relations : array();
     $this->options = !empty($this->options) ? $this->options : array();
     $this->options = $this->options + array(
       'node_access' => TRUE,
@@ -31,10 +33,8 @@ class SearchlightDatasource {
   }
 
   function setId() {
-    global $db_url;
-    $url = is_array($db_url) ? $db_url['default'] : $db_url;
-    $url = parse_url($url);
-    $this->id = trim(urldecode($url['path']), '/') .'_'. $this->name;
+    global $databases;
+    $this->id = $databases['default']['default']['database'] . '_' . $this->name;
     return $this;
   }
 
@@ -46,6 +46,7 @@ class SearchlightDatasource {
     views_include('view');
     $this->view = new view;
     $this->view->base_table = $this->base_table;
+    $this->view->base_field = $this->base_field;
     $this->view->api_version = '3.0-alpha1';
     $this->view->new_display('default', 'Default', 'default');
     $this->view->set_display('default');
@@ -67,18 +68,25 @@ class SearchlightDatasource {
         'id' => $this->base_field,
         'table' => $this->base_table,
         'field' => $this->base_field,
-        'relationship' => 'none'
+        'relationship' => 'none',
       );
     }
     foreach ($this->getFields() as $name => $field) {
-      $fields[$name] = array(
-        'id' => $field['name'],
-        'table' => $field['table'],
-        'field' => $field['field'],
-        'relationship' => 'none'
-      );
+      $data = views_fetch_data($field['table']);
+      if (isset($data[$field['field']]['field'])) {
+        $relationship = empty($field['relationship']) ? 'none' : $field['relationship'];
+        $fields[$name] = array(
+          'id' => $field['name'],
+          'table' => $field['table'],
+          'field' => $field['field'],
+          'relationship' => $relationship,
+        );
+      }
     }
     $handler->override_option('fields', $fields);
+
+    $handler->override_option('relationships', $this->getRelations());
+
     return $this;
   }
 
@@ -110,20 +118,30 @@ class SearchlightDatasource {
     $schema = drupal_get_schema($table);
     if ($schema && isset($field, $schema['fields'][$field])) {
       $class = $handler ? get_class($handler) : NULL;
-
+      // Use handler defined in $data in case $data has been altered by another
+      // and requires for example another handler
+      if (isset($data[$table][$field]['field']['handler'])) {
+        $class = $data[$table][$field]['field']['handler'];
+      }
       // Get the datasource attribute type.
       // We use the handler class for special cases like timestamp where DB
       // column type is not enough information to determine the usage of the
       // field.
       $map = array(
-        'serial'  => 'int',
-        'int'     => 'int',
+        'serial' => 'int',
+        'int' => 'int',
         'varchar' => 'text',
-        'text'    => 'text',
-        'float'   => 'float',
+        'text' => 'text',
+        'float' => 'float',
+        'numeric' => 'float',
+        'decimal' => 'float',
       );
       if (isset($map[$schema['fields'][$field]['type']])) {
         $column_type = $map[$schema['fields'][$field]['type']];
+        // Allow custom handlers to specity the column type in definition
+        if (isset($handler->definition['data_type'])) {
+          $column_type = $handler->definition['data_type'];
+        }
         if ($column_type === 'int' && strpos($class, 'date') !== FALSE) {
           return 'timestamp';
         }
@@ -164,6 +182,19 @@ class SearchlightDatasource {
   }
 
   /**
+   * Retrieve relationships currently enabled for this datasource.
+   */
+  function getRelations() {
+    $relationships = array();
+    foreach ($this->relations as $name => $relation) {
+      $relation['relationship'] = 'none';
+      $relation['group_type'] = 'group';
+      $relationships[$name] = $relation;
+    }
+    return $relationships;
+  }
+
+  /**
    * Retrieve all possible multivalue fields for this base table.
    */
   function buildMultivalues() {
@@ -182,7 +213,6 @@ class SearchlightDatasource {
         }
       }
     }
-
     foreach ($usable as $view) {
       if ($view->name !== 'searchlight_node_access') {
         foreach ($view->display as $display) {
@@ -219,6 +249,57 @@ class SearchlightDatasource {
     return $nodeaccess;
   }
 
+
+  /**
+   * Finds all possible relations ships for a field.
+   *
+   * Orignal code resides in admin.inc of views.
+   */
+  function getFieldRelationshipOptions($field_id) {
+    $relationship_options = array();
+    $view = &$this->view;
+    $item = $view->get_item('default', 'field', $field_id);
+    
+//    // If relation is already set, return it
+//    if (!empty($item['relationship']) && $item['relationship'] != 'none') {
+//      $relationship_options[$item['relationship']] = $item['relationship'];
+//      return $relationship_options;
+//    }
+    // A whole bunch of code to figure out what relationships are valid for
+    // this item.
+    $relationships = $view->display_handler->get_option('relationships');
+    $relationship_options = array();
+
+    foreach ($relationships as $relationship) {
+      $relationship_handler = views_get_handler($relationship['table'], $relationship['field'], 'relationship');
+      // ignore invalid/broken relationships.
+      if (empty($relationship_handler)) {
+        continue;
+      }
+
+      // If this relationship is valid for this type, add it to the list.
+      $data = views_fetch_data($relationship['table']);
+      $base = $data[$relationship['field']]['relationship']['base'];
+      $base_fields = views_fetch_fields($base, 'field', $view->display_handler->use_group_by());
+      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
+        $relationship_handler->init($view, $relationship);
+        $relationship_options[$relationship['id']] = $relationship_handler->options['field'];
+        //$relationship_options[$relationship['id']] = $relationship_handler->label();
+      }
+    }
+
+    if (!empty($relationship_options)) {
+      // Make sure the existing relationship is even valid. If not, force
+      // it to none.
+      $base_fields = views_fetch_fields($view->base_table, 'field', $view->display_handler->use_group_by());
+      if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
+        $relationship_options = array_merge(array('none' => t('Do not use a relationship')), $relationship_options);
+      }
+    }
+   
+    return $relationship_options;
+  }
+
   /**
    * Provide the default form for setting options.
    */
@@ -226,26 +307,27 @@ class SearchlightDatasource {
     views_include('admin');
     views_include('form');
 
+    $this->viewInit()->viewSetHandlers();
+    $base_tables = $this->view->get_base_tables();
+
     // Theme function will handle formatting of datasource information.
     $form['#theme'] = 'searchlight_admin_datasource';
     $form['#datasource'] = $this;
 
     // Calculations of indexing percentage.
-    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = '%s' GROUP BY status", $this->base_table);
+    $result = db_query("SELECT count(id) AS count, status FROM {searchlight_search} WHERE type = :type GROUP BY status", array(':type' => $this->base_table));
     $items_indexed = 0;
     $items_total = 0;
-    while ($row = db_fetch_object($result)) {
+    foreach ($result as $row) {
       $items_indexed = $row->status == 1 ? $row->count : $items_indexed;
       $items_total = $items_total + $row->count;
     }
     $form['index']['#tree'] = TRUE;
     $form['index']['percent'] = array(
-      '#type' => 'markup',
-      '#value' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
+      '#markup' => !empty($items_total) ? number_format(($items_indexed / $items_total * 100), 1) . '%' : '0%',
     );
     $form['index']['counts'] = array(
-      '#type' => 'markup',
-      '#value' => t('@indexed of @total total', array(
+      '#markup' => t('@indexed of @total total', array(
         '@indexed' => $items_indexed,
         '@total' => $items_total,
       )),
@@ -257,7 +339,7 @@ class SearchlightDatasource {
 
     $form['help'] = array(
       '#type' => 'item',
-      '#value' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.')
+      '#markup' => t('Choose a usage type for each field in the search datasource. <strong>Content</strong> fields will be used to perform text searches. <strong>Attributes</strong> can be used to filter, sort or group the search results.'),
     );
 
     $form['fields'] = array(
@@ -270,7 +352,8 @@ class SearchlightDatasource {
 
     // Add fields
     $field_options = array();
-    $fields = views_fetch_fields($this->base_table, 'field', TRUE);
+    $fields = views_fetch_fields(array_keys($base_tables), 'field', TRUE);
+
     foreach ($fields as $field_id => $info) {
       $field_options[$info['group']][$field_id] = $info['title'];
     }
@@ -279,15 +362,19 @@ class SearchlightDatasource {
       '#type' => 'select',
       '#options' => $field_options,
     );
+    
     $form['fields']['new']['add'] = array(
       '#value' => t('Add field'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
-      '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-fields-new-add/fields',
-        'wrapper' => 'datasource-fields',
-        'method' => 'replace',
-      ),
+      '#limit_validation_errors' => array(array('fields', 'new')),
+      // @TODO: Determine why AJAX is failing. Possibly because the element to
+      // which the ajax behavior is attached is replaced by the ajax callback.
+      // '#ajax' => array(
+      //   'callback' => 'searchlight_admin_datasource_ajax_fields_add',
+      //   'wrapper' => 'datasource-fields',
+      //   'method' => 'replace',
+      // ),
     );
 
     // Remove fields
@@ -296,14 +383,14 @@ class SearchlightDatasource {
         '#value' => t('Remove selected fields'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
-        '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-fields-remove/fields',
-          'wrapper' => 'datasource-fields',
-          'method' => 'replace',
-        ),
+        '#limit_validation_errors' => array(array('fields', 'fields')),
+        // '#ajax' => array(
+        //   'callback' => 'searchlight_admin_datasource_ajax_fields_remove',
+        //   'wrapper' => 'datasource-fields',
+        //   'method' => 'replace',
+        // ),
       );
     }
-
     // Adjust existing fields
     $form['fields']['fields'] = array('#tree' => TRUE);
     foreach ($this->getFields() as $name => $info) {
@@ -315,16 +402,34 @@ class SearchlightDatasource {
         '#default_value' => FALSE,
       );
 
+      // Relation
+      if (count($relation_options = $this->getFieldRelationshipOptions($name)) > 1) {
+
+        $form['fields']['fields'][$name]['relationship'] = array(
+          '#type' => 'select',
+          '#options' => $relation_options,
+          '#default_value' => ((!empty($info['relationship'])) ? $info['relationship'] : NULL),
+        );
+      }
+      else {
+        $relation = $info['relationship'];
+        $form['fields']['fields'][$name]['relation_name'] = array(
+          '#markup' => ((empty($relation)) ? t('none') : $relation),
+        );
+        $form['fields']['fields'][$name]['relationship'] = array(
+          '#type' => 'hidden',
+          '#value' => ((empty($relation)) ? t('none') : $relation),
+        );
+      }
+
       // Field label.
       $form['fields']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['fields']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       // Usage
@@ -332,20 +437,15 @@ class SearchlightDatasource {
       $default_usage = isset($this->fields[$name]['usage']) ? $this->fields[$name]['usage'] : $default_usage;
       $form['fields']['fields'][$name]['usage'] = array(
         '#type' => 'select',
-        '#options' => array( 'content' => t('Content'), 'attribute' => t('Attribute')),
+        '#options' => array(
+          'content' => t('Content'),
+          'attribute' => t('Attribute'),
+        ),
         '#default_value' => $default_usage,
       );
     }
 
-    // @TODO: Handle multivalues.
-    $form['multivalues'] = array(
-      '#tree' => TRUE,
-      '#theme' => 'searchlight_admin_datasource_fields',
-      '#title' => t('Multivalues'),
-      '#prefix' => "<div id='datasource-multivalues'>",
-      '#suffix' => "</div>",
-    );
-
+    // Handle multivalues.
     // Add fields
     $multivalue_options = array();
     foreach ($this->buildMultivalues() as $name => $info) {
@@ -353,6 +453,13 @@ class SearchlightDatasource {
         $multivalue_options[$name] = $info['label'];
       }
     }
+    $form['multivalues'] = array(
+      '#tree' => TRUE,
+      '#theme' => 'searchlight_admin_datasource_fields',
+      '#title' => t('Multivalues'),
+      '#prefix' => "<div id='datasource-multivalues'>",
+      '#suffix' => "</div>",
+    );
     $form['multivalues']['new']['#tree'] = TRUE;
     $form['multivalues']['new']['field'] = array(
       '#type' => 'select',
@@ -362,11 +469,12 @@ class SearchlightDatasource {
       '#value' => t('Add multivalue'),
       '#type' => 'submit',
       '#submit' => array('searchlight_admin_datasource_edit_submit'),
-      '#ahah' => array(
-        'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-new-add/multivalues',
-        'wrapper' => 'datasource-multivalues',
-        'method' => 'replace',
-      ),
+      '#limit_validation_errors' => array(array('multivalues', 'new')),
+    // '#ajax' => array(
+    //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_add',
+    //   'wrapper' => 'datasource-multivalues',
+    //   'method' => 'replace',
+    // ),
     );
 
     // Remove fields
@@ -375,14 +483,15 @@ class SearchlightDatasource {
         '#value' => t('Remove selected multivalues'),
         '#type' => 'submit',
         '#submit' => array('searchlight_admin_datasource_edit_submit'),
-        '#ahah' => array(
-          'path' => 'admin/settings/search/datasource/ahah/edit-multivalues-remove/multivalues',
-          'wrapper' => 'datasource-multivalues',
-          'method' => 'replace',
-        ),
+        '#limit_validation_errors' => array(array('multivalues', 'fields')),
+      // '#ajax' => array(
+      //   'callback' => 'searchlight_admin_datasource_ajax_multivalues_remove',
+      //   'wrapper' => 'datasource-multivalues',
+      //   'method' => 'replace',
+      // ),
       );
     }
-
+    $form['multivalues']['fields'] = array();
     foreach ($this->getMultivalues() as $name => $info) {
       $form['multivalues']['fields'][$name] = array();
 
@@ -394,33 +503,144 @@ class SearchlightDatasource {
 
       // Field label.
       $form['multivalues']['fields'][$name]['label'] = array(
-        '#type' => 'markup',
-        '#value' => $info['label'],
+        '#markup' => $info['label'],
       );
 
       // Datatype
       $form['multivalues']['fields'][$name]['datatype'] = array(
-        '#type' => 'markup',
-        '#value' => "<code>{$info['datatype']}</code>",
+        '#markup' => "<code>{$info['datatype']}</code>",
       );
 
       $form['multivalues']['fields'][$name]['usage'] = array(
-        '#type' => 'markup',
-        '#value' => t('Multivalue'),
+        '#markup' => t('Multivalue'),
       );
     }
 
-    $form['options']['#tree'] = TRUE;
-    // In reality, these are multivalue fields that are generated
-    // programmatically.
-    if ($this->base_table === 'node') {
-      $form['options']['node_access'] = array(
-        '#title' => t('Node access'),
-        '#description' => t('Include node access information in datasource'),
-        '#type' => 'checkbox',
-        '#default_value' => $this->options['node_access'],
+    $form['relations'] = array(
+      '#prefix' => "<div id='datasource-relations'>",
+      '#suffix' => "</div>",
+      '#tree' => TRUE,
+      '#theme' => 'searchlight_admin_datasource_relations',
+      '#title' => t('Relations'),
+    );
+
+    // Add relations
+    $relation_options = array();
+    $fields = views_fetch_fields(array_keys($base_tables), 'relationship');
+    foreach ($fields as $relation_id => $info) {
+      $relation_options[$info['group']][$relation_id] = $info['title'];
+    }
+    $form['relations']['new']['#tree'] = TRUE;
+    $form['relations']['new']['relation'] = array(
+      '#type' => 'select',
+      '#options' => $relation_options,
+    );
+    $form['relations']['new']['add'] = array(
+      '#value' => t('Add relation'),
+      '#type' => 'submit',
+      '#submit' => array('searchlight_admin_datasource_edit_submit'),
+      '#limit_validation_errors' => array(array('relations', 'new')),
+    );
+
+    $relations = $this->getRelations();
+    // Remove relations
+    if (count($relations)) {
+      $form['relations']['remove'] = array(
+        '#value' => t('Remove selected relations'),
+        '#type' => 'submit',
+        '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('relations', 'relations')),
       );
     }
+    // Adjust existing relations
+    $form['relations']['relations'] = array('#tree' => TRUE);
+    foreach ($relations as $name => $info) {
+      $form['relations']['relations'][$name] = array();
+
+      // Remove field checkbox.
+      $form['relations']['relations'][$name]['remove'] = array(
+        '#type' => 'checkbox',
+        '#default_value' => FALSE,
+      );
+
+      // Relation label.
+      $form['relations']['relations'][$name]['label'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $info['label'],
+        '#field_suffix' => '(' . $info['table'] . '.' . $info['field'] . ')',
+      );
+
+      // Required relation.
+      $form['relations']['relations'][$name]['required'] = array(
+        '#type' => 'checkbox',
+        '#default_value' => (int) $info['required'],
+      );
+    }
+
+    $backend = variable_get('searchlight_backend');
+    $settings = variable_get('searchlight_backend_' . $backend);
+    if ($settings['grouping']) {
+      // Group
+      $form['groupfield'] = array(
+        '#tree' => TRUE,
+        '#theme' => 'searchlight_admin_datasource_fields',
+        '#title' => t('Group'),
+        '#prefix' => "<div id='datasource-fields'>",
+        '#suffix' => "</div>",
+      );
+
+      // Add fields
+      $groupfield_options = array();
+      foreach ($this->getFields() as $name => $info) {
+        $groupfield_options[$name] = $info['label'];
+      }
+      $form['groupfield']['new']['#tree'] = TRUE;
+      $form['groupfield']['new']['field'] = array(
+        '#type' => 'select',
+        '#options' => $groupfield_options,
+      );
+      $form['groupfield']['new']['add'] = array(
+        '#value' => t('Add group field'),
+        '#type' => 'submit',
+        '#submit' => array('searchlight_admin_datasource_edit_submit'),
+        '#limit_validation_errors' => array(array('groupfield', 'new')),
+      );
+
+      // Remove field
+      if (isset($this->options['groupfield'])) {
+        $form['groupfield']['remove'] = array(
+          '#value' => t('Remove groupfield'),
+          '#type' => 'submit',
+          '#submit' => array('searchlight_admin_datasource_edit_submit'),
+          '#limit_validation_errors' => array(array('groupfield', 'fields')),
+        );
+      }
+      $form['groupfield']['fields'] = array();
+      if (isset($this->options['groupfield'])) {
+        $form['groupfield']['fields'][$this->options['groupfield']] = array();
+
+        // Remove field checkbox.
+        $form['groupfield']['fields'][$this->options['groupfield']]['remove'] = array(
+          '#type' => 'checkbox',
+          '#default_value' => FALSE,
+        );
+
+        // Field label.
+        $form['groupfield']['fields'][$this->options['groupfield']]['label'] = array(
+          '#markup' => $this->fields[$this->options['groupfield']]['label'],
+        );
+
+        // Datatype
+        $form['groupfield']['fields'][$this->options['groupfield']]['datatype'] = array(
+          '#markup' => "<code>{$this->fields[$this->options['groupfield']]['datatype']}</code>",
+        );
+
+        $form['groupfield']['fields'][$this->options['groupfield']]['usage'] = array(
+          '#markup' => t('Grouping'),
+        );
+      }
+    }
+
     return $form;
   }
 
@@ -459,6 +679,31 @@ class SearchlightDatasource {
         }
         searchlight_datasource_save($this, TRUE);
         break;
+      case 'edit-groupfield-new-add':
+        $this->options['groupfield'] = $form_state['values']['groupfield']['new']['field'];
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-groupfield-remove':
+        foreach ($form_state['values']['groupfield']['fields'] as $name => $values) {
+          if (!empty($values['remove'])) {
+            unset ($this->options['groupfield']);
+          }
+        }
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-relations-new-add':
+        list($table, $field) = explode('.', $form_state['values']['relations']['new']['relation']);
+        $this->addRelation($table, $field);
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-relations-remove':
+        foreach ($form_state['values']['relations']['relations'] as $name => $values) {
+          if (!empty($values['remove'])) {
+            $this->removeRelation($name);
+          }
+        }
+        searchlight_datasource_save($this, TRUE);
+        break;
       case 'edit-save':
         // Save additional metadata from fields, multivalues.
         foreach (array('fields', 'multivalues') as $key) {
@@ -472,34 +717,103 @@ class SearchlightDatasource {
           }
         }
         // Save options.
-        $this->options = $form_state['values']['options'];
+        $this->options = isset($form_state['values']['options']) ? $form_state['values']['options'] : $this->options;
+
+        // Save relations
+        if (!empty($form_state['values']['relations']['relations'])) {
+          foreach ($form_state['values']['relations']['relations'] as $name => $values) {
+            $values = array_diff_key($values, array('remove' => NULL));
+            if (isset($this->relations[$name])) {
+              $this->relations[$name] = array_merge($this->relations[$name], $values);
+            }
+          }
+        }
 
         // Save the datasource.
         searchlight_datasource_save($this);
         drupal_set_message(t('Datasource @datasource saved. The index for this datasource needs to be rebuilt.', array('@datasource' => $this->name)));
         break;
+
+      case 'edit-relations-new-add':
+        $this->addRelation($form_state['values']['relations']['new']['table'], $form_state['values']['relations']['new']['field']);
+        searchlight_datasource_save($this, TRUE);
+        break;
+      case 'edit-relations-remove':
+        foreach ($form_state['values']['relations']['relations'] as $name => $values) {
+          if (!empty($values['remove'])) {
+            $this->removeRelation(NULL, NULL, $name);
+          }
+        }
+        searchlight_datasource_save($this, TRUE);
+        break;
     }
+  }
+
+
+  /**
+   * Remove relation.
+   * @param string $relation
+   */
+  function removeRelation($name) {
+    if (array_key_exists($name, $this->relations)) {
+      unset($this->relations[$name]);
+    }
+    return $this->viewInit()->viewSetHandlers();
+  }
+
+  /**
+   * Adds a new relation for the datasource.
+   * @param string $table
+   * @param string $field
+   * @param boolean $required
+   */
+  function addRelation($table, $field, $label = NULL, $required = FALSE) {
+    $this->viewInit()->viewSetHandlers();
+
+    if (empty($label)) {
+      $label = $table . '.' . $field;
+    }
+
+    $options = array(
+      'label' => $label,
+      'required' => (bool) $required,
+    );
+    $id = $this->view->add_item('default', 'relationship', $table, $field, $options);
+
+    $this->relations = $this->view->display_handler->get_option('relationships');
   }
 
   function addField($table, $field) {
     // Add the field to the view and build. This will give us an inited handler
     // with full aliases.
     $this->viewInit()->viewSetHandlers();
-    $fields = $this->view->display_handler->get_option('fields');
+    $fields = &$this->view->display_handler->get_option('fields');
     $fields[$field] = array(
       'id' => $field,
       'table' => $table,
       'field' => $field,
       'relationship' => 'none',
     );
+    
     $this->view->display_handler->set_option('fields', $fields);
     $this->view->build();
+    
+    $relationship = 'none';
+    foreach($this->getFieldRelationshipOptions($field) as $key => $val) {
+      $relationship = $val;
+    }
+    $fields[$field]['relationship'] = $relationship;
 
     // Retrieve field information for storage with datasource.
     $handler = isset($this->view->field[$field]) ? $this->view->field[$field] : NULL;
 
+    // Track fields added so we can provide a default usage based on datatype.
+    $fields_added = array();
+
     // Don't use alias for base field.
     if ($field === $this->view->base_field) {
+      $fields_added[] = $field;
+
       $this->fields[$field] = array(
         'label' => $field,
         'datatype' => $this->getDatatype(NULL, $table, $field),
@@ -509,13 +823,24 @@ class SearchlightDatasource {
       );
     }
     // Use alias for all other fields.
-    if ($handler) {
+    if ($handler && $field != $this->view->base_field) {
+      // Generate unique id's
+      $alias_base = $handler->field_alias;
+      $count = 1;
+      while (!empty($this->fields[$handler->field_alias])) {
+        $handler->field_alias = $alias_base . '_' . $count++;
+      }
+
+      $fields_added[] = $handler->field_alias;
+
       $this->fields[$handler->field_alias] = array(
+        'id' => $handler->field_alias,
         'label' => $handler->ui_name() . " ({$handler->real_field})",
         'datatype' => $this->getDatatype($handler, $handler->table, $handler->real_field),
         'table' => $handler->table,
         'field' => $handler->real_field,
         'name' => $handler->field_alias,
+        'relationship' => $relationship,
       );
     }
     if (!empty($handler->additional_fields)) {
@@ -528,14 +853,37 @@ class SearchlightDatasource {
           $table = isset($info['table']) ? $info['table'] : $table;
           $field = $info['field'];
         }
-        if ($field !== $handler->view->base_field || $table !== $handler->view->base_table) {
+
+        // Check if we are dealing with a field API field handler.
+        // - Skip the actual field specified by the handler (entity_id).
+        // - Exclude field metadata in additional_fields (language, entity_type, delta, etc.)
+        $add_field = FALSE;
+        if (isset($handler->definition['field_info'], $handler->definition['entity_tables'])) {
+          $add_field = !in_array($field, array('delta', 'entity_type', 'language')) && strpos($field, '_format') === FALSE;
+        }
+        else {
+          $add_field = $field !== $handler->view->base_field || $table !== $handler->view->base_table;
+        }
+        if ($add_field) {
+          $fields_added[] = $handler->aliases[$field];
+
           $this->fields[$handler->aliases[$field]] = array(
+            'id'  =>  $handler->aliases[$field],
             'label' => $handler->ui_name() . " ({$field})",
             'datatype' => $this->getDatatype($handler, $table, $field),
             'table' => $table,
             'field' => $field,
             'name' => $handler->aliases[$field],
+            'relationship' => $relationship,
           );
+        }
+      }
+    }
+
+    if (sizeof($fields_added)) {
+      foreach ($fields_added as $name) {
+        if (!isset($this->fields[$name]['usage'])) {
+          $this->fields[$name]['usage'] = ($this->fields[$name]['datatype'] === 'text') ? 'content' : 'attribute';
         }
       }
     }
@@ -548,7 +896,7 @@ class SearchlightDatasource {
         unset($this->fields[$name]);
       }
     }
-    else if (isset($table, $field)) {
+    elseif (isset($table, $field)) {
       foreach ($this->fields as $name => $field) {
         if ($field['table'] === $table && $field['field'] === $field) {
           unset($this->fields[$name]);

@@ -3,7 +3,7 @@
 /**
  * Datasource management form.
  */
-function searchlight_admin_environment($form_state) {
+function searchlight_admin_environment($form, $form_state) {
   $form = array(
     '#theme' => 'searchlight_admin_list',
     '#objects' => array(searchlight_environment_load(NULL, TRUE)),
@@ -40,7 +40,7 @@ function searchlight_admin_environment_view_displays() {
   $usable = array();
   foreach ($views as $view) {
     foreach ($view->display as $display) {
-      if ($display->display_plugin === 'page') {
+      if ($display->display_plugin === 'page' || $display->display_plugin === 'panel_pane') {
         $view->set_display($display->id);
         $filters = $view->display_handler->get_option('filters');
         if (!empty($filters)) {
@@ -65,7 +65,7 @@ function searchlight_admin_environment_validate_name($element, &$form_state) {
     form_set_error('name', t('The environment name can only consist of lowercase letters, dashes, underscores, and numbers.'));
   }
   // Check for name collision
-  else if ($exists = searchlight_environment_load($element['#value'], TRUE)) {
+  elseif ($exists = searchlight_environment_load($element['#value'], TRUE)) {
     form_set_error('name', t('A environment with this name already exists. Please choose another name or delete the existing environment before creating a new one.'));
   }
 }
@@ -76,7 +76,7 @@ function searchlight_admin_environment_validate_name($element, &$form_state) {
 function searchlight_admin_environment_new(&$form, &$form_state) {
   $environment = searchlight_environment_new($form_state['values']['name'], $form_state['values']['view_display']);
   if (searchlight_environment_save($environment)) {
-    drupal_set_message(t('Saved environment %name.', array('%name' =>  $environment->name)));
+    drupal_set_message(t('Saved environment %name.', array('%name' => $environment->name)));
   }
   else {
     drupal_set_message(t('Could not save environment %name.', array('%name' => $environment->name)), 'error');
@@ -86,19 +86,21 @@ function searchlight_admin_environment_new(&$form, &$form_state) {
 /**
  * Edit form for environment.
  */
-function searchlight_admin_environment_edit($form_state, $environment) {
-  $form = array();
+function searchlight_admin_environment_edit($form, $form_state, $environment) {
   $form['#environment'] = $environment;
   $form['#environment_name'] = $environment->name;
+  $form['#attached']['js'][drupal_get_path('module', 'searchlight') . '/searchlight.admin.js'] = array('type' => 'file');
+  $form['#attached']['css'][drupal_get_path('module', 'searchlight') . '/searchlight.admin.css'] = array('type' => 'file');
   $environment->optionsForm($form, $form_state);
 
-  $form['buttons']['save'] = array(
+  $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  $form['buttons']['cancel'] = array(
-    '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/environment'),
+  $form['actions']['cancel'] = array(
+    '#type' => 'link',
+    '#title' => t('Cancel'),
+    '#href' => 'admin/config/search/settings/environment',
   );
   return $form;
 }
@@ -115,7 +117,7 @@ function searchlight_admin_environment_edit_submit(&$form, $form_state) {
 /**
  * Datasource management form.
  */
-function searchlight_admin_datasource($form_state) {
+function searchlight_admin_datasource($form, $form_state) {
   views_include('admin');
   $base_tables = views_fetch_base_tables();
 
@@ -171,7 +173,7 @@ function searchlight_admin_datasource($form_state) {
   );
   $form['buttons']['cancel'] = array(
     '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/datastore'),
+    '#value' => l(t('Cancel'), 'admin/config/search/settings/datastore'),
   );
   return $form;
 }
@@ -186,11 +188,11 @@ function searchlight_admin_datasource_new_validate(&$form, &$form_state) {
     form_set_error('name', t('!name field is required.', array('!name' => $form['new']['name']['#title'])));
   }
   // Check for string identifier sanity
-  else if (!preg_match('!^[a-z0-9_-]+$!', $name)) {
+  elseif (!preg_match('!^[a-z0-9_-]+$!', $name)) {
     form_set_error('name', t('The datasource name can only consist of lowercase letters, dashes, underscores, and numbers.'));
   }
   // Check for name collision
-  else if ($exists = searchlight_datasource_load($name, TRUE)) {
+  elseif ($exists = searchlight_datasource_load($name, TRUE)) {
     form_set_error('name', t('A datasource with this name already exists. Please choose another name or delete the existing datasource before creating a new one.'));
   }
 }
@@ -201,7 +203,7 @@ function searchlight_admin_datasource_new_validate(&$form, &$form_state) {
 function searchlight_admin_datasource_new(&$form, &$form_state) {
   $datasource = searchlight_datasource_new($form_state['values']['name'], $form_state['values']['base_table']);
   if (searchlight_datasource_save($datasource)) {
-    drupal_set_message(t('Created datasource %name.', array('%name' =>  $datasource->name)));
+    drupal_set_message(t('Created datasource %name.', array('%name' => $datasource->name)));
   }
   else {
     drupal_set_message(t('Could not save datasource %name.', array('%name' => $datasource->name)), 'error');
@@ -214,8 +216,8 @@ function searchlight_admin_datasource_new(&$form, &$form_state) {
 function searchlight_admin_datasource_save(&$form, &$form_state) {
   foreach ($form_state['values']['active'] as $base_table => $datasource) {
     if (!empty($datasource)) {
-      $current = variable_get("searchlight_datasource_{$base_table}", "searchlight_{$base_table}");
-      variable_set('searchlight_datasource_'. $base_table, $datasource);
+      $current = variable_get("searchlight_datasource_{$base_table}", "search_{$base_table}");
+      variable_set('searchlight_datasource_' . $base_table, $datasource);
       drupal_set_message(t('New active datasource settings have been saved.'), 'status', FALSE);
 
       // If active datasource settings have changed a rebuild is necessary.
@@ -234,20 +236,28 @@ function searchlight_admin_datasource_save(&$form, &$form_state) {
 /**
  * Edit form for datasource.
  */
-function searchlight_admin_datasource_edit($form_state, $datasource) {
-  $form = array();
+function searchlight_admin_datasource_edit($form, $form_state, $datasource) {
   $form['#datasource'] = $datasource;
   $form['#datasource_name'] = $datasource->name;
+  $form['#attached']['js']['misc/tableselect.js'] = array('type' => 'file');
+
   $datasource->init();
   $datasource->optionsForm($form, $form_state);
 
-  $form['buttons']['save'] = array(
+  $form['actions']['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
+    '#limit_validation_errors' => array(
+      array('options'),
+      array('fields', 'fields'),
+      array('multivalues', 'fields'),
+      array('relations', 'relations'),
+    ),
   );
-  $form['buttons']['cancel'] = array(
-    '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'admin/settings/search/datastore'),
+  $form['actions']['cancel'] = array(
+    '#type' => 'link',
+    '#title' => t('Cancel'),
+    '#href' => 'admin/config/search/settings/datastore',
   );
   return $form;
 }
@@ -255,45 +265,60 @@ function searchlight_admin_datasource_edit($form_state, $datasource) {
 /**
  * Submit handler for searchlight_admin_datasource_edit().
  */
-function searchlight_admin_datasource_edit_submit(&$form, $form_state) {
+function searchlight_admin_datasource_edit_submit($form, &$form_state) {
   if (!empty($form['#datasource'])) {
     $form['#datasource']->optionsSubmit($form, $form_state);
   }
 }
 
 /**
- * AHAH callback & processor for datasource editor.
+ * AJAX callback & processor for datasource editor.
  */
-function searchlight_admin_datasource_ahah($clicked_id, $element = 'fields') {
-  $form_state = array();
+function searchlight_admin_datasource_ajax($form, $form_state, $clicked_id, $element = 'fields') {
   $form_state['clicked_button']['#id'] = $clicked_id;
-  $form_state['values'] = $_POST;
-  $form = form_get_cache($_POST['form_build_id'], $form_state);
-  if ($form) {
-    $datasource = searchlight_datasource_load($form['#datasource_name']);
-    $datasource->optionsSubmit($form, $form_state);
 
-    $form['#datasource'] = $datasource;
-    $datasource->optionsForm($form, $form_state);
-    form_set_cache($_POST['form_build_id'], $form, $form_state);
+  $datasource = searchlight_datasource_load($form['#datasource_name']);
+  $datasource->optionsSubmit($form, $form_state);
 
-    // Build and render the new element, then return it in JSON format.
-    $form_state = array();
-    $form['#post'] = array();
-    $form = form_builder($form['form_id']['#value'], $form, $form_state);
-    $output = drupal_render($form[$element]);
-    drupal_json(array('status' => TRUE, 'data' => $output));
-  }
-  else {
-    drupal_json(array('status' => FALSE, 'data' => ''));
-  }
-  exit();
+  $form['#datasource'] = $datasource;
+  $datasource->optionsForm($form, $form_state);
+  form_set_cache($_POST['form_build_id'], $form, $form_state);
+
+  return $form[$element];
+}
+
+/**
+ * Form AJAX callback for adding fields.
+ */
+function searchlight_admin_datasource_ajax_fields_add($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-fields-new-add', 'fields');
+}
+
+/**
+ * Form AJAX callback for removing fields.
+ */
+function searchlight_admin_datasource_ajax_fields_remove($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-fields-remove', 'fields');
+}
+
+/**
+ * Form AJAX callback for adding MVA fields.
+ */
+function searchlight_admin_datasource_ajax_multivalues_add($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-multivalues-new-add', 'multivalues');
+}
+
+/**
+ * Form AJAX callback for removing MVA fields.
+ */
+function searchlight_admin_datasource_ajax_multivalues_remove($form, $form_state) {
+  return searchlight_admin_datasource_ajax($form, $form_state, 'edit-multivalues-remove', 'multivalues');
 }
 
 /**
  * Confirmation form for datasource actions.
  */
-function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
+function searchlight_admin_confirm($form, &$form_state, $type, $object, $op) {
   switch ($type) {
     case 'searchlight_datasource':
       $type_name = t('datasource');
@@ -303,9 +328,18 @@ function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
       break;
   }
   $form = array();
-  $form['type'] = array('#type' => 'value', '#value' => $type);
-  $form['object'] = array('#type' => 'value', '#value' => $object);
-  $form['action'] = array('#type' => 'value', '#value' => $op);
+  $form['type'] = array(
+    '#type' => 'value',
+    '#value' => $type,
+  );
+  $form['object'] = array(
+    '#type' => 'value',
+    '#value' => $object,
+  );
+  $form['action'] = array(
+    '#type' => 'value',
+    '#value' => $op,
+  );
   switch ($op) {
     case 'revert':
       $action = t('revert');
@@ -324,9 +358,10 @@ function searchlight_admin_confirm(&$form_state, $type, $object, $op) {
       $message = '';
       break;
   }
-  $form = confirm_form($form,
+  $form = confirm_form(
+    $form,
     t('Are you sure you want to !action the @type %title?', array('%title' => $object->name, '@type' => $type_name, '!action' => $action)),
-    'admin/settings/search',
+    'admin/config/search/settings',
     $message,
     drupal_ucfirst($action), t('Cancel')
   );
@@ -346,15 +381,16 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
         case 'searchlight_datasource':
           searchlight_datasource_delete($object);
 
-          // If reverting, display a message indicating that the index must be rebuilt.
+          // If reverting, display a message indicating that the index must be
+          // rebuilt.
           if ($form_state['values']['action'] === 'revert') {
             drupal_set_message(t('Datasource @datasource reverted. The index for this datasource needs to be rebuilt.', array('@datasource' => $object->name)));
           }
-          $form_state['redirect'] = 'admin/settings/search/datasource';
+          $form_state['redirect'] = 'admin/config/search/settings/datasource';
           break;
         case 'searchlight_environment':
           searchlight_environment_delete($object);
-          $form_state['redirect'] = 'admin/settings/search/environment';
+          $form_state['redirect'] = 'admin/config/search/settings/environment';
           break;
       }
       break;
@@ -364,8 +400,8 @@ function searchlight_admin_confirm_submit($form, &$form_state) {
 /**
  * System settings form for Searchlight.
  */
-function searchlight_admin_backend($form_state) {
-  drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.admin.js');
+function searchlight_admin_backend($form, $form_state) {
+  drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.admin.js');
 
   $form = array();
 
@@ -387,7 +423,7 @@ function searchlight_admin_backend($form_state) {
     '#type' => 'select',
     '#title' => t('Global search'),
     '#description' => t('Choose a View to power the global search block.'),
-    '#options' => array(FALSE => '<'. t("Don't replace global search") .'>') + searchlight_admin_global_search_views(),
+    '#options' => array(FALSE => '<' . t("Don't replace global search") . '>') + searchlight_admin_global_search_views(),
     '#default_value' => variable_get('searchlight_global_search', FALSE),
   );
 
@@ -400,10 +436,10 @@ function searchlight_admin_backend($form_state) {
   );
   $form['backend']['searchlight_backend'] = array(
     '#type' => 'select',
-    '#options' => array(0 => '< '. t('Choose a backend') .' >'),
+    '#options' => array(0 => '< ' . t('Choose a backend') . ' >'),
     '#default_value' => variable_get('searchlight_backend', 'sphinx'),
     '#attributes' => array(
-      'class' => 'searchlight-backend-select',
+      'class' => array('searchlight-backend-select'),
     ),
   );
   foreach (searchlight_registry('backend', TRUE) as $key => $info) {
@@ -414,7 +450,7 @@ function searchlight_admin_backend($form_state) {
     $form["searchlight_backend_{$key}"]['#title'] = $info['title'];
     $form["searchlight_backend_{$key}"]['#type'] = 'fieldset';
     $form["searchlight_backend_{$key}"]['#attributes'] = array(
-      'class' => "searchlight-backend-settings searchlight-backend-{$key}",
+      'class' => array("searchlight-backend-settings", "searchlight-backend-{$key}"),
     );
   }
   $form = system_settings_form($form);

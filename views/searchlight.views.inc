@@ -1,25 +1,15 @@
 <?php
 // $Id$
 
-/**
- * Implementation of hook_views_query_alter().
- * Provides backwards-compatibility events for Views 2.x.
- */
-function searchlight_views_query_alter(&$view, &$query) {
-  if (views_api_version() == '2.0' && !empty($query->searchlight)) {
-    $query->build($view);
-    $query->execute($view);
-  }
-}
 
 /**
- * Implementation of hook_views_plugins().
+ * Implements hook_views_plugins().
  */
 function searchlight_views_plugins() {
   return array(
     'query' => array(
       'searchlight' => array(
-        'file' => (views_api_version() == '2.0') ? 'searchlight_plugin_query_v2.inc' : 'searchlight_plugin_query_v3.inc',
+        'file' => 'searchlight_plugin_query_v3.inc',
         'path' => drupal_get_path('module', 'searchlight') . '/views',
         'title' => t('Searchlight'),
         'help' => t('Searchlight query plugin.'),
@@ -57,11 +47,11 @@ function searchlight_views_plugins() {
 }
 
 /**
- * Implementation of hook_views_handlers().
+ * Implements hook_views_handlers().
  */
 function searchlight_views_handlers() {
   return array(
-    'info' => array('path' => drupal_get_path('module', 'searchlight') .'/views'),
+    'info' => array('path' => drupal_get_path('module', 'searchlight') . '/views'),
     'handlers' => array(
       'searchlight_handler_argument_search' => array('parent' => 'views_handler_argument'),
       'searchlight_handler_filter_search' => array('parent' => 'views_handler_filter'),
@@ -74,7 +64,7 @@ function searchlight_views_handlers() {
 }
 
 /**
- * Implementation of hook_views_data().
+ * Implements hook_views_data().
  */
 function searchlight_views_data() {
   $data = array();
@@ -103,7 +93,7 @@ function searchlight_views_data() {
 }
 
 /**
- * Implementation of hook_views_data_alter().
+ * Implements hook_views_data_alter().
  */
 function searchlight_views_data_alter(&$data) {
   if (!empty($data['node_access']['nid']) && empty($data['node_access']['nid']['field'])) {
@@ -113,11 +103,27 @@ function searchlight_views_data_alter(&$data) {
     );
   }
 
+  // A special handler for taxonomy_index table. Taxonomy views integration
+  // in D7 sometimes makes use of `taxonomy_term_data` but when used for
+  // arguments, filters, etc. directly queries against `taxonomy_index`. 
+  if (module_exists('taxonomy')) {
+    $data['taxonomy_index']['searchlight_tid'] = array(
+      'title' => t('Term ID (Searchlight)'),
+      'help' => t('The taxonomy term ID'),
+      'real field' => 'tid',
+      'field' => array(
+        'field' => 'tid',
+        'handler' => 'views_handler_field_numeric',
+        'click sortable' => TRUE,
+      ),
+    );
+  }
+
   // OG UID field handler. Needed to allow filtering directly against OG UID.
   if (module_exists('og_views')) {
     $data['og_uid']['nid']['field'] = array(
       'title' => t('Group ID'),
-      'handler' => 'views_handler_field'
+      'handler' => 'views_handler_field',
     );
   }
 
@@ -163,15 +169,16 @@ function searchlight_views_init_query(&$view) {
     // Check that an active datasource can be found for this base table.
     if (searchlight_get_datasource($view->base_table)) {
       // Add Searchlight JS.
-      drupal_add_js(drupal_get_path('module', 'searchlight') .'/searchlight.js');
+      drupal_add_js(drupal_get_path('module', 'searchlight') . '/searchlight.js');
 
-      $view->query = searchlight_get_query($view->base_table, $view->base_field);
+      $query_options = $view->display_handler->get_option('query');
+      $view->query = searchlight_get_query($view->base_table, $view->base_field, $query_options['options']);
     }
   }
 }
 
 /**
- * Implementation of hook_views_default_views().
+ * Implements hook_views_default_views().
  */
 function searchlight_views_default_views() {
   $views = array();
@@ -181,7 +188,7 @@ function searchlight_views_default_views() {
   //
   $realms = array();
   $result = db_query("SELECT realm FROM {node_access} GROUP BY realm");
-  while ($row = db_fetch_object($result)) {
+  foreach ($result as $row) {
     $realms[$row->realm] = $row->realm;
   }
   // Allow modules to declare their realms in an alter hook. This allows
@@ -236,12 +243,44 @@ function searchlight_views_default_views() {
     $view->base_table = 'node';
     $view->api_version = '3.0-alpha1';
     $handler = $view->new_display('default', 'Default', 'default');
+    /* Display: All terms */
+    $handler = $view->new_display('searchlight_multivalue', 'all', 'searchlight_multivalue_all');
+    $handler->override_option('arguments', array());
+    $handler->override_option('relationships', array());
+    $handler->override_option('sorts', array());
+    $handler->override_option('fields', array(
+      'nid' => array(
+        'id' => 'nid',
+        'table' => 'node',
+        'field' => 'nid',
+        'relationship' => 'none',
+      ),
+      'seachlight_tid' => array(
+        'id' => 'searchlight_tid',
+        'table' => 'taxonomy_index',
+        'field' => 'searchlight_tid',
+        'relationship' => 'none',
+        'label' => t('Term ID'),
+      ),
+      'name' => array(
+        'id' => 'name',
+        'table' => 'taxonomy_term_data',
+        'field' => 'name',
+        'relationship' => 'none',
+        'label' => t('All terms'),
+      ),
+    ));
+    $handler->override_option('searchlight_multivalue', array(
+      'field' => 'taxonomy_index_tid',
+      'label_field' => 'taxonomy_term_data_name',
+      'override' => array(
+        'name' => 'taxonomy_index_tid',
+        'label' => t('Taxonomy (all)'),
+      ),
+    ));
     foreach (taxonomy_get_vocabularies() as $vocab) {
-      $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
-      $identifier = strtr($identifier, ' -:', '___');
-
       /* Display: Vocabulary */
-      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_'. $identifier);
+      $handler = $view->new_display('searchlight_multivalue', $vocab->name, 'searchlight_multivalue_' . $vocab->machine_name);
       $handler->override_option('arguments', array());
       $handler->override_option('relationships', array());
       $handler->override_option('sorts', array());
@@ -252,256 +291,38 @@ function searchlight_views_default_views() {
           'field' => 'nid',
           'relationship' => 'none',
         ),
+        'seachlight_tid' => array(
+          'id' => 'searchlight_tid',
+          'table' => 'taxonomy_index',
+          'field' => 'searchlight_tid',
+          'relationship' => 'none',
+          'label' => t('Term ID'),
+        ),
         'name' => array(
           'id' => 'name',
-          'table' => 'term_data',
+          'table' => 'taxonomy_term_data',
           'field' => 'name',
           'relationship' => 'none',
           'label' => $vocab->name,
         ),
       ));
-
-      // If Views can handle the Taxonomy vocab module field for supporting
-      // exportable vocabularies, use it.
-      $data = views_fetch_data('vocabulary');
-      if (isset($data['module']) && !is_numeric($identifier)) {
-        $handler->override_option('filters', array(
-          'module' => array(
-            'id' => 'module',
-            'table' => 'vocabulary',
-            'field' => 'module',
-            'value' => array($vocab->module => $vocab->module),
-          ),
-        ));
-      }
-      else {
-        $handler->override_option('filters', array(
-          'vid' => array(
-            'id' => 'vid',
-            'table' => 'term_data',
-            'field' => 'vid',
-            'value' => array($vocab->vid => $vocab->vid),
-          ),
-        ));
-      }
+      $handler->override_option('filters', array(
+        'machine_name' => array(
+          'id' => 'machine_name',
+          'table' => 'taxonomy_vocabulary',
+          'field' => 'machine_name',
+          'value' => array($vocab->machine_name => $vocab->machine_name),
+        ),
+      ));
       $handler->override_option('searchlight_multivalue', array(
-        'field' => 'term_data_tid',
-        'label_field' => 'term_data_name',
+        'field' => 'taxonomy_index_tid',
+        'label_field' => 'taxonomy_term_data_name',
         'override' => array(
-          'name' => 'term_data_tid_'. $identifier,
+          'name' => 'taxonomy_index_tid_' . $vocab->machine_name,
           'label' => $vocab->name,
         ),
       ));
     }
-    $views[$view->name] = $view;
-  }
-
-  //
-  // Content profile ==========================================================
-  //
-  if (module_exists('content_profile')) {
-    $view = new view;
-    $view->name = 'searchlight_content_profile';
-    $view->tag = 'searchlight';
-    $view->base_table = 'users';
-    $view->api_version = '3.0-alpha1';
-    $handler = $view->new_display('default', 'Default', 'default');
-    foreach(array_keys(content_profile_get_types()) as $profile_type) {
-      foreach (taxonomy_get_vocabularies() as $vocab) {
-        if (isset($vocab->nodes[$profile_type])) {
-          $identifier = !empty($vocab->module) && $vocab->module !== 'taxonomy' ? $vocab->module : $vocab->vid;
-          $identifier = strtr($identifier, ' -:', '___');
-
-          /* Display: Vocabulary */
-          $handler = $view->new_display('searchlight_multivalue', "{$profile_type}: {$vocab->name}", "searchlight_multivalue_{$profile_type}_{$identifier}");
-          $handler->override_option('arguments', array());
-          $handler->override_option('sorts', array());
-          $handler->override_option('relationships', array(
-            'content_profile_rel' => array(
-              'required' => 1,
-              'type' => $profile_type,
-              'id' => 'content_profile_rel',
-              'table' => 'users',
-              'field' => 'content_profile_rel',
-              'relationship' => 'none',
-            ),
-          ));
-          $handler->override_option('fields', array(
-            'uid' => array(
-              'id' => 'uid',
-              'table' => 'users',
-              'field' => 'uid',
-              'relationship' => 'none',
-            ),
-            'name' => array(
-              'id' => 'name',
-              'table' => 'term_data',
-              'field' => 'name',
-              'relationship' => 'content_profile_rel',
-              'label' => $vocab->name,
-            ),
-          ));
-
-          // If Views can handle the Taxonomy vocab module field for supporting
-          // exportable vocabularies, use it.
-          $data = views_fetch_data('vocabulary');
-          if (isset($data['module']) && !is_numeric($identifier)) {
-            $handler->override_option('filters', array(
-              'module' => array(
-                'id' => 'module',
-                'table' => 'vocabulary',
-                'field' => 'module',
-                'value' => array($vocab->module => $vocab->module),
-                'relationship' => 'content_profile_rel',
-              ),
-            ));
-          }
-          else {
-            $handler->override_option('filters', array(
-              'vid' => array(
-                'id' => 'vid',
-                'table' => 'term_data',
-                'field' => 'vid',
-                'value' => array($vocab->vid => $vocab->vid),
-                'relationship' => 'content_profile_rel',
-              ),
-            ));
-          }
-          $handler->override_option('searchlight_multivalue', array(
-            'field' => 'node_users__term_data_tid',
-            'label_field' => 'node_users__term_data_name',
-            'override' => array(
-              'name' => "term_data_tid_{$profile_type}_{$identifier}",
-              'label' => $vocab->name,
-            ),
-          ));
-        }
-      }
-    }
-    $views[$view->name] = $view;
-  }
-
-  //
-  // Organic Groups ===========================================================
-  //
-  if (module_exists('og_views')) {
-    $view = new view;
-    $view->name = 'searchlight_og_ancestry';
-    $view->tag = 'searchlight';
-    $view->base_table = 'node';
-    $view->api_version = '3.0-alpha1';
-    $handler = $view->new_display('default', 'Default', 'default');
-
-    /* Display: Node's groups */
-    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups', 'searchlight_multivalue_og');
-    $handler->override_option('arguments', array());
-    $handler->override_option('sorts', array());
-    $handler->override_option('relationships', array(
-      'group_nid' => array(
-        'required' => 1,
-        'id' => 'group_nid',
-        'table' => 'og_ancestry',
-        'field' => 'group_nid',
-        'relationship' => 'none',
-      ),
-    ));
-    $handler->override_option('fields', array(
-      'nid' => array(
-        'id' => 'nid',
-        'table' => 'node',
-        'field' => 'nid',
-        'relationship' => 'none',
-      ),
-      'title' => array(
-        'id' => 'title',
-        'table' => 'node',
-        'field' => 'title',
-        'label' => 'Groups',
-        'relationship' => 'group_nid',
-      ),
-    ));
-    $handler->override_option('searchlight_multivalue', array(
-      'field' => 'node_og_ancestry_nid',
-      'label_field' => 'node_og_ancestry_title',
-      'override' => array(
-        'label' => 'Organic Groups',
-        'table' => 'og_ancestry',
-        'name' => 'group_nid',
-      ),
-    ));
-    $views[$view->name] = $view;
-
-    $view = new view;
-    $view->name = 'searchlight_og_uid';
-    $view->tag = 'searchlight';
-    $view->base_table = 'users';
-    $view->api_version = '3.0-alpha1';
-    $handler = $view->new_display('default', 'Default', 'default');
-
-    /* Display: User's groups */
-    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups', 'searchlight_multivalue_og');
-    $handler->override_option('arguments', array());
-    $handler->override_option('sorts', array());
-    $handler->override_option('relationships', array(
-      'nid' => array(
-        'required' => 1,
-        'id' => 'nid',
-        'table' => 'og_uid',
-        'field' => 'nid',
-        'relationship' => 'none',
-      ),
-    ));
-    $handler->override_option('fields', array(
-      'uid' => array(
-        'id' => 'uid',
-        'table' => 'users',
-        'field' => 'uid',
-        'relationship' => 'none',
-      ),
-      'title' => array(
-        'id' => 'title',
-        'table' => 'node',
-        'field' => 'title',
-        'label' => 'Groups',
-        'relationship' => 'nid',
-      ),
-    ));
-    $handler->override_option('searchlight_multivalue', array(
-      'field' => 'node_og_uid_nid',
-      'label_field' => 'node_og_uid_title',
-      'override' => array(
-        'label' => 'Organic Groups',
-        'table' => 'og_uid',
-        'name' => 'nid',
-      ),
-    ));
-
-    /* Display: User's groups */
-    $handler = $view->new_display('searchlight_multivalue', 'Organic Groups (filter)', 'searchlight_multivalue_og_uid');
-    $handler->override_option('arguments', array());
-    $handler->override_option('sorts', array());
-    $handler->override_option('relationships', array());
-    $handler->override_option('fields', array(
-      'uid' => array(
-        'id' => 'uid',
-        'table' => 'users',
-        'field' => 'uid',
-        'relationship' => 'none',
-      ),
-      'nid' => array(
-        'id' => 'nid',
-        'table' => 'og_uid',
-        'field' => 'nid',
-        'label' => 'Groups',
-      ),
-    ));
-    $handler->override_option('searchlight_multivalue', array(
-      'field' => 'og_uid_nid',
-      'label_field' => 'og_uid_nid',
-      'override' => array(
-        'label' => 'Organic Groups (nid)',
-      ),
-    ));
     $views[$view->name] = $view;
   }
 

@@ -34,14 +34,6 @@ function _searchlight_basic_searchlight_default_datasources() {
       'name' => 'node_title',
       'usage' => 'content',
     ),
-    'node_revisions_body' => array(
-      'label' => 'Node: Body (body)',
-      'datatype' => 'text',
-      'table' => 'node_revisions',
-      'field' => 'body',
-      'name' => 'node_revisions_body',
-      'usage' => 'content',
-    ),
     'node_status' => array(
       'label' => 'Node: Published (status)',
       'datatype' => 'int',
@@ -64,7 +56,7 @@ function _searchlight_basic_searchlight_default_datasources() {
       'table' => 'users',
       'field' => 'name',
       'name' => 'users_name',
-      'usage' => 'attribute',
+      'usage' => 'content',
     ),
     'users_uid' => array(
       'label' => 'User: Name (uid)',
@@ -81,6 +73,22 @@ function _searchlight_basic_searchlight_default_datasources() {
       'field' => 'type',
       'name' => 'node_type',
       'usage' => 'attribute',
+    ),
+    'field_data_body_entity_id' => array(
+      'label' => 'Fields: body (entity_id)',
+      'datatype' => 'int',
+      'table' => 'field_data_body',
+      'field' => 'entity_id',
+      'name' => 'field_data_body_entity_id',
+      'usage' => 'attribute',
+    ),
+    'field_data_body_body_value' => array(
+      'label' => 'Fields: body (body_value)',
+      'datatype' => 'text',
+      'table' => 'field_data_body',
+      'field' => 'body_value',
+      'name' => 'field_data_body_body_value',
+      'usage' => 'content',
     ),
   );
   $searchlight_datasource->filters = array();
